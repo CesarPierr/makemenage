@@ -29,8 +29,10 @@ test("user can register, create a household, add a member, create a task, and co
   page,
 }, testInfo) => {
   const email = buildUniqueEmail("e2e", testInfo.project.name);
+  const isMobileProject = testInfo.project.name.includes("mobile");
 
   await page.goto("/register");
+  await expect(page.getByText("Démarrage rapide sans écran inutile")).toBeVisible();
   await page.getByPlaceholder("Prénom ou pseudo").fill("E2E User");
   await page.getByPlaceholder("Email").fill(email);
   await page.getByPlaceholder("Mot de passe").fill("demo12345");
@@ -42,6 +44,10 @@ test("user can register, create a household, add a member, create a task, and co
   await page.getByRole("button", { name: "Créer le foyer" }).click();
 
   await expect(page.getByRole("heading", { name: /Vue rapide du foyer/i })).toBeVisible();
+  const mainNavigation = page.getByRole("navigation");
+  await expect(mainNavigation.getByRole("link", { name: "Mes tâches" })).toBeVisible();
+  await expect(mainNavigation.getByRole("link", { name: "Réglages" })).toBeVisible();
+  await expect(mainNavigation.getByRole("link", { name: "Accueil" })).toBeVisible();
 
   await page.goto("/app/settings");
   await expect(page.getByRole("heading", { name: "Ajouter un membre" })).toBeVisible();
@@ -69,6 +75,10 @@ test("user can register, create a household, add a member, create a task, and co
   await expect(page.getByText(/completed/i).first()).toBeVisible();
 
   await page.goto("/app/calendar");
+  if (isMobileProject) {
+    await expect(page.getByRole("heading", { name: "Prochaines tâches" })).toBeVisible();
+    await expect(page.getByText(/jours actifs/i)).toBeVisible();
+  }
   const calendarExport = await page.locator('a[href*="/api/calendar/feed.ics"]').first().getAttribute("href");
   expect(calendarExport).toContain("/api/calendar/feed.ics");
 });
@@ -76,6 +86,7 @@ test("user can register, create a household, add a member, create a task, and co
 test("demo user can reach login and auth redirect works", async ({ page, request }) => {
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "Retrouver le planning du foyer" })).toBeVisible();
+  await expect(page.getByText("Actions en un geste sur téléphone")).toBeVisible();
 
   const health = await request.get("/api/health");
   expect(health.ok()).toBeTruthy();

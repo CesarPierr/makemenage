@@ -8,9 +8,9 @@ export const memberPalette = [
 ];
 
 export const mobileSections = [
-  { href: "/app", label: "Aujourd'hui" },
+  { href: "/app", label: "Accueil" },
   { href: "/app/my-tasks", label: "Mes tâches" },
-  { href: "/app/calendar", label: "Calendrier" },
-  { href: "/app/history", label: "Historique" },
+  { href: "/app/calendar", label: "Agenda" },
+  { href: "/app/history", label: "Journal" },
   { href: "/app/settings", label: "Réglages" },
 ];

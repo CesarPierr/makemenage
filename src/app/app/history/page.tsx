@@ -15,9 +15,9 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 
   return (
     <section className="space-y-4">
-      <div className="app-surface rounded-[2rem] p-5 sm:p-6">
-        <p className="text-sm uppercase tracking-[0.24em] text-[var(--leaf-600)]">Historique</p>
-        <h2 className="display-title mt-2 text-4xl">Ce qui a changé récemment</h2>
+      <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
+        <p className="section-kicker">Historique</p>
+        <h2 className="display-title mt-2 text-4xl leading-tight">Ce qui a changé récemment</h2>
         <p className="mt-3 text-[var(--ink-700)]">
           Chaque action importante laisse une trace: création, complétion, saut, report ou réassignation.
         </p>

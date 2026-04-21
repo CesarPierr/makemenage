@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { addDays, format, startOfToday } from "date-fns";
 import { fr } from "date-fns/locale";
-import { CalendarClock, Clock3, ListChecks, TimerReset } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, CalendarClock, Clock3, ListChecks, Settings2, TimerReset } from "lucide-react";
 
 import { OccurrenceCard } from "@/components/occurrence-card";
 import { buildLoadMetrics } from "@/lib/analytics";
@@ -20,12 +20,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   if (!context) {
     return (
-      <section className="app-surface rounded-[2rem] p-6 sm:p-8">
-        <p className="text-sm uppercase tracking-[0.24em] text-[var(--leaf-600)]">Bienvenue</p>
-        <h2 className="display-title mt-2 text-4xl">Créer votre premier foyer</h2>
+      <section className="app-surface glow-card rounded-[2rem] p-6 sm:p-8">
+        <p className="section-kicker">Bienvenue</p>
+        <h2 className="display-title mt-2 text-4xl leading-tight sm:text-5xl">
+          Créer votre premier foyer
+        </h2>
         <p className="mt-3 max-w-2xl text-[var(--ink-700)]">
-          Commencez par un foyer, puis ajoutez les membres et les tâches récurrentes. Tout est prévu pour démarrer vite.
+          On démarre en une minute : le foyer, les membres, puis les tâches récurrentes. Tout est pensé pour se faire depuis le téléphone.
         </p>
+        <div className="mt-6 mobile-section-grid sm:max-w-2xl sm:grid-cols-3">
+          {[
+            "Un seul foyer pour commencer, sans configuration lourde.",
+            "Ajout rapide des membres et de leurs couleurs.",
+            "Première tâche prête à tourner juste après.",
+          ].map((tip) => (
+            <div key={tip} className="soft-panel px-4 py-3 text-sm leading-6 text-[var(--ink-700)]">
+              {tip}
+            </div>
+          ))}
+        </div>
         <form action="/api/households" method="post" className="mt-8 grid gap-3 sm:max-w-lg">
           <input className="field" type="text" name="name" placeholder="Nom du foyer" required />
           <input
@@ -61,17 +74,39 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   return (
     <div className="space-y-4">
       <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="app-surface rounded-[2rem] p-5 sm:p-6">
-          <p className="text-sm uppercase tracking-[0.24em] text-[var(--leaf-600)]">
+        <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
+          <p className="section-kicker">
             {format(today, "EEEE d MMMM", { locale: fr })}
           </p>
-          <h2 className="display-title mt-2 text-3xl sm:text-4xl">
+          <h2 className="display-title mt-2 text-3xl leading-tight sm:text-4xl">
             Vue rapide du foyer {context.household.name}
           </h2>
           <p className="mt-3 max-w-2xl text-[var(--ink-700)]">
-            Les actions les plus fréquentes sont juste en dessous. L&apos;idée est qu&apos;un passage sur téléphone suffise à garder le planning net.
+            Les actions les plus fréquentes sont juste en dessous. L&apos;objectif est qu&apos;un passage de 20 secondes sur téléphone suffise à garder le planning net.
           </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link
+              className="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold"
+              href={`/app/my-tasks?household=${context.household.id}`}
+            >
+              Mes tâches
+              <ArrowRight className="size-4" />
+            </Link>
+            <Link
+              className="btn-secondary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm"
+              href={`/app/calendar?household=${context.household.id}`}
+            >
+              Voir le calendrier
+            </Link>
+            <Link
+              className="btn-secondary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm"
+              href={`/app/settings?household=${context.household.id}`}
+            >
+              <Settings2 className="size-4" />
+              Réglages
+            </Link>
+          </div>
+          <div className="mt-6 mobile-section-grid sm:grid-cols-2 xl:grid-cols-4">
             {[
               {
                 label: "Aujourd’hui",
@@ -105,7 +140,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 icon: Clock3,
               },
             ].map(({ label, value, detail, icon: Icon }) => (
-              <article key={label} className="rounded-[1.6rem] bg-white/70 p-4">
+              <article key={label} className="soft-panel px-4 py-4">
                 <Icon className="size-5 text-[var(--coral-600)]" />
                 <p className="mt-3 text-sm text-[var(--ink-700)]">{label}</p>
                 <p className="mt-1 text-3xl font-semibold">{value}</p>
@@ -116,9 +151,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
 
         <div className="app-surface rounded-[2rem] p-5 sm:p-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-[var(--leaf-600)]">Équilibre</p>
+              <p className="section-kicker">Équilibre</p>
               <h3 className="display-title mt-2 text-3xl">Charge de la semaine</h3>
             </div>
             <Link className="btn-secondary px-4 py-2 text-sm" href={`/app/settings?household=${context.household.id}`}>
@@ -127,7 +162,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </div>
           <div className="mt-5 space-y-3">
             {metrics.byMember.map((member) => (
-              <div key={member.memberId} className="rounded-[1.4rem] bg-white/72 p-4">
+              <div key={member.memberId} className="soft-panel px-4 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <span
@@ -204,7 +239,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <section className="app-surface rounded-[2rem] p-5 sm:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-[var(--leaf-600)]">Ajout rapide</p>
+              <p className="section-kicker">Ajout rapide</p>
               <h3 className="display-title mt-2 text-3xl">Créer une nouvelle tâche</h3>
             </div>
             <p className="max-w-xl text-sm text-[var(--ink-700)]">
@@ -235,13 +270,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <option value="least_assigned_count">Moins de tâches</option>
               <option value="least_assigned_minutes">Moins de minutes</option>
             </select>
-            <select className="field lg:col-span-2" name="eligibleMemberIds" multiple required size={Math.min(context.household.members.length, 5)}>
-              {context.household.members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.displayName}
-                </option>
-              ))}
-            </select>
+            <div className="soft-panel p-3 lg:col-span-2">
+              <p className="text-sm font-semibold text-[var(--ink-950)]">Membres concernés</p>
+              <p className="mt-1 text-sm text-[var(--ink-700)]">
+                Sélection multiple. Sur mobile, gardez appuyé pour choisir plusieurs personnes si besoin.
+              </p>
+              <select className="field mt-3" name="eligibleMemberIds" multiple required size={Math.min(context.household.members.length, 5)}>
+                {context.household.members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button className="btn-primary lg:col-span-2 px-5 py-3 font-semibold" type="submit">
               Créer la tâche
             </button>

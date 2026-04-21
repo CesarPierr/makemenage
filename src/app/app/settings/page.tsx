@@ -13,18 +13,36 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
   return (
     <div className="space-y-4">
-      <section className="app-surface rounded-[2rem] p-5 sm:p-6">
-        <p className="text-sm uppercase tracking-[0.24em] text-[var(--leaf-600)]">Réglages</p>
-        <h2 className="display-title mt-2 text-4xl">Membres, absences et règles</h2>
+      <section className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
+        <p className="section-kicker">Réglages</p>
+        <h2 className="display-title mt-2 text-4xl leading-tight">Membres, absences et règles</h2>
         <p className="mt-3 text-[var(--ink-700)]">
           Toute la configuration de V1 est regroupée ici pour rester simple sur mobile.
         </p>
+        <div className="mt-5 mobile-section-grid sm:grid-cols-3">
+          <div className="soft-panel px-4 py-3">
+            <p className="text-sm text-[var(--ink-700)]">Membres</p>
+            <p className="mt-1 text-2xl font-semibold">{context.household.members.length}</p>
+          </div>
+          <div className="soft-panel px-4 py-3">
+            <p className="text-sm text-[var(--ink-700)]">Tâches actives</p>
+            <p className="mt-1 text-2xl font-semibold">{context.tasks.length}</p>
+          </div>
+          <div className="soft-panel px-4 py-3">
+            <p className="text-sm text-[var(--ink-700)]">Mon rôle</p>
+            <p className="mt-1 text-2xl font-semibold capitalize">{context.membership.role}</p>
+          </div>
+        </div>
       </section>
 
       {canManageHousehold(context.membership.role) ? (
         <section className="grid gap-4 xl:grid-cols-2">
           <article className="app-surface rounded-[2rem] p-5 sm:p-6">
-            <h3 className="display-title text-3xl">Ajouter un membre</h3>
+            <p className="section-kicker">Équipe</p>
+            <h3 className="display-title mt-2 text-3xl">Ajouter un membre</h3>
+            <p className="mt-2 text-sm text-[var(--ink-700)]">
+              Nom, couleur et capacité hebdo suffisent pour commencer proprement.
+            </p>
             <form action={`/api/households/${context.household.id}/members`} method="post" className="mt-5 space-y-3">
               <input className="field" type="text" name="displayName" placeholder="Nom affiché" required />
               <input className="field" type="color" name="color" defaultValue="#E86A33" />
@@ -41,7 +59,11 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           </article>
 
           <article className="app-surface rounded-[2rem] p-5 sm:p-6">
-            <h3 className="display-title text-3xl">Déclarer une absence</h3>
+            <p className="section-kicker">Planning</p>
+            <h3 className="display-title mt-2 text-3xl">Déclarer une absence</h3>
+            <p className="mt-2 text-sm text-[var(--ink-700)]">
+              Cela permet d&apos;éviter des répartitions injustes pendant une absence temporaire.
+            </p>
             <form action="/api/members/absence" method="post" className="mt-5 space-y-3">
               <select className="field" name="memberId" defaultValue={context.currentMember?.id ?? ""} required>
                 <option value="">Choisir un membre</option>
@@ -63,10 +85,18 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       ) : null}
 
       <section className="app-surface rounded-[2rem] p-5 sm:p-6">
-        <h3 className="display-title text-3xl">Tâches configurées</h3>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-kicker">Règles actives</p>
+            <h3 className="display-title mt-2 text-3xl">Tâches configurées</h3>
+          </div>
+          <p className="text-sm text-[var(--ink-700)]">
+            Chaque carte résume la récurrence et le mode d&apos;attribution retenus.
+          </p>
+        </div>
         <div className="mt-5 space-y-3">
           {context.tasks.map((task) => (
-            <article key={task.id} className="rounded-[1.6rem] bg-white/70 p-4">
+            <article key={task.id} className="soft-panel p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h4 className="text-lg font-semibold">{task.title}</h4>

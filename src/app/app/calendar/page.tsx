@@ -15,11 +15,11 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
 
   return (
     <section className="space-y-4">
-      <div className="app-surface rounded-[2rem] p-5 sm:p-6">
-        <p className="text-sm uppercase tracking-[0.24em] text-[var(--leaf-600)]">Calendrier</p>
-        <h2 className="display-title mt-2 text-4xl">Le foyer au fil du mois</h2>
+      <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
+        <p className="section-kicker">Calendrier</p>
+        <h2 className="display-title mt-2 text-4xl leading-tight">Le foyer au fil du mois</h2>
         <p className="mt-3 text-[var(--ink-700)]">
-          Visualisez les occurrences futures, par membre et par rythme. Un flux iCal est aussi disponible.
+          Sur téléphone, l&apos;agenda des prochaines tâches passe en premier. La grille mensuelle reste disponible dès que l&apos;écran le permet.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <a
