@@ -11,6 +11,18 @@ import { db } from "@/lib/db";
 const SESSION_COOKIE = "makemenage_session";
 const SESSION_DURATION_DAYS = 21;
 
+function shouldUseSecureSessionCookie() {
+  if (process.env.APP_BASE_URL) {
+    try {
+      return new URL(process.env.APP_BASE_URL).protocol === "https:";
+    } catch {
+      // ignore invalid APP_BASE_URL and fall back below
+    }
+  }
+
+  return process.env.NODE_ENV === "production";
+}
+
 function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -23,7 +35,7 @@ export async function verifyPassword(password: string, passwordHash: string) {
   return bcrypt.compare(password, passwordHash);
 }
 
-export async function createSession(userId: string) {
+export async function createSession(userId: string, options?: { secure?: boolean }) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000);
 
@@ -39,7 +51,7 @@ export async function createSession(userId: string) {
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: options?.secure ?? shouldUseSecureSessionCookie(),
     path: "/",
     expires: expiresAt,
   });

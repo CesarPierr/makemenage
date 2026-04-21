@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { redirectTo } from "@/lib/request";
 import { householdSchema } from "@/lib/validation";
 
 export async function GET() {
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL("/app?onboarding=1", request.url), 303);
+    return redirectTo(request, "/app?onboarding=1");
   }
 
   const household = await db.household.create({
@@ -48,5 +49,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/app?household=${household.id}`, request.url), 303);
+  return redirectTo(request, `/app?household=${household.id}`);
 }

@@ -1,0 +1,112 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const authMocks = vi.hoisted(() => ({
+  createSession: vi.fn(),
+  hashPassword: vi.fn(),
+  verifyPassword: vi.fn(),
+}));
+
+const dbMocks = vi.hoisted(() => ({
+  userFindUnique: vi.fn(),
+  userCreate: vi.fn(),
+  userUpdate: vi.fn(),
+}));
+
+vi.mock("@/lib/auth", () => ({
+  createSession: authMocks.createSession,
+  hashPassword: authMocks.hashPassword,
+  verifyPassword: authMocks.verifyPassword,
+}));
+
+vi.mock("@/lib/db", () => ({
+  db: {
+    user: {
+      findUnique: dbMocks.userFindUnique,
+      create: dbMocks.userCreate,
+      update: dbMocks.userUpdate,
+    },
+  },
+}));
+
+import { POST as loginPost } from "@/app/api/auth/login/route";
+import { POST as registerPost } from "@/app/api/auth/register/route";
+
+function buildFormRequest(
+  url: string,
+  fields: Record<string, string>,
+  headers: Record<string, string> = {},
+) {
+  return new Request(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      ...headers,
+    },
+    body: new URLSearchParams(fields).toString(),
+  });
+}
+
+describe("auth routes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.APP_BASE_URL = "http://192.168.1.132";
+  });
+
+  it("register redirects to the public base URL and creates an HTTP-safe cookie on local prod", async () => {
+    dbMocks.userFindUnique.mockResolvedValue(null);
+    authMocks.hashPassword.mockResolvedValue("hashed-password");
+    dbMocks.userCreate.mockResolvedValue({ id: "user-1" });
+
+    const response = await registerPost(
+      buildFormRequest("http://localhost:3000/api/auth/register", {
+        displayName: "Pierre",
+        email: "pierre@example.com",
+        password: "motdepasse123",
+      }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("http://192.168.1.132/app");
+    expect(authMocks.createSession).toHaveBeenCalledWith("user-1", { secure: false });
+  });
+
+  it("login prefers forwarded HTTPS headers for redirects and secure cookies", async () => {
+    dbMocks.userFindUnique.mockResolvedValue({ id: "user-2", passwordHash: "stored-hash" });
+    authMocks.verifyPassword.mockResolvedValue(true);
+    dbMocks.userUpdate.mockResolvedValue({ id: "user-2" });
+
+    const response = await loginPost(
+      buildFormRequest(
+        "http://localhost:3000/api/auth/login",
+        {
+          email: "pierre@example.com",
+          password: "motdepasse123",
+        },
+        {
+          "x-forwarded-host": "menage.example.com",
+          "x-forwarded-proto": "https",
+        },
+      ),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("https://menage.example.com/app");
+    expect(authMocks.createSession).toHaveBeenCalledWith("user-2", { secure: true });
+  });
+
+  it("login stays on the public login page when credentials are invalid", async () => {
+    dbMocks.userFindUnique.mockResolvedValue({ id: "user-2", passwordHash: "stored-hash" });
+    authMocks.verifyPassword.mockResolvedValue(false);
+
+    const response = await loginPost(
+      buildFormRequest("http://localhost:3000/api/auth/login", {
+        email: "pierre@example.com",
+        password: "mauvaispass123",
+      }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("http://192.168.1.132/login");
+    expect(authMocks.createSession).not.toHaveBeenCalled();
+  });
+});

@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
-
 import { requireUser } from "@/lib/auth";
-import { canManageHousehold } from "@/lib/households";
 import { db } from "@/lib/db";
+import { canManageHousehold } from "@/lib/households";
+import { redirectTo } from "@/lib/request";
 import { memberSchema } from "@/lib/validation";
 
 type Params = {
@@ -20,7 +19,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!membership || !canManageHousehold(membership.role)) {
-    return NextResponse.redirect(new URL(`/app/settings?household=${id}`, request.url), 303);
+    return redirectTo(request, `/app/settings?household=${id}`);
   }
 
   const formData = await request.formData();
@@ -33,12 +32,12 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL(`/app/settings?household=${id}`, request.url), 303);
+    return redirectTo(request, `/app/settings?household=${id}`);
   }
 
   await db.householdMember.create({
     data: parsed.data,
   });
 
-  return NextResponse.redirect(new URL(`/app/settings?household=${id}`, request.url), 303);
+  return redirectTo(request, `/app/settings?household=${id}`);
 }

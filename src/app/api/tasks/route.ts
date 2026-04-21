@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
 import { parseDateInput } from "@/lib/date-input";
-import { canManageHousehold } from "@/lib/households";
 import { db } from "@/lib/db";
+import { canManageHousehold } from "@/lib/households";
+import { redirectTo } from "@/lib/request";
 
 export async function GET(request: Request) {
   const user = await requireUser();
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
   });
 
   if (!membership || !canManageHousehold(membership.role) || !eligibleMemberIds.length) {
-    return NextResponse.redirect(new URL(`/app?household=${householdId}`, request.url), 303);
+    return redirectTo(request, `/app?household=${householdId}`);
   }
 
   const recurrenceRule = await db.recurrenceRule.create({
@@ -103,5 +104,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/app?household=${householdId}`, request.url), 303);
+  return redirectTo(request, `/app?household=${householdId}`);
 }

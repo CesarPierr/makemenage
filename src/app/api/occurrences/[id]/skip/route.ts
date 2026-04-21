@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { redirectTo } from "@/lib/request";
 import { skipOccurrence } from "@/lib/scheduling/service";
 
 type Params = {
@@ -16,7 +15,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!occurrence) {
-    return NextResponse.redirect(new URL("/app", request.url), 303);
+    return redirectTo(request, "/app");
   }
 
   const membership = await db.householdMember.findFirst({
@@ -27,7 +26,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!membership) {
-    return NextResponse.redirect(new URL("/app", request.url), 303);
+    return redirectTo(request, "/app");
   }
 
   const formData = await request.formData();
@@ -37,5 +36,5 @@ export async function POST(request: Request, { params }: Params) {
     actorMemberId: String(formData.get("memberId") || membership.id),
   });
 
-  return NextResponse.redirect(new URL(`/app?household=${occurrence.householdId}`, request.url), 303);
+  return redirectTo(request, `/app?household=${occurrence.householdId}`);
 }

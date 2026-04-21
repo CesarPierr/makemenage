@@ -1,10 +1,34 @@
+import { randomUUID } from "node:crypto";
+
 import { expect, test } from "@playwright/test";
+
+function buildUniqueEmail(prefix: string, projectName: string) {
+  const safeProjectName = projectName.replace(/[^a-z0-9-]/gi, "-").toLowerCase();
+
+  return `${prefix}-${safeProjectName}-${Date.now()}-${randomUUID().slice(0, 8)}@makemenage.local`;
+}
+
+test("register API returns a usable redirect and session cookie over HTTP", async ({ request }, testInfo) => {
+  const response = await request.fetch("/api/auth/register", {
+    method: "POST",
+    form: {
+      displayName: "API User",
+      email: buildUniqueEmail("api", testInfo.project.name),
+      password: "demo12345",
+    },
+    maxRedirects: 0,
+  });
+
+  expect(response.status()).toBe(303);
+  expect(response.headers()["location"]).toBe("http://localhost:3100/app");
+  expect(response.headers()["set-cookie"]).toContain("makemenage_session=");
+  expect(response.headers()["set-cookie"]).not.toContain("Secure");
+});
 
 test("user can register, create a household, add a member, create a task, and complete it", async ({
   page,
-}) => {
-  const stamp = `${Date.now()}`;
-  const email = `e2e-${stamp}@makemenage.local`;
+}, testInfo) => {
+  const email = buildUniqueEmail("e2e", testInfo.project.name);
 
   await page.goto("/register");
   await page.getByPlaceholder("Prénom ou pseudo").fill("E2E User");

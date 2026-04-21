@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-
 import { createSession, hashPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { redirectTo, shouldUseSecureCookies } from "@/lib/request";
 import { registerSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -13,7 +12,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL("/register", request.url), 303);
+    return redirectTo(request, "/register");
   }
 
   const existing = await db.user.findUnique({
@@ -23,7 +22,7 @@ export async function POST(request: Request) {
   });
 
   if (existing) {
-    return NextResponse.redirect(new URL("/login", request.url), 303);
+    return redirectTo(request, "/login");
   }
 
   const user = await db.user.create({
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
     },
   });
 
-  await createSession(user.id);
+  await createSession(user.id, { secure: shouldUseSecureCookies(request) });
 
-  return NextResponse.redirect(new URL("/app", request.url), 303);
+  return redirectTo(request, "/app");
 }

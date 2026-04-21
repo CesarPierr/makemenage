@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { redirectTo } from "@/lib/request";
 import { absenceSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -15,7 +14,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL("/app/settings", request.url), 303);
+    return redirectTo(request, "/app/settings");
   }
 
   const target = await db.householdMember.findUnique({
@@ -23,7 +22,7 @@ export async function POST(request: Request) {
   });
 
   if (!target) {
-    return NextResponse.redirect(new URL("/app/settings", request.url), 303);
+    return redirectTo(request, "/app/settings");
   }
 
   const membership = await db.householdMember.findFirst({
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
   });
 
   if (!membership) {
-    return NextResponse.redirect(new URL("/app", request.url), 303);
+    return redirectTo(request, "/app");
   }
 
   await db.memberAvailability.create({
@@ -47,5 +46,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/app/settings?household=${target.householdId}`, request.url), 303);
+  return redirectTo(request, `/app/settings?household=${target.householdId}`);
 }
