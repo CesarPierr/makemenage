@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: makemenage
+      POSTGRES_USER: makemenage
+      POSTGRES_PASSWORD: makemenage
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U makemenage -d makemenage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://makemenage:makemenage@db:5432/makemenage?schema=public
+      APP_BASE_URL: http://localhost:3000
+      AUTH_SECRET: dev-secret-change-me
+      DEFAULT_TIMEZONE: Europe/Paris
+      OCCURRENCE_PAST_DAYS: 30
+      OCCURRENCE_FUTURE_DAYS: 60
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    command: sh -c "npx prisma db push && npm run start"
+
+volumes:
+  postgres_dev_data:

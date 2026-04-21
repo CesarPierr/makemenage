@@ -2,6 +2,7 @@ import {
   addDays,
   addWeeks,
   endOfDay,
+  format,
   getDate,
   getDay,
   isAfter,
@@ -124,7 +125,7 @@ export function computeDueDate(scheduledDate: Date, offsetDays = 0) {
 }
 
 export function buildGenerationKey(taskTemplateId: string, date: Date) {
-  return `${taskTemplateId}:${date.toISOString().slice(0, 10)}`;
+  return `${taskTemplateId}:${format(date, "yyyy-MM-dd")}`;
 }
 
 export function isLogicalOccurrenceDate(rule: RecurrenceRuleInput, date: Date) {

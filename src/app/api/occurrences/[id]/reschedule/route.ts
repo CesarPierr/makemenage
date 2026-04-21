@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
+import { parseDateInput } from "@/lib/date-input";
 import { db } from "@/lib/db";
 import { rescheduleOccurrence } from "@/lib/scheduling/service";
 
@@ -40,7 +41,7 @@ export async function POST(request: Request, { params }: Params) {
   await rescheduleOccurrence({
     occurrenceId: id,
     actorMemberId: String(formData.get("memberId") || membership.id),
-    scheduledDate: new Date(date),
+    scheduledDate: parseDateInput(date),
   });
 
   return NextResponse.redirect(new URL(`/app?household=${occurrence.householdId}`, request.url));

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { parseDateInput } from "@/lib/date-input";
+
 export const registerSchema = z.object({
   displayName: z.string().min(2).max(60),
   email: z.email(),
@@ -29,8 +31,8 @@ export const memberSchema = z.object({
 
 export const absenceSchema = z.object({
   memberId: z.string().cuid(),
-  startDate: z.coerce.date(),
-  endDate: z.coerce.date(),
+  startDate: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
+  endDate: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
   notes: z.string().max(240).optional(),
 });
 
@@ -39,7 +41,7 @@ export const recurrenceSchema = z.object({
   interval: z.coerce.number().int().min(1).max(90).default(1),
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
   dayOfMonth: z.coerce.number().int().min(1).max(31).optional(),
-  anchorDate: z.coerce.date(),
+  anchorDate: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
   dueOffsetDays: z.coerce.number().int().min(0).max(30).default(0),
 });
 
@@ -68,8 +70,8 @@ export const taskTemplateSchema = z.object({
   room: z.string().max(40).optional(),
   estimatedMinutes: z.coerce.number().int().min(5).max(480).default(30),
   priority: z.coerce.number().int().min(1).max(3).default(2),
-  startsOn: z.coerce.date(),
-  endsOn: z.coerce.date().optional(),
+  startsOn: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
+  endsOn: z.preprocess((value) => (value ? parseDateInput(String(value)) : undefined), z.date()).optional(),
   recurrence: recurrenceSchema,
   assignment: assignmentSchema,
 });
@@ -78,6 +80,6 @@ export const occurrenceActionSchema = z.object({
   occurrenceId: z.string().cuid(),
   memberId: z.string().cuid().optional(),
   notes: z.string().max(280).optional(),
-  date: z.coerce.date().optional(),
+  date: z.preprocess((value) => (value ? parseDateInput(String(value)) : undefined), z.date()).optional(),
   actualMinutes: z.coerce.number().int().min(0).max(480).optional(),
 });

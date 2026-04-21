@@ -1,12 +1,32 @@
-import type { TaskOccurrence, HouseholdMember } from "@prisma/client";
+type MemberLike = {
+  id: string;
+  displayName: string;
+  color: string;
+  isActive: boolean;
+};
 
-export function buildLoadMetrics(members: HouseholdMember[], occurrences: TaskOccurrence[]) {
+type OccurrenceLike = {
+  assignedMemberId: string | null;
+  actualMinutes: number | null;
+  status: string;
+  taskTemplate?: {
+    estimatedMinutes: number;
+  };
+};
+
+export function buildLoadMetrics(members: MemberLike[], occurrences: OccurrenceLike[]) {
   const activeMembers = members.filter((member) => member.isActive);
-  const totalMinutes = occurrences.reduce((sum, occurrence) => sum + (occurrence.actualMinutes ?? 0), 0);
+  const totalMinutes = occurrences.reduce(
+    (sum, occurrence) => sum + (occurrence.actualMinutes ?? occurrence.taskTemplate?.estimatedMinutes ?? 0),
+    0,
+  );
 
   const byMember = activeMembers.map((member) => {
     const owned = occurrences.filter((occurrence) => occurrence.assignedMemberId === member.id);
-    const plannedMinutes = owned.reduce((sum, occurrence) => sum + (occurrence.actualMinutes ?? 0), 0);
+    const plannedMinutes = owned.reduce(
+      (sum, occurrence) => sum + (occurrence.actualMinutes ?? occurrence.taskTemplate?.estimatedMinutes ?? 0),
+      0,
+    );
     const completed = owned.filter((occurrence) => occurrence.status === "completed").length;
 
     return {

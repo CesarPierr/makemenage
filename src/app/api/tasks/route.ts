@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
+import { parseDateInput } from "@/lib/date-input";
 import { canManageHousehold } from "@/lib/households";
 import { db } from "@/lib/db";
 
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
         | "every_x_weeks"
         | "monthly_simple",
       interval: Number(formData.get("interval") ?? 1),
-      anchorDate: new Date(String(formData.get("startsOn"))),
+      anchorDate: parseDateInput(String(formData.get("startsOn"))),
       dueOffsetDays: 0,
     },
   });
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
       room: (formData.get("room")?.toString() || null) ?? null,
       estimatedMinutes: Number(formData.get("estimatedMinutes") ?? 30),
       priority: 2,
-      startsOn: new Date(String(formData.get("startsOn"))),
+      startsOn: parseDateInput(String(formData.get("startsOn"))),
       recurrenceRuleId: recurrenceRule.id,
       assignmentRuleId: assignmentRule.id,
       createdByMemberId: membership.id,

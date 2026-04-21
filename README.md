@@ -1,48 +1,61 @@
-# Spécifications de l'application web de répartition des tâches ménagères
+# MakeMenage
 
-Ce dossier contient un pack de spécifications en **Markdown** à remettre à Codex pour développer une application web responsive, auto-hébergeable, orientée navigateur, avec déploiement Docker et reverse proxy.
+Application web responsive de gestion et de répartition des tâches ménagères, pensée d'abord pour le téléphone puis pour le desktop, et déployable en self-hosted avec PostgreSQL et Docker.
 
-## Objectif produit
+## Ce qui est déjà implémenté
 
-Créer une application web permettant à un foyer, un couple ou une colocation de :
+- authentification locale simple email / mot de passe
+- création de foyer
+- gestion des membres et des absences
+- création de tâches récurrentes
+- moteur de génération avec `daily`, `every_x_days`, `weekly`, `every_x_weeks`, `monthly_simple`
+- modes d'attribution `fixed`, `manual`, `strict_alternation`, `round_robin`, `least_assigned_count`, `least_assigned_minutes`
+- actions sur occurrence : complétion, saut, report, réassignation
+- dashboard mobile-first
+- vue mes tâches
+- vue calendrier
+- historique
+- analytics simples de charge / équité
+- export iCal foyer et par membre
+- Docker dev et prod
 
-- définir des tâches ménagères récurrentes ;
-- attribuer ces tâches manuellement ou automatiquement ;
-- gérer des rotations complexes (alternance une semaine sur deux, round-robin, équilibrage par charge ou par temps estimé) ;
-- visualiser les tâches dans une vue liste et calendrier ;
-- suivre l'historique, la charge et l'équité ;
-- fonctionner sur mobile et desktop via navigateur ;
-- être déployée facilement sur un serveur personnel via Docker ;
-- exposer à terme des flux iCal et, plus tard, des intégrations calendrier plus avancées.
+## Démarrage rapide
 
-## Fichiers
+```bash
+cp .env.example .env
+npm install
+docker compose up -d db
+npx prisma generate
+npx prisma db push
+npm run dev
+```
 
-- [AGENT.md](AGENT.md) — guide global à destination de Codex / agent développeur.
-- [01_vision_produit.md](01_vision_produit.md) — vision, objectifs, périmètre, cas d'usage et fonctionnalités.
-- [02_architecture_technique.md](02_architecture_technique.md) — architecture cible, stack, composants, sécurité, Docker, reverse proxy, DNS.
-- [03_modele_de_donnees_et_regles_metier.md](03_modele_de_donnees_et_regles_metier.md) — schéma métier, modèles, règles de récurrence et d'attribution.
-- [04_plan_de_sprints.md](04_plan_de_sprints.md) — découpage par sprints avec objectifs, stories et critères d'acceptation.
-- [05_plan_de_tests.md](05_plan_de_tests.md) — stratégie de test progressive, du simple au complexe.
+Application : `http://localhost:3000`
 
-## Hypothèses de mise en œuvre
+## Tests
 
-- Application **responsive web-first**, installable ensuite en PWA si utile.
-- Déploiement **self-hosted** sur un VPS ou serveur personnel.
-- Reverse proxy **Caddy** recommandé pour simplifier HTTPS, avec option Nginx documentée.
-- Backend API avec base PostgreSQL.
-- Interface claire, simple, mobile-friendly, sans dépendre d'apps natives iOS/Android.
-- Priorité au **fonctionnel robuste** avant les intégrations avancées.
+```bash
+npm run lint
+npm run typecheck
+npm run test
+```
 
-## Résultat attendu pour la V1
+## Documentation complémentaire
 
-Une application utilisable au quotidien, stable et auto-hébergeable, permettant :
+- [docs/setup-dev.md](docs/setup-dev.md)
+- [docs/setup-prod.md](docs/setup-prod.md)
+- [docs/reverse-proxy-caddy.md](docs/reverse-proxy-caddy.md)
+- [docs/reverse-proxy-nginx.md](docs/reverse-proxy-nginx.md)
+- [docs/env.md](docs/env.md)
+- [docs/backup.md](docs/backup.md)
 
-- création de foyers et membres ;
-- création de tâches récurrentes ;
-- attribution manuelle ou auto ;
-- alternance stricte ou équilibrage ;
-- validation des tâches ;
-- vues calendrier/liste ;
-- indicateurs de charge ;
-- Docker Compose opérationnel derrière reverse proxy.
+## Specs d'origine
 
+Les spécifications initiales restent dans :
+
+- [AGENT.md](AGENT.md)
+- [docs/01_vision_produit.md](docs/01_vision_produit.md)
+- [docs/02_architecture_technique.md](docs/02_architecture_technique.md)
+- [docs/03_modele_de_donnees_et_regles_metier.md](docs/03_modele_de_donnees_et_regles_metier.md)
+- [docs/04_plan_de_sprints.md](docs/04_plan_de_sprints.md)
+- [docs/05_plan_de_tests.md](docs/05_plan_de_tests.md)
