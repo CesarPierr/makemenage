@@ -1,0 +1,15 @@
+[Unit]
+Description=MakeMenage docker stack
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/makemenage
+ExecStart=/usr/bin/env bash /opt/makemenage/scripts/server/install-or-update.sh
+ExecStop=/usr/bin/env bash -lc 'cd /opt/makemenage && docker compose --env-file .env.production -f docker-compose.prod.yml down'
+
+[Install]
+WantedBy=multi-user.target

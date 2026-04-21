@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL("/register", request.url));
+    return NextResponse.redirect(new URL("/register", request.url), 303);
   }
 
   const existing = await db.user.findUnique({
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   });
 
   if (existing) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/login", request.url), 303);
   }
 
   const user = await db.user.create({
@@ -36,5 +36,5 @@ export async function POST(request: Request) {
 
   await createSession(user.id);
 
-  return NextResponse.redirect(new URL("/app", request.url));
+  return NextResponse.redirect(new URL("/app", request.url), 303);
 }

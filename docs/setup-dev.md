@@ -48,3 +48,10 @@ Compte créé :
 
 - email : `demo@makemenage.local`
 - mot de passe : `demo12345`
+
+## E2E navigateur
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```

@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL("/app?onboarding=1", request.url));
+    return NextResponse.redirect(new URL("/app?onboarding=1", request.url), 303);
   }
 
   const household = await db.household.create({
@@ -48,5 +48,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/app?household=${household.id}`, request.url));
+  return NextResponse.redirect(new URL(`/app?household=${household.id}`, request.url), 303);
 }

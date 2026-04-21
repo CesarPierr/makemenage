@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!membership || !canManageHousehold(membership.role)) {
-    return NextResponse.redirect(new URL(`/app/settings?household=${id}`, request.url));
+    return NextResponse.redirect(new URL(`/app/settings?household=${id}`, request.url), 303);
   }
 
   const formData = await request.formData();
@@ -33,12 +33,12 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL(`/app/settings?household=${id}`, request.url));
+    return NextResponse.redirect(new URL(`/app/settings?household=${id}`, request.url), 303);
   }
 
   await db.householdMember.create({
     data: parsed.data,
   });
 
-  return NextResponse.redirect(new URL(`/app/settings?household=${id}`, request.url));
+  return NextResponse.redirect(new URL(`/app/settings?household=${id}`, request.url), 303);
 }

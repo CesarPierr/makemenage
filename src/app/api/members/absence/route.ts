@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL("/app/settings", request.url));
+    return NextResponse.redirect(new URL("/app/settings", request.url), 303);
   }
 
   const target = await db.householdMember.findUnique({
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   });
 
   if (!target) {
-    return NextResponse.redirect(new URL("/app/settings", request.url));
+    return NextResponse.redirect(new URL("/app/settings", request.url), 303);
   }
 
   const membership = await db.householdMember.findFirst({
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   });
 
   if (!membership) {
-    return NextResponse.redirect(new URL("/app", request.url));
+    return NextResponse.redirect(new URL("/app", request.url), 303);
   }
 
   await db.memberAvailability.create({
@@ -47,5 +47,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/app/settings?household=${target.householdId}`, request.url));
+  return NextResponse.redirect(new URL(`/app/settings?household=${target.householdId}`, request.url), 303);
 }

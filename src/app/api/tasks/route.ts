@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   });
 
   if (!membership || !canManageHousehold(membership.role) || !eligibleMemberIds.length) {
-    return NextResponse.redirect(new URL(`/app?household=${householdId}`, request.url));
+    return NextResponse.redirect(new URL(`/app?household=${householdId}`, request.url), 303);
   }
 
   const recurrenceRule = await db.recurrenceRule.create({
@@ -103,5 +103,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/app?household=${householdId}`, request.url));
+  return NextResponse.redirect(new URL(`/app?household=${householdId}`, request.url), 303);
 }

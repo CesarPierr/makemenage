@@ -16,7 +16,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!occurrence) {
-    return NextResponse.redirect(new URL("/app", request.url));
+    return NextResponse.redirect(new URL("/app", request.url), 303);
   }
 
   const membership = await db.householdMember.findFirst({
@@ -27,7 +27,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!membership) {
-    return NextResponse.redirect(new URL("/app", request.url));
+    return NextResponse.redirect(new URL("/app", request.url), 303);
   }
 
   const formData = await request.formData();
@@ -37,5 +37,5 @@ export async function POST(request: Request, { params }: Params) {
     actorMemberId: String(formData.get("memberId") || membership.id),
   });
 
-  return NextResponse.redirect(new URL(`/app?household=${occurrence.householdId}`, request.url));
+  return NextResponse.redirect(new URL(`/app?household=${occurrence.householdId}`, request.url), 303);
 }

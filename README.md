@@ -18,6 +18,7 @@ Application web responsive de gestion et de répartition des tâches ménagères
 - analytics simples de charge / équité
 - export iCal foyer et par membre
 - Docker dev et prod
+- stack prod isolée du dev sur la même machine
 
 ## Démarrage rapide
 
@@ -38,6 +39,8 @@ Application : `http://localhost:3000`
 npm run lint
 npm run typecheck
 npm run test
+npx playwright install chromium
+npm run test:e2e
 ```
 
 ## Documentation complémentaire
@@ -48,6 +51,12 @@ npm run test
 - [docs/reverse-proxy-nginx.md](docs/reverse-proxy-nginx.md)
 - [docs/env.md](docs/env.md)
 - [docs/backup.md](docs/backup.md)
+
+## Déploiement assisté
+
+- sync direct vers un serveur SSH : `bash scripts/deploy/sync-to-server.sh user@host`
+- auto-update côté serveur via `deploy/systemd/*.service` et `*.timer`
+- auto-update local sur cette VM : `npm run deploy:install-local-cron`
 
 ## Specs d'origine
 

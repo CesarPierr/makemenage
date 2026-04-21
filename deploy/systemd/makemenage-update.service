@@ -1,0 +1,9 @@
+[Unit]
+Description=Update and redeploy MakeMenage
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/makemenage
+ExecStart=/usr/bin/env bash /opt/makemenage/scripts/server/pull-and-deploy.sh

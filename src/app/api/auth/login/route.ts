@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/login", request.url), 303);
   }
 
   const user = await db.user.findUnique({
@@ -22,13 +22,13 @@ export async function POST(request: Request) {
   });
 
   if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/login", request.url), 303);
   }
 
   const valid = await verifyPassword(parsed.data.password, user.passwordHash);
 
   if (!valid) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/login", request.url), 303);
   }
 
   await db.user.update({
@@ -38,5 +38,5 @@ export async function POST(request: Request) {
 
   await createSession(user.id);
 
-  return NextResponse.redirect(new URL("/app", request.url));
+  return NextResponse.redirect(new URL("/app", request.url), 303);
 }

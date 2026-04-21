@@ -1,3 +1,5 @@
+name: makemenage-prod
+
 services:
   db:
     image: postgres:17
@@ -8,6 +10,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set-postgres-password}
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
+    expose:
+      - "5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-makemenage} -d ${POSTGRES_DB:-makemenage}"]
       interval: 15s
@@ -34,7 +38,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-    command: sh -c "npx prisma db push && npm run start"
+    command: sh -c "npx prisma migrate deploy && npm run start"
 
   reverse-proxy:
     image: caddy:2
@@ -42,9 +46,10 @@ services:
     depends_on:
       app:
         condition: service_started
+    environment:
+      APP_HOST: ${APP_HOST:?set-app-host}
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./examples/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -52,5 +57,8 @@ services:
 
 volumes:
   postgres_prod_data:
+    name: makemenage_postgres_prod_data
   caddy_data:
+    name: makemenage_caddy_data
   caddy_config:
+    name: makemenage_caddy_config
