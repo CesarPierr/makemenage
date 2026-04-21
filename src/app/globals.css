@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+:root {
+  --sand-50: #f7f2e9;
+  --sand-100: #efe2cd;
+  --sand-200: #e4d0ae;
+  --ink-950: #1e1f22;
+  --ink-700: #545c68;
+  --ink-500: #7f8997;
+  --leaf-500: #38735d;
+  --leaf-600: #2f5f4d;
+  --coral-500: #d8643d;
+  --coral-600: #bc4f2d;
+  --card: rgba(255, 255, 255, 0.84);
+  --line: rgba(30, 31, 34, 0.08);
+  --shadow: 0 20px 60px rgba(70, 48, 20, 0.12);
+}
+
+@theme inline {
+  --color-background: var(--sand-50);
+  --color-foreground: var(--ink-950);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-sans);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(216, 100, 61, 0.18), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(56, 115, 93, 0.16), transparent 22%),
+    var(--sand-50);
+  color: var(--ink-950);
+  font-family: var(--font-sans), sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app-surface {
+  background: var(--card);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+}
+
+.display-title {
+  font-family: var(--font-display), serif;
+}
+
+.field {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.9rem 1rem;
+  color: var(--ink-950);
+}
+
+.field::placeholder {
+  color: var(--ink-500);
+}
+
+.btn-primary {
+  border-radius: 999px;
+  background: var(--coral-500);
+  color: white;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.btn-primary:hover {
+  background: var(--coral-600);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.stat-pill {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--line);
+}
+
+.calendar-cell {
+  min-height: 7.5rem;
+}
+
+@media (max-width: 640px) {
+  .calendar-cell {
+    min-height: 5.75rem;
+  }
+}

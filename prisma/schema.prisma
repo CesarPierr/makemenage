@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum HouseholdRole {
+  owner
+  admin
+  member
+}
+
+enum AvailabilityType {
+  weekly_rule
+  date_range_absence
+}
+
+enum RecurrenceType {
+  daily
+  every_x_days
+  weekly
+  every_x_weeks
+  monthly_simple
+}
+
+enum AssignmentMode {
+  fixed
+  manual
+  strict_alternation
+  round_robin
+  least_assigned_count
+  least_assigned_minutes
+}
+
+enum OccurrenceStatus {
+  planned
+  due
+  overdue
+  completed
+  skipped
+  rescheduled
+  cancelled
+}
+
+enum OccurrenceActionType {
+  created
+  assigned
+  completed
+  skipped
+  rescheduled
+  reassigned
+  edited
+  cancelled
+}
+
+model User {
+  id           String            @id @default(cuid())
+  email        String            @unique
+  passwordHash String
+  displayName  String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  lastLoginAt  DateTime?
+  sessions     Session[]
+  memberships  HouseholdMember[]
+  households   Household[]       @relation("HouseholdOwner")
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Household {
+  id              String            @id @default(cuid())
+  name            String
+  timezone        String
+  createdByUserId String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  createdBy       User              @relation("HouseholdOwner", fields: [createdByUserId], references: [id])
+  members         HouseholdMember[]
+  tasks           TaskTemplate[]
+  occurrences     TaskOccurrence[]
+
+  @@index([createdByUserId])
+}
+
+model HouseholdMember {
+  id                    String             @id @default(cuid())
+  householdId           String
+  userId                String?
+  displayName           String
+  color                 String
+  role                  HouseholdRole
+  isActive              Boolean            @default(true)
+  weightingFactor       Float              @default(1)
+  weeklyCapacityMinutes Int?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  household             Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user                  User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  availabilities        MemberAvailability[]
+  createdTasks          TaskTemplate[]     @relation("TaskTemplateCreator")
+  assignedOccurrences   TaskOccurrence[]   @relation("OccurrenceAssignee")
+  completedOccurrences  TaskOccurrence[]   @relation("OccurrenceCompleter")
+  actionLogs            OccurrenceActionLog[]
+
+  @@index([householdId])
+  @@index([userId])
+}
+
+model MemberAvailability {
+  id        String           @id @default(cuid())
+  memberId  String
+  type      AvailabilityType
+  weekdays  Json?
+  startDate DateTime
+  endDate   DateTime
+  notes     String?
+  createdAt DateTime         @default(now())
+  member    HouseholdMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, startDate, endDate])
+}
+
+model RecurrenceRule {
+  id                 String         @id @default(cuid())
+  type               RecurrenceType
+  interval           Int            @default(1)
+  weekdays           Json?
+  dayOfMonth         Int?
+  anchorDate         DateTime
+  generateTimeOfDay  String?
+  dueOffsetDays      Int            @default(0)
+  config             Json?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  task               TaskTemplate?
+}
+
+model AssignmentRule {
+  id                           String          @id @default(cuid())
+  mode                         AssignmentMode
+  eligibleMemberIds            Json
+  fixedMemberId                String?
+  rotationOrder                Json?
+  fairnessWindowDays           Int?
+  preserveRotationOnSkip       Boolean         @default(true)
+  preserveRotationOnReschedule Boolean         @default(true)
+  rebalanceOnMemberAbsence     Boolean         @default(true)
+  lockAssigneeAfterGeneration  Boolean         @default(true)
+  config                       Json?
+  createdAt                    DateTime        @default(now())
+  updatedAt                    DateTime        @updatedAt
+  task                         TaskTemplate?
+}
+
+model TaskTemplate {
+  id               String          @id @default(cuid())
+  householdId      String
+  title            String
+  description      String?
+  category         String?
+  room             String?
+  tags             Json?
+  estimatedMinutes Int             @default(30)
+  difficulty       Int?
+  priority         Int             @default(2)
+  isActive         Boolean         @default(true)
+  startsOn         DateTime
+  endsOn           DateTime?
+  recurrenceRuleId String          @unique
+  assignmentRuleId String          @unique
+  createdByMemberId String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  household        Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  recurrenceRule   RecurrenceRule  @relation(fields: [recurrenceRuleId], references: [id], onDelete: Cascade)
+  assignmentRule   AssignmentRule  @relation(fields: [assignmentRuleId], references: [id], onDelete: Cascade)
+  createdByMember  HouseholdMember? @relation("TaskTemplateCreator", fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  occurrences      TaskOccurrence[]
+
+  @@index([householdId])
+}
+
+model TaskOccurrence {
+  id                  String               @id @default(cuid())
+  householdId         String
+  taskTemplateId      String
+  scheduledDate       DateTime
+  dueDate             DateTime
+  assignedMemberId    String?
+  status              OccurrenceStatus     @default(planned)
+  sourceGenerationKey String               @unique
+  generationVersion   Int                  @default(1)
+  originalScheduledDate DateTime
+  completedAt         DateTime?
+  completedByMemberId String?
+  actualMinutes       Int?
+  notes               String?
+  isManuallyModified  Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  household           Household            @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  taskTemplate        TaskTemplate         @relation(fields: [taskTemplateId], references: [id], onDelete: Cascade)
+  assignedMember      HouseholdMember?     @relation("OccurrenceAssignee", fields: [assignedMemberId], references: [id], onDelete: SetNull)
+  completedByMember   HouseholdMember?     @relation("OccurrenceCompleter", fields: [completedByMemberId], references: [id], onDelete: SetNull)
+  logs                OccurrenceActionLog[]
+
+  @@index([householdId, scheduledDate])
+  @@index([assignedMemberId, scheduledDate])
+  @@index([taskTemplateId])
+}
+
+model OccurrenceActionLog {
+  id             String               @id @default(cuid())
+  occurrenceId   String
+  actionType     OccurrenceActionType
+  actorMemberId  String?
+  previousValues Json?
+  newValues      Json?
+  createdAt      DateTime             @default(now())
+  occurrence     TaskOccurrence       @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+  actorMember    HouseholdMember?     @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
+
+  @@index([occurrenceId])
+}

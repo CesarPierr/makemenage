@@ -1,0 +1,253 @@
+import Link from "next/link";
+import { addDays, format, startOfToday } from "date-fns";
+import { fr } from "date-fns/locale";
+import { CalendarClock, Clock3, ListChecks, TimerReset } from "lucide-react";
+
+import { OccurrenceCard } from "@/components/occurrence-card";
+import { buildLoadMetrics } from "@/lib/analytics";
+import { requireUser } from "@/lib/auth";
+import { canManageHousehold, getCurrentHouseholdContext } from "@/lib/households";
+import { formatMinutes, percent } from "@/lib/utils";
+
+type DashboardPageProps = {
+  searchParams: Promise<{ household?: string; onboarding?: string }>;
+};
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const user = await requireUser();
+  const params = await searchParams;
+  const context = await getCurrentHouseholdContext(user.id, params.household);
+
+  if (!context) {
+    return (
+      <section className="app-surface rounded-[2rem] p-6 sm:p-8">
+        <p className="text-sm uppercase tracking-[0.24em] text-[var(--leaf-600)]">Bienvenue</p>
+        <h2 className="display-title mt-2 text-4xl">Créer votre premier foyer</h2>
+        <p className="mt-3 max-w-2xl text-[var(--ink-700)]">
+          Commencez par un foyer, puis ajoutez les membres et les tâches récurrentes. Tout est prévu pour démarrer vite.
+        </p>
+        <form action="/api/households" method="post" className="mt-8 grid gap-3 sm:max-w-lg">
+          <input className="field" type="text" name="name" placeholder="Nom du foyer" required />
+          <input
+            className="field"
+            type="text"
+            name="timezone"
+            defaultValue={process.env.DEFAULT_TIMEZONE ?? "Europe/Paris"}
+            required
+          />
+          <button className="btn-primary px-5 py-3 font-semibold" type="submit">
+            Créer le foyer
+          </button>
+        </form>
+      </section>
+    );
+  }
+
+  const today = startOfToday();
+  const todaysOccurrences = context.occurrences.filter(
+    (occurrence) => format(occurrence.scheduledDate, "yyyy-MM-dd") === format(today, "yyyy-MM-dd"),
+  );
+  const upcomingOccurrences = context.occurrences.filter(
+    (occurrence) =>
+      occurrence.scheduledDate > today &&
+      occurrence.scheduledDate <= addDays(today, 7) &&
+      occurrence.status !== "cancelled",
+  );
+  const myOccurrences = context.currentMember
+    ? context.occurrences.filter((occurrence) => occurrence.assignedMemberId === context.currentMember?.id)
+    : [];
+  const metrics = buildLoadMetrics(context.household.members, context.weekOccurrences);
+
+  return (
+    <div className="space-y-4">
+      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="app-surface rounded-[2rem] p-5 sm:p-6">
+          <p className="text-sm uppercase tracking-[0.24em] text-[var(--leaf-600)]">
+            {format(today, "EEEE d MMMM", { locale: fr })}
+          </p>
+          <h2 className="display-title mt-2 text-3xl sm:text-4xl">
+            Vue rapide du foyer {context.household.name}
+          </h2>
+          <p className="mt-3 max-w-2xl text-[var(--ink-700)]">
+            Les actions les plus fréquentes sont juste en dessous. L&apos;idée est qu&apos;un passage sur téléphone suffise à garder le planning net.
+          </p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              {
+                label: "Aujourd’hui",
+                value: todaysOccurrences.length.toString(),
+                detail: "tâches prévues",
+                icon: ListChecks,
+              },
+              {
+                label: "En retard",
+                value: context.overdueOccurrences.filter((occurrence) => occurrence.status === "overdue").length.toString(),
+                detail: "à rattraper",
+                icon: TimerReset,
+              },
+              {
+                label: "Cette semaine",
+                value: context.weekOccurrences.length.toString(),
+                detail: "occurrences",
+                icon: CalendarClock,
+              },
+              {
+                label: "Ma charge",
+                value: context.currentMember
+                  ? formatMinutes(
+                      myOccurrences.reduce(
+                        (sum, occurrence) => sum + occurrence.taskTemplate.estimatedMinutes,
+                        0,
+                      ),
+                    )
+                  : "0 min",
+                detail: "sur la période",
+                icon: Clock3,
+              },
+            ].map(({ label, value, detail, icon: Icon }) => (
+              <article key={label} className="rounded-[1.6rem] bg-white/70 p-4">
+                <Icon className="size-5 text-[var(--coral-600)]" />
+                <p className="mt-3 text-sm text-[var(--ink-700)]">{label}</p>
+                <p className="mt-1 text-3xl font-semibold">{value}</p>
+                <p className="text-sm text-[var(--ink-500)]">{detail}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div className="app-surface rounded-[2rem] p-5 sm:p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.24em] text-[var(--leaf-600)]">Équilibre</p>
+              <h3 className="display-title mt-2 text-3xl">Charge de la semaine</h3>
+            </div>
+            <Link className="btn-secondary px-4 py-2 text-sm" href={`/app/settings?household=${context.household.id}`}>
+              Régler
+            </Link>
+          </div>
+          <div className="mt-5 space-y-3">
+            {metrics.byMember.map((member) => (
+              <div key={member.memberId} className="rounded-[1.4rem] bg-white/72 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="size-3 rounded-full"
+                      style={{ backgroundColor: member.color }}
+                    />
+                    <div>
+                      <p className="font-semibold">{member.displayName}</p>
+                      <p className="text-sm text-[var(--ink-700)]">
+                        {member.plannedCount} tâches, {formatMinutes(member.plannedMinutes)}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold text-[var(--leaf-600)]">
+                    {percent(member.completionRate)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="display-title text-2xl">Aujourd’hui</h3>
+            <Link className="text-sm font-semibold text-[var(--coral-600)]" href={`/app/my-tasks?household=${context.household.id}`}>
+              Voir mes tâches
+            </Link>
+          </div>
+          {todaysOccurrences.length ? (
+            todaysOccurrences.map((occurrence) => (
+              <OccurrenceCard
+                key={occurrence.id}
+                occurrence={occurrence}
+                members={context.household.members}
+                currentMemberId={context.currentMember?.id}
+              />
+            ))
+          ) : (
+            <div className="app-surface rounded-[1.8rem] p-5 text-[var(--ink-700)]">
+              Aucune tâche prévue aujourd&apos;hui.
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="display-title text-2xl">À venir</h3>
+            <Link className="text-sm font-semibold text-[var(--coral-600)]" href={`/app/calendar?household=${context.household.id}`}>
+              Voir le calendrier
+            </Link>
+          </div>
+          {upcomingOccurrences.length ? (
+            upcomingOccurrences.slice(0, 6).map((occurrence) => (
+              <OccurrenceCard
+                key={occurrence.id}
+                occurrence={occurrence}
+                members={context.household.members}
+                currentMemberId={context.currentMember?.id}
+                compact
+              />
+            ))
+          ) : (
+            <div className="app-surface rounded-[1.8rem] p-5 text-[var(--ink-700)]">
+              Rien d&apos;urgent dans les 7 prochains jours.
+            </div>
+          )}
+        </div>
+      </section>
+
+      {canManageHousehold(context.membership.role) ? (
+        <section className="app-surface rounded-[2rem] p-5 sm:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.24em] text-[var(--leaf-600)]">Ajout rapide</p>
+              <h3 className="display-title mt-2 text-3xl">Créer une nouvelle tâche</h3>
+            </div>
+            <p className="max-w-xl text-sm text-[var(--ink-700)]">
+              Utilisez le mode d&apos;attribution qui correspond à la vie réelle: fixe, alternance, round-robin ou équilibrage.
+            </p>
+          </div>
+
+          <form action="/api/tasks" method="post" className="mt-6 grid gap-3 lg:grid-cols-2">
+            <input type="hidden" name="householdId" value={context.household.id} />
+            <input className="field" type="text" name="title" placeholder="Titre de la tâche" required />
+            <input className="field" type="number" min="5" name="estimatedMinutes" placeholder="Durée estimée (min)" required />
+            <input className="field" type="text" name="category" placeholder="Catégorie" />
+            <input className="field" type="text" name="room" placeholder="Pièce" />
+            <input className="field" type="date" name="startsOn" required />
+            <select className="field" name="recurrenceType" defaultValue="weekly">
+              <option value="daily">Tous les jours</option>
+              <option value="every_x_days">Tous les X jours</option>
+              <option value="weekly">Chaque semaine</option>
+              <option value="every_x_weeks">Toutes les X semaines</option>
+              <option value="monthly_simple">Chaque mois</option>
+            </select>
+            <input className="field" type="number" min="1" name="interval" defaultValue="1" required />
+            <select className="field" name="assignmentMode" defaultValue="strict_alternation">
+              <option value="fixed">Fixe</option>
+              <option value="manual">Manuelle</option>
+              <option value="strict_alternation">Alternance stricte</option>
+              <option value="round_robin">Round-robin</option>
+              <option value="least_assigned_count">Moins de tâches</option>
+              <option value="least_assigned_minutes">Moins de minutes</option>
+            </select>
+            <select className="field lg:col-span-2" name="eligibleMemberIds" multiple required size={Math.min(context.household.members.length, 5)}>
+              {context.household.members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.displayName}
+                </option>
+              ))}
+            </select>
+            <button className="btn-primary lg:col-span-2 px-5 py-3 font-semibold" type="submit">
+              Créer la tâche
+            </button>
+          </form>
+        </section>
+      ) : null}
+    </div>
+  );
+}
