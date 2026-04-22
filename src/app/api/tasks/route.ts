@@ -94,11 +94,11 @@ export async function POST(request: Request) {
   });
 
   if (!membership || !canManageHousehold(membership.role) || !eligibleMemberIds.length) {
-    return redirectTo(request, `/app?household=${householdId}`);
+    return redirectTo(request, `/app/my-tasks?household=${householdId}#new-task`);
   }
 
   if (!parsedTask.success) {
-    return redirectTo(request, `/app?household=${householdId}`);
+    return redirectTo(request, `/app/my-tasks?household=${householdId}#new-task`);
   }
 
   const recurrenceRule = await db.recurrenceRule.create({
@@ -152,5 +152,5 @@ export async function POST(request: Request) {
 
   await syncHouseholdOccurrences(householdId);
 
-  return redirectTo(request, `/app?household=${householdId}`);
+  return redirectTo(request, `/app/my-tasks?household=${householdId}`);
 }

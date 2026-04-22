@@ -3,7 +3,7 @@ import { fr } from "date-fns/locale";
 import { CheckCircle2, CircleDashed, RotateCcw, Settings2 } from "lucide-react";
 
 import { hexToRgba } from "@/lib/colors";
-import { cn, formatMinutes } from "@/lib/utils";
+import { formatMinutes } from "@/lib/utils";
 
 type OccurrenceCardProps = {
   occurrence: {
@@ -30,6 +30,66 @@ function getStatusLabel(status: string) {
   return status.replace("_", " ");
 }
 
+function getStatusTone(status: string, taskColor: string) {
+  if (status === "completed") {
+    return {
+      accent: "var(--leaf-600)",
+      surface: "rgba(56, 115, 93, 0.1)",
+      pillBackground: "rgba(56, 115, 93, 0.12)",
+      pillColor: "var(--leaf-600)",
+      border: "rgba(56, 115, 93, 0.16)",
+    };
+  }
+
+  if (status === "skipped") {
+    return {
+      accent: "var(--ink-700)",
+      surface: "rgba(30, 31, 34, 0.05)",
+      pillBackground: "rgba(30, 31, 34, 0.06)",
+      pillColor: "var(--ink-700)",
+      border: "rgba(30, 31, 34, 0.08)",
+    };
+  }
+
+  if (status === "rescheduled") {
+    return {
+      accent: "var(--sky-600)",
+      surface: "rgba(47, 109, 136, 0.1)",
+      pillBackground: "rgba(47, 109, 136, 0.12)",
+      pillColor: "var(--sky-600)",
+      border: "rgba(47, 109, 136, 0.16)",
+    };
+  }
+
+  if (status === "overdue") {
+    return {
+      accent: "var(--coral-600)",
+      surface: "rgba(216, 100, 61, 0.1)",
+      pillBackground: "rgba(216, 100, 61, 0.12)",
+      pillColor: "var(--coral-600)",
+      border: "rgba(216, 100, 61, 0.16)",
+    };
+  }
+
+  if (status === "due") {
+    return {
+      accent: "var(--coral-600)",
+      surface: "rgba(200, 142, 61, 0.12)",
+      pillBackground: "rgba(200, 142, 61, 0.16)",
+      pillColor: "var(--coral-600)",
+      border: "rgba(200, 142, 61, 0.18)",
+    };
+  }
+
+  return {
+    accent: taskColor,
+    surface: hexToRgba(taskColor, 0.08),
+    pillBackground: hexToRgba(taskColor, 0.12),
+    pillColor: "var(--ink-950)",
+    border: hexToRgba(taskColor, 0.18),
+  };
+}
+
 export function OccurrenceCard({
   occurrence,
   members,
@@ -39,20 +99,26 @@ export function OccurrenceCard({
   const canEditOccurrence = occurrence.status !== "cancelled";
   const taskColor = occurrence.taskTemplate.color ?? "#D8643D";
   const archived = ["completed", "skipped", "cancelled"].includes(occurrence.status);
+  const statusTone = getStatusTone(occurrence.status, taskColor);
 
   return (
     <article
       className="app-surface rounded-[1.7rem] p-4 sm:p-5"
       style={{
-        borderColor: hexToRgba(taskColor, 0.24),
+        borderColor: statusTone.border,
+        background: `linear-gradient(135deg, ${statusTone.surface}, rgba(255, 255, 255, 0.9))`,
         boxShadow: `0 18px 50px ${hexToRgba(taskColor, 0.08)}`,
       }}
     >
+      <div
+        className="mb-4 h-1.5 w-full rounded-full"
+        style={{ background: `linear-gradient(90deg, ${statusTone.accent}, ${hexToRgba(taskColor, 0.42)})` }}
+      />
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="size-3 rounded-full" style={{ backgroundColor: taskColor }} />
-            <p className="text-sm uppercase tracking-[0.18em] text-[var(--leaf-600)]">
+            <p className="text-sm uppercase tracking-[0.18em]" style={{ color: statusTone.accent }}>
               {format(occurrence.scheduledDate, "EEE d MMM", { locale: fr })}
             </p>
           </div>
@@ -82,10 +148,12 @@ export function OccurrenceCard({
           </div>
         </div>
         <span
-          className={cn(
-            "stat-pill shrink-0 px-3 py-1 text-xs font-semibold",
-            archived ? "text-[var(--leaf-600)]" : "text-[var(--ink-700)]",
-          )}
+          className="stat-pill shrink-0 px-3 py-1 text-xs font-semibold"
+          style={{
+            backgroundColor: statusTone.pillBackground,
+            borderColor: statusTone.border,
+            color: statusTone.pillColor,
+          }}
         >
           {getStatusLabel(occurrence.status)}
         </span>
@@ -98,7 +166,7 @@ export function OccurrenceCard({
           <form action={`/api/occurrences/${occurrence.id}/complete`} method="post">
             <input name="memberId" type="hidden" value={currentMemberId ?? ""} />
             <button
-              className="w-full rounded-[1.2rem] border border-[rgba(56,115,93,0.16)] bg-[rgba(56,115,93,0.12)] px-4 py-3 text-left transition-colors hover:bg-[rgba(56,115,93,0.18)]"
+              className="w-full rounded-[1.2rem] border border-[rgba(56,115,93,0.16)] bg-[rgba(56,115,93,0.12)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[rgba(56,115,93,0.18)] hover:shadow-[0_12px_24px_rgba(56,115,93,0.12)]"
               type="submit"
             >
               <span className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--leaf-600)]">
@@ -112,7 +180,7 @@ export function OccurrenceCard({
           <form action={`/api/occurrences/${occurrence.id}/skip`} method="post">
             <input name="memberId" type="hidden" value={currentMemberId ?? ""} />
             <button
-              className="w-full rounded-[1.2rem] border border-[rgba(30,31,34,0.08)] bg-[rgba(30,31,34,0.04)] px-4 py-3 text-left transition-colors hover:bg-[rgba(30,31,34,0.07)]"
+              className="w-full rounded-[1.2rem] border border-[rgba(30,31,34,0.08)] bg-[rgba(30,31,34,0.04)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[rgba(30,31,34,0.07)] hover:shadow-[0_12px_24px_rgba(30,31,34,0.08)]"
               type="submit"
             >
               <span className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink-950)]">
@@ -127,7 +195,7 @@ export function OccurrenceCard({
             <form action={`/api/occurrences/${occurrence.id}/reopen`} method="post">
               <input name="memberId" type="hidden" value={currentMemberId ?? ""} />
               <button
-                className="w-full rounded-[1.2rem] border border-[rgba(47,109,136,0.16)] bg-[rgba(47,109,136,0.1)] px-4 py-3 text-left transition-colors hover:bg-[rgba(47,109,136,0.16)]"
+                className="w-full rounded-[1.2rem] border border-[rgba(47,109,136,0.16)] bg-[rgba(47,109,136,0.1)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[rgba(47,109,136,0.16)] hover:shadow-[0_12px_24px_rgba(47,109,136,0.12)]"
                 type="submit"
               >
                 <span className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--sky-600)]">

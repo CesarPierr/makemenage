@@ -59,18 +59,17 @@ function buildInitialDraft(memberIds: string[]): DraftTask {
 export function TaskCreationWizard({ householdId, members }: TaskCreationWizardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1);
-  const [canSubmitStep3, setCanSubmitStep3] = useState(false);
+  const [isStep3Armed, setIsStep3Armed] = useState(false);
   const [draft, setDraft] = useState<DraftTask>(() => buildInitialDraft(members.map((member) => member.id)));
 
   const everyXMode = draft.recurrenceType === "every_x_days" || draft.recurrenceType === "every_x_weeks";
 
   useEffect(() => {
     if (step !== 3) {
-      setCanSubmitStep3(false);
       return;
     }
 
-    const timeout = window.setTimeout(() => setCanSubmitStep3(true), 120);
+    const timeout = window.setTimeout(() => setIsStep3Armed(true), 120);
     return () => window.clearTimeout(timeout);
   }, [step]);
 
@@ -90,6 +89,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
   function resetWizard() {
     setIsOpen(false);
     setStep(1);
+    setIsStep3Armed(false);
     setDraft(buildInitialDraft(members.map((member) => member.id)));
   }
 
@@ -350,7 +350,10 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
               <button
                 className="btn-quiet inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
                 disabled={step === 1}
-                onClick={() => setStep((current) => Math.max(1, current - 1))}
+                onClick={() => {
+                  setIsStep3Armed(false);
+                  setStep((current) => Math.max(1, current - 1));
+                }}
                 type="button"
               >
                 <ChevronLeft className="size-4" />
@@ -361,7 +364,10 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                 <button
                   className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold"
                   disabled={step === 1 && !draft.title.trim()}
-                  onClick={() => setStep((current) => Math.min(3, current + 1))}
+                  onClick={() => {
+                    setIsStep3Armed(false);
+                    setStep((current) => Math.min(3, current + 1));
+                  }}
                   type="button"
                 >
                   Continuer
@@ -370,7 +376,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
               ) : (
                 <button
                   className="btn-primary px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
-                  disabled={!canSubmitStep3 || !draft.title.trim() || draft.eligibleMemberIds.length === 0}
+                  disabled={!isStep3Armed || !draft.title.trim() || draft.eligibleMemberIds.length === 0}
                   type="submit"
                 >
                   Créer la tâche

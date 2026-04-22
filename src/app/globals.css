@@ -17,6 +17,7 @@
   --card: rgba(255, 255, 255, 0.84);
   --line: rgba(30, 31, 34, 0.08);
   --shadow: 0 20px 60px rgba(70, 48, 20, 0.12);
+  --ring-soft: 0 0 0 4px rgba(56, 115, 93, 0.16);
 }
 
 @theme inline {
@@ -128,6 +129,9 @@ textarea {
 }
 
 .btn-primary {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border-radius: 999px;
   background: var(--coral-500);
   color: white;
@@ -139,6 +143,23 @@ textarea {
     opacity 160ms ease;
 }
 
+.btn-primary::after,
+.btn-secondary::after,
+.btn-quiet::after,
+.section-nav-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 55%);
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 180ms ease,
+    transform 220ms ease;
+}
+
 .btn-primary:hover {
   background: var(--coral-600);
   transform: translateY(-1px);
@@ -146,6 +167,9 @@ textarea {
 }
 
 .btn-secondary {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.75);
@@ -162,6 +186,9 @@ textarea {
 }
 
 .btn-quiet {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.58);
@@ -177,12 +204,37 @@ textarea {
   background: rgba(255, 255, 255, 0.9);
 }
 
+.btn-primary:hover::after,
+.btn-secondary:hover::after,
+.btn-quiet:hover::after,
+.section-nav-link:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.btn-primary:active,
+.btn-secondary:active,
+.btn-quiet:active,
+.section-nav-link:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+.btn-primary:active::after,
+.btn-secondary:active::after,
+.btn-quiet:active::after,
+.section-nav-link:active::after {
+  opacity: 1;
+  transform: translateY(0) scale(1.02);
+}
+
 .btn-primary:focus-visible,
 .btn-secondary:focus-visible,
+.btn-quiet:focus-visible,
 .field:focus-visible,
+.section-nav-link:focus-visible,
 a:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(56, 115, 93, 0.16);
+  box-shadow: var(--ring-soft);
 }
 
 .stat-pill {
@@ -207,6 +259,11 @@ a:focus-visible {
     box-shadow 180ms ease,
     border-color 180ms ease,
     background 180ms ease;
+}
+
+.soft-panel:hover {
+  border-color: rgba(47, 109, 136, 0.14);
+  box-shadow: 0 16px 34px rgba(47, 109, 136, 0.08);
 }
 
 .glow-card {
@@ -257,6 +314,9 @@ a:focus-visible {
 }
 
 .section-nav-link {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   white-space: nowrap;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -277,6 +337,11 @@ a:focus-visible {
   background: white;
   border-color: rgba(47, 109, 136, 0.2);
   color: var(--ink-950);
+}
+
+button:not(:disabled),
+[role="button"] {
+  cursor: pointer;
 }
 
 .section-block {

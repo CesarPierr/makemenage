@@ -26,7 +26,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
     });
 
     if (!membership || !canManageHousehold(membership.role)) {
-      return redirectTo(request, `/app/settings?household=${householdId}`);
+      return redirectTo(request, `/app/my-tasks?household=${householdId}#administration`);
     }
 
     const task = await db.taskTemplate.findFirst({
@@ -34,7 +34,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
     });
 
     if (!task) {
-      return redirectTo(request, `/app/settings?household=${householdId}`);
+      return redirectTo(request, `/app/my-tasks?household=${householdId}#administration`);
     }
 
     await db.taskTemplate.update({
@@ -63,7 +63,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
       data: { status: "cancelled" },
     });
 
-    return redirectTo(request, `/app/settings?household=${householdId}`);
+    return redirectTo(request, `/app/my-tasks?household=${householdId}#administration`);
   }
 
   // Handle PUT as POST default
@@ -112,7 +112,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
   });
 
   if (!parsedTask.success || !eligibleMemberIds.length) {
-    return redirectTo(request, `/app/settings?household=${householdId}`);
+    return redirectTo(request, `/app/my-tasks?household=${householdId}#administration`);
   }
 
   const membership = await db.householdMember.findFirst({
@@ -123,7 +123,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
   });
 
   if (!membership || !canManageHousehold(membership.role)) {
-    return redirectTo(request, `/app/settings?household=${householdId}`);
+    return redirectTo(request, `/app/my-tasks?household=${householdId}#administration`);
   }
 
   const task = await db.taskTemplate.findFirst({
@@ -132,7 +132,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
   });
 
   if (!task) {
-    return redirectTo(request, `/app/settings?household=${householdId}`);
+    return redirectTo(request, `/app/my-tasks?household=${householdId}#administration`);
   }
 
   await db.recurrenceRule.update({
@@ -169,5 +169,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
 
   await syncHouseholdOccurrences(householdId, { taskId, forceOverwriteManual });
 
-  return redirectTo(request, `/app/settings?household=${householdId}`);
+  return redirectTo(request, `/app/my-tasks?household=${householdId}#administration`);
 }

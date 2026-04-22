@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { CopyValueButton } from "@/components/copy-value-button";
 import { MemberSettingsList } from "@/components/member-settings-list";
-import { TaskSettingsList } from "@/components/task-settings-list";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
@@ -64,30 +63,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                         : params.rebalance === "done_overwrite"
                           ? { tone: "success" as const, text: "Rééquilibrage terminé avec écrasement des modifications futures." }
                           : null;
-  const manualFutureOverrides = context.tasks.length
-    ? await db.taskOccurrence.findMany({
-        where: {
-          householdId: context.household.id,
-          taskTemplateId: {
-            in: context.tasks.map((task) => task.id),
-          },
-          status: {
-            in: ["planned", "due", "overdue", "rescheduled"],
-          },
-          scheduledDate: {
-            gte: new Date(),
-          },
-          isManuallyModified: true,
-        },
-        select: {
-          taskTemplateId: true,
-        },
-      })
-    : [];
-  const manualOverridesByTaskId = manualFutureOverrides.reduce<Record<string, number>>((acc, occurrence) => {
-    acc[occurrence.taskTemplateId] = (acc[occurrence.taskTemplateId] ?? 0) + 1;
-    return acc;
-  }, {});
 
   return (
     <div className="space-y-4">
@@ -121,12 +96,21 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <p className="mt-1 text-2xl font-semibold capitalize">{context.membership.role}</p>
           </div>
         </div>
+        {manageable ? (
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link className="btn-primary px-4 py-2.5 text-sm font-semibold" href={`/app/my-tasks?household=${context.household.id}#administration`}>
+              Gérer les tâches récurrentes
+            </Link>
+            <Link className="btn-secondary px-4 py-2.5 text-sm font-semibold" href={`/app/my-tasks?household=${context.household.id}#new-task`}>
+              Créer une tâche
+            </Link>
+          </div>
+        ) : null}
         <div className="section-nav mt-5">
           <a className="section-nav-link" href="#foyers">Foyers</a>
-          <a className="section-nav-link" href="#membres">Membres</a>
-          {manageable ? <a className="section-nav-link" href="#invitations">Invitations</a> : null}
+          <a className="section-nav-link" href="#membres">Équipe</a>
+          {manageable ? <a className="section-nav-link" href="#invitations">Accès</a> : null}
           {manageable ? <a className="section-nav-link" href="#planning">Planning</a> : null}
-          <a className="section-nav-link" href="#taches">Tâches</a>
           {context.membership.role === "owner" ? <a className="section-nav-link" href="#danger">Zone sensible</a> : null}
         </div>
       </section>
@@ -258,7 +242,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       {manageable ? (
         <>
           <section className="app-surface rounded-[2rem] p-5 sm:p-6 section-block" id="invitations">
-            <p className="section-kicker">Invitations</p>
+            <p className="section-kicker">Accès</p>
             <h3 className="display-title mt-2 text-3xl">Partager l’accès</h3>
             <form action={`/api/households/${context.household.id}/invites`} method="post" className="mt-5 compact-form-grid">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -367,16 +351,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           </section>
         </>
       ) : null}
-
-      <section className="app-surface rounded-[2rem] p-5 sm:p-6 section-block" id="taches">
-        <p className="section-kicker">Tâches</p>
-        <h3 className="display-title mt-2 text-3xl">Réglages des tâches</h3>
-        <TaskSettingsList
-          tasks={context.tasks}
-          householdId={context.household.id}
-          manualOverridesByTaskId={manualOverridesByTaskId}
-        />
-      </section>
 
       {context.membership.role === "owner" ? (
         <section className="app-surface rounded-[2rem] border border-red-200/70 p-5 sm:p-6 section-block" id="danger">
