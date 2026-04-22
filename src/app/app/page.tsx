@@ -1,12 +1,22 @@
 import { addDays, format, startOfToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
-import { ArrowRight, CalendarClock, Clock3, ListChecks, Settings2, TimerReset } from "lucide-react";
+import {
+  CalendarClock,
+  CalendarDays,
+  Clock3,
+  ListChecks,
+  Plus,
+  Settings2,
+  TimerReset,
+  Users,
+} from "lucide-react";
 
 import { OccurrenceCard } from "@/components/occurrence-card";
 import { buildLoadMetrics, buildRollingCompletionMetrics } from "@/lib/analytics";
 import { requireUser } from "@/lib/auth";
-import { getCurrentHouseholdContext } from "@/lib/households";
+import { groupOccurrencesByRoom, sumOccurrenceMinutes } from "@/lib/experience";
+import { canManageHousehold, getCurrentHouseholdContext } from "@/lib/households";
 import { formatMinutes, percent } from "@/lib/utils";
 
 type DashboardPageProps = {
@@ -78,6 +88,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     );
   }
 
+  const manageable = canManageHousehold(context.membership.role);
   const today = startOfToday();
   const todaysOccurrences = context.occurrences.filter(
     (occurrence) => format(occurrence.scheduledDate, "yyyy-MM-dd") === format(today, "yyyy-MM-dd"),
@@ -93,20 +104,44 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     : [];
   const metrics = buildLoadMetrics(context.household.members, context.weekOccurrences);
   const rollingCompletionMetrics = buildRollingCompletionMetrics(context.household.members, context.occurrences);
-  const todaysByRoom = Object.entries(
-    todaysOccurrences.reduce<Record<string, typeof todaysOccurrences>>((groups, occurrence) => {
-      const room = occurrence.taskTemplate.room || "Tout l'appartement";
-      groups[room] = [...(groups[room] ?? []), occurrence];
-      return groups;
-    }, {}),
-  );
-  const upcomingByRoom = Object.entries(
-    upcomingOccurrences.reduce<Record<string, typeof upcomingOccurrences>>((groups, occurrence) => {
-      const room = occurrence.taskTemplate.room || "Tout l'appartement";
-      groups[room] = [...(groups[room] ?? []), occurrence];
-      return groups;
-    }, {}),
-  );
+  const todaysByRoom = groupOccurrencesByRoom(todaysOccurrences);
+  const upcomingByRoom = groupOccurrencesByRoom(upcomingOccurrences);
+  const weekCompletedCount = context.weekOccurrences.filter((occurrence) => occurrence.status === "completed").length;
+  const weekCompletionRate = context.weekOccurrences.length
+    ? Math.round((weekCompletedCount / context.weekOccurrences.length) * 100)
+    : 0;
+  const todayMinutes = sumOccurrenceMinutes(todaysOccurrences);
+  const upcomingMinutes = sumOccurrenceMinutes(upcomingOccurrences);
+  const quickActions = [
+    {
+      href: `/app/my-tasks?household=${context.household.id}&tab=daily`,
+      label: "Voir mes tâches",
+      detail: "Priorités, corrections et tâches à venir",
+      icon: ListChecks,
+    },
+    {
+      href: `/app/calendar?household=${context.household.id}`,
+      label: "Ouvrir le calendrier",
+      detail: "Vue mensuelle et export iCal",
+      icon: CalendarDays,
+    },
+    {
+      href: `/app/settings?household=${context.household.id}${manageable ? "&panel=team" : ""}`,
+      label: manageable ? "Gérer le foyer" : "Voir mes réglages",
+      detail: manageable ? "Membres, accès et intégrations" : "Profil et préférences",
+      icon: manageable ? Users : Settings2,
+    },
+    ...(manageable
+      ? [
+          {
+            href: `/app/my-tasks?household=${context.household.id}&tab=wizard`,
+            label: "Créer une tâche",
+            detail: "Simple ou récurrente, en quelques étapes",
+            icon: Plus,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="space-y-4">
@@ -117,41 +152,31 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
+        <div className="app-surface glow-card interactive-surface rounded-[2rem] p-5 sm:p-6">
           <p className="section-kicker">
             {format(today, "EEEE d MMMM", { locale: fr })}
           </p>
-          <h2 className="display-title mt-2 text-3xl leading-tight sm:text-4xl">
-            Vue rapide du foyer {context.household.name}
-          </h2>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Link
-              className="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold"
-              href={`/app/my-tasks?household=${context.household.id}`}
-            >
-              Ouvrir les tâches
-              <ArrowRight className="size-4" />
-            </Link>
-            <Link
-              className="btn-secondary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm"
-              href={`/app/calendar?household=${context.household.id}`}
-            >
-              Voir le calendrier
-            </Link>
-            <Link
-              className="btn-secondary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm"
-              href={`/app/settings?household=${context.household.id}`}
-            >
-              <Settings2 className="size-4" />
-              Réglages
-            </Link>
+          <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <h2 className="display-title text-3xl leading-tight sm:text-4xl">
+                Vue rapide du foyer {context.household.name}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-[var(--ink-700)] sm:text-[0.98rem]">
+                Une entrée plus directe pour voir quoi faire, où agir et comment garder le foyer fluide.
+              </p>
+            </div>
+            <span className="accent-pill">
+              <span className="accent-pill-dot" style={{ backgroundColor: "var(--leaf-500)" }} />
+              {weekCompletionRate}% validé cette semaine
+            </span>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+
+          <div className="mt-6 summary-strip sm:grid-cols-2 xl:grid-cols-4">
             {[
               {
                 label: "Aujourd’hui",
                 value: todaysOccurrences.length.toString(),
-                detail: "tâches prévues",
+                detail: `${formatMinutes(todayMinutes)} prévues`,
                 icon: ListChecks,
               },
               {
@@ -180,7 +205,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 icon: Clock3,
               },
             ].map(({ label, value, detail, icon: Icon }) => (
-              <article key={label} className="soft-panel px-4 py-4">
+              <article key={label} className="metric-card interactive-surface px-4 py-4">
                 <Icon className="size-5 text-[var(--coral-600)]" />
                 <p className="mt-3 text-sm text-[var(--ink-700)]">{label}</p>
                 <p className="mt-1 text-3xl font-semibold">{value}</p>
@@ -188,21 +213,61 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </article>
             ))}
           </div>
+
+          <div className="soft-divider my-6" />
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {quickActions.map(({ href, label, detail, icon: Icon }) => (
+              <Link
+                key={label}
+                href={href}
+                className="metric-card interactive-surface flex min-h-[8.8rem] flex-col justify-between px-4 py-4 transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-strong)]"
+              >
+                <div className="flex size-10 items-center justify-center rounded-full bg-[rgba(47,109,136,0.12)] text-[var(--sky-600)]">
+                  <Icon className="size-5" />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-[var(--ink-950)]">{label}</p>
+                  <p className="text-sm leading-6 text-[var(--ink-700)]">{detail}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
 
         <div className="app-surface rounded-[2rem] p-5 sm:p-6">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="section-kicker">Équilibre</p>
+              <p className="section-kicker">Rythme</p>
               <h3 className="display-title mt-2 text-3xl">Charge de la semaine</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--ink-700)]">
+                Répartition actuelle et niveau de validation sur la fenêtre active.
+              </p>
             </div>
             <Link className="btn-secondary px-4 py-2 text-sm" href={`/app/settings?household=${context.household.id}`}>
               Régler
             </Link>
           </div>
+          <div className="mt-5 rounded-[1.5rem] border border-[var(--line)] bg-white/70 px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-[var(--ink-950)]">Progression collective</p>
+                <p className="text-sm text-[var(--ink-700)]">
+                  {weekCompletedCount} tâche{weekCompletedCount > 1 ? "s" : ""} validée{weekCompletedCount > 1 ? "s" : ""} sur {context.weekOccurrences.length}
+                </p>
+              </div>
+              <span className="text-sm font-semibold text-[var(--leaf-600)]">{weekCompletionRate}%</span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/6">
+              <div
+                className="h-full rounded-full bg-[var(--leaf-500)] transition-all"
+                style={{ width: `${weekCompletionRate}%` }}
+              />
+            </div>
+          </div>
           <div className="mt-5 space-y-3">
             {metrics.byMember.map((member) => (
-              <div key={member.memberId} className="soft-panel px-4 py-4">
+              <div key={member.memberId} className="soft-panel interactive-surface px-4 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <span
@@ -228,7 +293,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <div
-          className="app-surface rounded-[2rem] p-4 sm:p-5"
+          className="app-surface deferred-section rounded-[2rem] p-4 sm:p-5"
           style={{ background: "linear-gradient(180deg, rgba(63,127,103,0.08), rgba(255,255,255,0.96))" }}
         >
           <div className="flex items-center justify-between gap-3 px-1">
@@ -236,19 +301,37 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <p className="section-kicker">Focus</p>
               <h3 className="display-title mt-2 text-2xl">Aujourd’hui</h3>
             </div>
-            <Link className="text-sm font-semibold text-[var(--coral-600)]" href={`/app/my-tasks?household=${context.household.id}`}>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="accent-pill">
+                <span className="accent-pill-dot" style={{ backgroundColor: "var(--leaf-500)" }} />
+                {todaysOccurrences.length} prévue{todaysOccurrences.length > 1 ? "s" : ""}
+              </span>
+              <span className="accent-pill">
+                <span className="accent-pill-dot" style={{ backgroundColor: "var(--coral-500)" }} />
+                {formatMinutes(todayMinutes)}
+              </span>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-3 px-1">
+            <p className="text-sm text-[var(--ink-700)]">
+              Regroupé par pièce pour faciliter les séquences de ménage et éviter les allers-retours.
+            </p>
+            <Link className="text-sm font-semibold text-[var(--coral-600)]" href={`/app/my-tasks?household=${context.household.id}&tab=daily`}>
               Voir mes tâches
             </Link>
           </div>
           <div className="mt-4 space-y-4">
             {todaysByRoom.length ? (
-              todaysByRoom.map(([room, occurrences]) => (
+              todaysByRoom.map(({ room, occurrences, totalMinutes }) => (
                 <div key={room} className="space-y-3">
                   <div className="flex items-center justify-between gap-3 px-1">
                     <span className="stat-pill px-3 py-1 text-xs font-semibold">{room}</span>
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">
-                      {occurrences.length} tâche{occurrences.length > 1 ? "s" : ""}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">
+                        {occurrences.length} tâche{occurrences.length > 1 ? "s" : ""}
+                      </span>
+                      <span className="stat-pill px-3 py-1 text-xs font-semibold">{formatMinutes(totalMinutes)}</span>
+                    </div>
                   </div>
                   {occurrences.map((occurrence) => (
                     <OccurrenceCard
@@ -269,7 +352,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
 
         <div
-          className="app-surface rounded-[2rem] p-4 sm:p-5"
+          className="app-surface deferred-section rounded-[2rem] p-4 sm:p-5"
           style={{ background: "linear-gradient(180deg, rgba(47,109,136,0.08), rgba(255,255,255,0.96))" }}
         >
           <div className="flex items-center justify-between gap-3 px-1">
@@ -277,19 +360,37 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <p className="section-kicker">Planning</p>
               <h3 className="display-title mt-2 text-2xl">À venir</h3>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="accent-pill">
+                <span className="accent-pill-dot" style={{ backgroundColor: "var(--sky-500)" }} />
+                {upcomingOccurrences.length} occurrence{upcomingOccurrences.length > 1 ? "s" : ""}
+              </span>
+              <span className="accent-pill">
+                <span className="accent-pill-dot" style={{ backgroundColor: "var(--leaf-500)" }} />
+                {formatMinutes(upcomingMinutes)}
+              </span>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-3 px-1">
+            <p className="text-sm text-[var(--ink-700)]">
+              Les prochaines occurrences pour organiser les journées suivantes sans perdre le fil.
+            </p>
             <Link className="text-sm font-semibold text-[var(--coral-600)]" href={`/app/calendar?household=${context.household.id}`}>
               Voir le calendrier
             </Link>
           </div>
           <div className="mt-4 space-y-4">
             {upcomingByRoom.length ? (
-              upcomingByRoom.map(([room, occurrences]) => (
+              upcomingByRoom.map(({ room, occurrences, totalMinutes }) => (
                 <div key={room} className="space-y-3">
                   <div className="flex items-center justify-between gap-3 px-1">
                     <span className="stat-pill px-3 py-1 text-xs font-semibold">{room}</span>
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">
-                      {occurrences.length} tâche{occurrences.length > 1 ? "s" : ""}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">
+                        {occurrences.length} tâche{occurrences.length > 1 ? "s" : ""}
+                      </span>
+                      <span className="stat-pill px-3 py-1 text-xs font-semibold">{formatMinutes(totalMinutes)}</span>
+                    </div>
                   </div>
                   {occurrences.slice(0, 4).map((occurrence) => (
                     <OccurrenceCard

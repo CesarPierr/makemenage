@@ -12,6 +12,56 @@ function readObject(value: unknown) {
     : {};
 }
 
+export type HistoryFilter = "all" | "completed" | "skipped" | "rescheduled" | "edited";
+
+type HistoryLog = {
+  actionType: OccurrenceActionType;
+  createdAt: Date;
+};
+
+export function filterHistoryLogs<T extends HistoryLog>(logs: T[], filter: HistoryFilter) {
+  if (filter === "all") {
+    return logs;
+  }
+
+  if (filter === "edited") {
+    return logs.filter((log) => ["edited", "reassigned", "assigned"].includes(log.actionType));
+  }
+
+  return logs.filter((log) => log.actionType === filter);
+}
+
+export function summarizeHistoryLogs(logs: HistoryLog[]) {
+  return logs.reduce(
+    (summary, log) => {
+      if (log.actionType === "completed") {
+        summary.completed += 1;
+      }
+
+      if (log.actionType === "skipped") {
+        summary.skipped += 1;
+      }
+
+      if (log.actionType === "rescheduled") {
+        summary.rescheduled += 1;
+      }
+
+      if (["edited", "reassigned", "assigned"].includes(log.actionType)) {
+        summary.edited += 1;
+      }
+
+      return summary;
+    },
+    {
+      completed: 0,
+      skipped: 0,
+      rescheduled: 0,
+      edited: 0,
+      total: logs.length,
+    },
+  );
+}
+
 export function getHistoryActionLabel(actionType: OccurrenceActionType) {
   switch (actionType) {
     case "completed":

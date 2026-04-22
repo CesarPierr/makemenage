@@ -19,7 +19,15 @@ export function CalendarSidebar({ householdFeedUrl, personalFeedUrl, householdId
   };
 
   return (
-    <aside className="space-y-4">
+    <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+      <div className="app-surface rounded-[2rem] p-5">
+        <p className="section-kicker">Raccourcis</p>
+        <h3 className="display-title mt-2 text-2xl">Partager le planning</h3>
+        <p className="mt-3 text-sm leading-6 text-[var(--ink-700)]">
+          Synchronisez votre agenda ou exportez le foyer sans chercher les bons liens dans plusieurs écrans.
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => toggleTab("sync")}

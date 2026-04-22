@@ -9,6 +9,7 @@ import {
 } from "date-fns";
 import { redirect } from "next/navigation";
 
+import { shouldSyncHouseholdContext, resetHouseholdContextSyncState } from "@/lib/context-sync";
 import { db } from "@/lib/db";
 import { syncHouseholdOccurrences } from "@/lib/scheduling/service";
 
@@ -50,7 +51,14 @@ export async function getCurrentHouseholdContext(
     return null;
   }
 
-  await syncHouseholdOccurrences(membership.householdId);
+  if (shouldSyncHouseholdContext(membership.householdId)) {
+    try {
+      await syncHouseholdOccurrences(membership.householdId);
+    } catch (error) {
+      resetHouseholdContextSyncState(membership.householdId);
+      throw error;
+    }
+  }
 
   const today = startOfToday();
   const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });

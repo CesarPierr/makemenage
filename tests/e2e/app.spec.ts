@@ -239,6 +239,17 @@ test("user can register, login, create a household, add a member, create a task,
 
   await page.goto("/app/calendar");
   await expect(page.getByRole("heading", { name: new RegExp(format(new Date(), "MMMM yyyy", { locale: fr }), "i") })).toBeVisible();
+
+  if (isMobileProject) {
+    await page.getByRole("link", { name: "Suivant" }).click();
+    await expect(page).toHaveURL(/dayOffset=4/);
+    await expect(page.getByRole("heading", { name: "Prochaines tâches" }).first()).toBeVisible();
+    await expect(page.getByText(/jours actifs/i).first()).toBeVisible();
+  } else {
+    await page.getByTitle("Mois suivant").click();
+    await expect(page.getByRole("heading", { name: new RegExp(nextMonthLabel, "i") })).toBeVisible();
+  }
+
   await page.getByRole("button", { name: "Synchroniser" }).click();
   await expect(page.getByRole("heading", { name: "Abonnement iCal" })).toBeVisible();
   const householdIcalCopyButton = page.getByRole("button", { name: "Copier l’URL" }).first();
@@ -247,12 +258,6 @@ test("user can register, login, create a household, add a member, create a task,
   await expect(page.getByRole("link", { name: "Ouvrir Google Calendar" })).toBeVisible();
   await page.getByRole("button", { name: "Exporter" }).click();
   await expect(page.getByRole("heading", { name: "Télécharger" })).toBeVisible();
-  await page.getByTitle("Mois suivant").click();
-  await expect(page.getByRole("heading", { name: new RegExp(nextMonthLabel, "i") })).toBeVisible();
-  if (isMobileProject) {
-    await expect(page.getByRole("heading", { name: "Prochaines tâches" }).first()).toBeVisible();
-    await expect(page.getByText(/jours actifs/i).first()).toBeVisible();
-  }
   const calendarExport = await page.getByRole("link", { name: "Export complet foyer" }).getAttribute("href");
   expect(calendarExport).toContain("/api/calendar/feed.ics");
 });
@@ -488,6 +493,40 @@ test("demo user can reach login and auth redirect works", async ({ page, request
 
   await page.goto("/app");
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test("dashboard quick actions and history filters stay usable", async ({ page }, testInfo) => {
+  const email = buildUniqueEmail("dashboard-history", testInfo.project.name);
+
+  await registerAndLogin(page, {
+    displayName: "Dashboard History User",
+    email,
+  });
+  await createHousehold(page, "Foyer Dashboard");
+
+  await createTaskFromWizard(page, {
+    title: "Surface cuisine",
+    minutes: "18",
+    category: "Nettoyage",
+    room: "Cuisine",
+    recurrenceLabel: "Tous les jours",
+  });
+
+  await page.goto("/app/my-tasks?tab=daily");
+  await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
+  await page.locator('input[name="actualMinutes"]').first().fill("19");
+  await page.locator('input[name="notes"]').first().fill("Nettoyée après le repas");
+  await page.getByRole("button", { name: "Enregistrer" }).first().click();
+
+  await page.goto("/app");
+  await expect(page.getByText("Créer une tâche").first()).toBeVisible();
+  await expect(page.getByText("Cuisine").first()).toBeVisible();
+
+  await page.goto("/app/history");
+  await page.getByRole("link", { name: "Terminées" }).click();
+  await expect(page).toHaveURL(/filter=completed/);
+  await expect(page.getByText("À l’instant")).toBeVisible();
+  await expect(page.getByText("Surface cuisine")).toBeVisible();
 });
 
 test("can edit a task template and overwrite or preserve manual modifications", async ({ page }, testInfo) => {

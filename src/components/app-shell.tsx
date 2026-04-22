@@ -30,18 +30,23 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
   const sectionMeta = {
     "/app": {
       title: "Accueil",
+      description: "Vue rapide, charge et priorités du foyer.",
     },
     "/app/my-tasks": {
       title: "Tâches",
+      description: "Créer, suivre et ajuster les tâches.",
     },
     "/app/calendar": {
       title: "Calendrier",
+      description: "Vision mensuelle, exports et synchronisation.",
     },
     "/app/history": {
       title: "Historique",
+      description: "Actions récentes, corrections et audit utile.",
     },
     "/app/settings": {
       title: "Réglages",
+      description: "Foyer, membres, accès et intégrations.",
     },
   } as const;
   const activeSection =
@@ -52,9 +57,12 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
     <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col lg:flex-row lg:gap-6 lg:p-6">
       {/* Sidebar for Desktop */}
       <nav className="hidden lg:flex lg:w-64 lg:flex-col lg:gap-4">
-        <div className="app-surface glow-card rounded-[2rem] p-6 mb-4">
+        <div className="app-surface glow-card interactive-surface rounded-[2rem] p-6 mb-4">
           <p className="section-kicker">MakeMenage</p>
           <h2 className="mt-1 text-xl font-bold tracking-tight">{householdName ?? "Votre foyer"}</h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--ink-700)]">
+            Navigation rapide pensée pour un usage quotidien, surtout sur mobile.
+          </p>
         </div>
         
         <div className="flex flex-col gap-2">
@@ -62,20 +70,33 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
             const href = `${item.href}${suffix}`;
             const active = pathname === item.href;
             const Icon = navIcons[item.href as keyof typeof navIcons];
+            const meta = sectionMeta[item.href as keyof typeof sectionMeta];
 
             return (
               <Link
                 key={item.href}
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition-all",
+                  "interactive-surface flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition-all",
                   active
                     ? "bg-[var(--coral-500)] text-white shadow-[0_14px_28px_rgba(216,100,61,0.18)] scale-[1.02]"
                     : "text-[var(--ink-700)] hover:bg-white hover:text-[var(--ink-950)] hover:shadow-sm"
                 )}
               >
                 <Icon className="size-5 shrink-0" />
-                {item.label}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span>{item.label}</span>
+                    {active ? (
+                      <span className="rounded-full bg-white/18 px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-[0.16em]">
+                        Actif
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className={cn("truncate text-[0.72rem] font-medium opacity-80", active ? "text-white/88" : "text-[var(--ink-500)]")}>
+                    {meta.description}
+                  </p>
+                </div>
               </Link>
             );
           })}
@@ -108,6 +129,9 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
                   {householdName ?? "Votre foyer"}
                 </span>
               </div>
+              <p className="mt-2 hidden text-sm text-[var(--ink-700)] sm:block">
+                {activeMeta.description}
+              </p>
             </div>
             <form action="/api/auth/logout" method="post" className="shrink-0 lg:hidden">
               <button

@@ -3,6 +3,7 @@ import { fr } from "date-fns/locale";
 
 import { CalendarMonth } from "@/components/calendar-month";
 import { requireUser } from "@/lib/auth";
+import { buildCalendarOverview } from "@/lib/experience";
 import { requireHouseholdContext } from "@/lib/households";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
@@ -49,6 +50,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         },
       })),
   );
+  const overview = buildCalendarOverview(context.monthOccurrences, absences);
 
   const prevMonthHref = `/app/calendar?household=${context.household.id}&monthOffset=${monthOffset - 1}&dayOffset=0`;
   const nextMonthHref = `/app/calendar?household=${context.household.id}&monthOffset=${monthOffset + 1}&dayOffset=0`;
@@ -67,6 +69,9 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
               <h2 className="display-title mt-2 truncate text-3xl leading-tight sm:text-4xl">
                 {format(currentMonth, "MMMM yyyy", { locale: fr })}
               </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-700)]">
+                Vue mensuelle pour regrouper les tâches, repérer les jours chargés et visualiser les absences sans perdre l’essentiel.
+              </p>
             </div>
             
             <div className="flex flex-wrap items-center gap-2">
@@ -113,9 +118,55 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
               </div>
             </div>
           </div>
+
+          <div className="mt-6 summary-strip sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              {
+                label: "Occurrences",
+                value: overview.taskCount,
+                detail: "sur le mois affiché",
+              },
+              {
+                label: "Jours actifs",
+                value: overview.busyDays,
+                detail: "avec au moins une tâche",
+              },
+              {
+                label: "Absences",
+                value: overview.absenceCount,
+                detail: `${overview.absenceDays} jour${overview.absenceDays > 1 ? "s" : ""} couverts`,
+              },
+              {
+                label: "Vue mobile",
+                value: 4,
+                detail: "jours visibles à la fois",
+              },
+            ].map((item) => (
+              <article key={item.label} className="metric-card interactive-surface px-4 py-4">
+                <p className="text-sm text-[var(--ink-700)]">{item.label}</p>
+                <p className="mt-2 text-3xl font-semibold">{item.value}</p>
+                <p className="text-sm text-[var(--ink-500)]">{item.detail}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className="accent-pill">
+              <span className="accent-pill-dot" style={{ backgroundColor: "var(--coral-500)" }} />
+              Tâche du planning
+            </span>
+            <span className="accent-pill">
+              <span className="accent-pill-dot" style={{ backgroundColor: "var(--sky-500)" }} />
+              Jour affiché
+            </span>
+            <span className="accent-pill">
+              <span className="accent-pill-dot" style={{ backgroundColor: "var(--leaf-500)" }} />
+              Absence
+            </span>
+          </div>
         </div>
 
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="deferred-section animate-in fade-in slide-in-from-bottom-4 duration-500">
           <CalendarMonth 
             month={currentMonth} 
             occurrences={context.monthOccurrences}

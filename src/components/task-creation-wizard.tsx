@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { CalendarClock, Check, ChevronLeft, ChevronRight, Plus, TimerReset } from "lucide-react";
 
 import { roomSuggestions, taskPalette } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, formatMinutes } from "@/lib/utils";
 
 type TaskCreationWizardProps = {
   householdId: string;
@@ -66,6 +66,13 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
 
   const isSingleTask = draft.kind === "single";
   const everyXMode = draft.recurrenceType === "every_x_days" || draft.recurrenceType === "every_x_weeks";
+  const selectedMembers = members.filter((member) => draft.eligibleMemberIds.includes(member.id));
+  const recurrenceLabel = isSingleTask
+    ? "Une seule fois"
+    : recurrenceOptions.find((option) => option.value === draft.recurrenceType)?.label ?? "Récurrente";
+  const selectedAssignmentLabel = isSingleTask
+    ? "Fixe"
+    : assignmentOptions.find((option) => option.value === draft.assignmentMode)?.label ?? "Attribution";
 
   useEffect(() => {
     if (step !== 3) {
@@ -135,6 +142,45 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
             </button>
           </div>
 
+          <div className="mt-5 flex flex-wrap gap-2">
+            {[
+              { index: 1, label: "La tâche" },
+              { index: 2, label: isSingleTask ? "La date" : "Le rythme" },
+              { index: 3, label: "L’attribution" },
+            ].map((item) => {
+              const active = step === item.index;
+              const completed = step > item.index;
+
+              return (
+                <div
+                  key={`${item.index}-${item.label}`}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em]",
+                    active
+                      ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] text-[var(--sky-700)]"
+                      : completed
+                        ? "border-[rgba(56,115,93,0.18)] bg-[rgba(56,115,93,0.1)] text-[var(--leaf-600)]"
+                        : "border-[var(--line)] bg-white/70 text-[var(--ink-500)]",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-5 items-center justify-center rounded-full text-[0.68rem]",
+                      active
+                        ? "bg-[var(--sky-500)] text-white"
+                        : completed
+                          ? "bg-[var(--leaf-500)] text-white"
+                          : "bg-[var(--line)] text-[var(--ink-700)]",
+                    )}
+                  >
+                    {completed ? <Check className="size-3" /> : item.index}
+                  </span>
+                  {item.label}
+                </div>
+              );
+            })}
+          </div>
+
           <div className="mt-5 h-2 overflow-hidden rounded-full bg-black/5">
             <div
               className="h-full rounded-full bg-[var(--sky-500)] transition-all duration-200"
@@ -168,12 +214,42 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
               <input key={memberId} name="eligibleMemberIds" type="hidden" value={memberId} />
             ))}
 
+            <div className="rounded-[1.5rem] border border-[var(--line)] bg-white/72 px-4 py-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="section-kicker">Aperçu</p>
+                  <h4 className="mt-2 text-lg font-semibold text-[var(--ink-950)]">
+                    {draft.title.trim() || "Votre nouvelle tâche"}
+                  </h4>
+                  <p className="mt-2 text-sm leading-6 text-[var(--ink-700)]">
+                    {recurrenceLabel} · {draft.estimatedMinutes ? formatMinutes(Number(draft.estimatedMinutes) || 0) : "Durée à définir"} · {selectedAssignmentLabel}
+                  </p>
+                </div>
+                <span className="stat-pill px-3 py-1 text-xs font-semibold">
+                  {draft.room.trim() || "Pièce libre"}
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="stat-pill inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold">
+                  <span className="size-2.5 rounded-full" style={{ backgroundColor: draft.color }} />
+                  {draft.category.trim() || "Sans catégorie"}
+                </span>
+                <span className="stat-pill px-3 py-1 text-xs font-semibold">
+                  {selectedMembers.length || 0} membre{selectedMembers.length > 1 ? "s" : ""}
+                </span>
+                <span className="stat-pill px-3 py-1 text-xs font-semibold">
+                  {draft.startsOn || "Date à définir"}
+                </span>
+              </div>
+            </div>
+
             {step === 1 ? (
               <div className="compact-stack">
                 <div className="field-label">
                   <span>Format</span>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <button
+                      aria-pressed={isSingleTask}
                       className={cn(
                         "soft-panel group relative overflow-hidden px-4 py-3 text-left transition-all",
                         isSingleTask
@@ -205,6 +281,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                       <p className="text-sm text-[var(--ink-700)]">Une seule date, une seule personne.</p>
                     </button>
                     <button
+                      aria-pressed={!isSingleTask}
                       className={cn(
                         "soft-panel group relative overflow-hidden px-4 py-3 text-left transition-all",
                         !isSingleTask
@@ -349,6 +426,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                           const active = draft.recurrenceType === option.value;
                           return (
                             <button
+                              aria-pressed={active}
                               className={cn(
                                 "soft-panel group relative flex items-center gap-3 overflow-hidden px-4 py-3 text-left transition-all",
                                 active ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] shadow-sm" : "hover:bg-white/50",
@@ -408,6 +486,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
 
                       return (
                         <button
+                          aria-pressed={active}
                           className={cn(
                             "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all",
                             active
@@ -446,6 +525,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                         const active = draft.assignmentMode === option.value;
                         return (
                           <button
+                            aria-pressed={active}
                             className={cn(
                               "soft-panel group relative overflow-hidden px-4 py-3 text-left transition-all",
                               active ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] shadow-sm" : "hover:bg-white/50",
@@ -472,9 +552,15 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
               </div>
             ) : null}
 
-            <div className="mt-2 flex items-center justify-between gap-3">
+            <div
+              className="sticky bottom-2 mt-2 flex flex-col gap-3 rounded-[1.4rem] border border-[var(--line)] bg-white/90 px-3 py-3 shadow-[var(--shadow-soft)] sm:static sm:flex-row sm:items-center sm:justify-between sm:border-none sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none"
+              style={{ marginBottom: "env(safe-area-inset-bottom, 0px)" }}
+            >
+              <p className="text-xs font-medium text-[var(--ink-500)] sm:hidden">
+                {step < 3 ? "Continuez pour finaliser la tâche." : "Vérifiez puis créez la tâche."}
+              </p>
               <button
-                className="btn-quiet inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
+                className="btn-quiet inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold"
                 disabled={step === 1}
                 onClick={() => {
                   setIsStep3Armed(false);
@@ -488,7 +574,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
 
               {step < 3 ? (
                 <button
-                  className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold"
+                  className="btn-primary inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold"
                   disabled={step === 1 && !draft.title.trim()}
                   onClick={() => {
                     setIsStep3Armed(false);
@@ -501,7 +587,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                 </button>
               ) : (
                 <button
-                  className="btn-primary px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
+                  className="btn-primary inline-flex items-center justify-center px-5 py-3 text-sm font-semibold disabled:opacity-50"
                   disabled={!isStep3Armed || !draft.title.trim() || draft.eligibleMemberIds.length === 0}
                   type="submit"
                 >
