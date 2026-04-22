@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { redirectTo } from "@/lib/request";
+import { normalizeNextPath, redirectTo } from "@/lib/request";
 import { reassignOccurrence } from "@/lib/scheduling/service";
 
 type Params = {
@@ -31,9 +31,10 @@ export async function POST(request: Request, { params }: Params) {
 
   const formData = await request.formData();
   const assignedMemberId = formData.get("assignedMemberId")?.toString();
+  const nextPath = normalizeNextPath(formData.get("nextPath")?.toString());
 
   if (!assignedMemberId) {
-    return redirectTo(request, `/app?household=${occurrence.householdId}`);
+    return redirectTo(request, nextPath ?? `/app?household=${occurrence.householdId}`);
   }
 
   await reassignOccurrence({
@@ -42,5 +43,5 @@ export async function POST(request: Request, { params }: Params) {
     assignedMemberId,
   });
 
-  return redirectTo(request, `/app?household=${occurrence.householdId}`);
+  return redirectTo(request, nextPath ?? `/app?household=${occurrence.householdId}`);
 }

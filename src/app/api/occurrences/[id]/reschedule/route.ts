@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { parseDateInput } from "@/lib/date-input";
 import { db } from "@/lib/db";
-import { redirectTo } from "@/lib/request";
+import { normalizeNextPath, redirectTo } from "@/lib/request";
 import { rescheduleOccurrence } from "@/lib/scheduling/service";
 
 type Params = {
@@ -32,9 +32,10 @@ export async function POST(request: Request, { params }: Params) {
 
   const formData = await request.formData();
   const date = formData.get("date")?.toString();
+  const nextPath = normalizeNextPath(formData.get("nextPath")?.toString());
 
   if (!date) {
-    return redirectTo(request, `/app?household=${occurrence.householdId}`);
+    return redirectTo(request, nextPath ?? `/app?household=${occurrence.householdId}`);
   }
 
   await rescheduleOccurrence({
@@ -43,5 +44,5 @@ export async function POST(request: Request, { params }: Params) {
     scheduledDate: parseDateInput(date),
   });
 
-  return redirectTo(request, `/app?household=${occurrence.householdId}`);
+  return redirectTo(request, nextPath ?? `/app?household=${occurrence.householdId}`);
 }

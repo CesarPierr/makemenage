@@ -482,6 +482,47 @@ test("can edit a task template and overwrite or preserve manual modifications", 
   await expect(page.getByText("Reportée")).toHaveCount(0);
 });
 
+test("manual override badge opens a dedicated page and keeps future occurrences editable", async ({ page }, testInfo) => {
+  const email = buildUniqueEmail("override-detail", testInfo.project.name);
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const inTwoDays = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  await registerAndLogin(page, {
+    displayName: "Override Detail User",
+    email,
+  });
+  await createHousehold(page, "Foyer Overrides");
+
+  await createTaskFromWizard(page, {
+    title: "Linge à relancer",
+    minutes: "14",
+    recurrenceLabel: "Chaque semaine",
+  });
+
+  await page.goto("/app/my-tasks");
+  await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
+  await page.locator('form[action*="/reschedule"] input[name="date"]').first().fill(tomorrow);
+  await page.getByRole("button", { name: "Changer la date" }).first().click();
+  await expect(page.getByText("Reportée").first()).toBeVisible();
+
+  await openTaskAdministration(page);
+  const managedTask = page.locator("#administration article", { hasText: "Linge à relancer" });
+  await managedTask.getByRole("link", { name: /occurrence future modifiée/i }).click();
+
+  await expect(page).toHaveURL(/\/app\/my-tasks\/overrides\/.+household=/);
+  await expect(page.locator("h2", { hasText: "Linge à relancer" })).toBeVisible();
+  await expect(page.getByText("Date déplacée").first()).toBeVisible();
+  await expect(page.getByText(/Dernier changement/i)).toBeVisible();
+
+  await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
+  await page.locator('form[action*="/reschedule"] input[name="date"]').first().fill(inTwoDays);
+  await page.getByRole("button", { name: "Changer la date" }).first().click();
+
+  await expect(page).toHaveURL(/\/app\/my-tasks\/overrides\/.+household=/);
+  await expect(page.getByText("Reportée").first()).toBeVisible();
+  await expect(page.getByText("Date actuelle:").first()).toBeVisible();
+});
+
 test("deleting a task removes it from settings and calendar", async ({ page }, testInfo) => {
   const email = buildUniqueEmail("delete-task", testInfo.project.name);
 

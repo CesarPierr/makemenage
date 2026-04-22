@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { redirectTo } from "@/lib/request";
+import { normalizeNextPath, redirectTo } from "@/lib/request";
 import { skipOccurrence } from "@/lib/scheduling/service";
 import { occurrenceActionSchema } from "@/lib/validation";
 
@@ -31,6 +31,7 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const formData = await request.formData();
+  const nextPath = normalizeNextPath(formData.get("nextPath")?.toString());
   const parsed = occurrenceActionSchema.safeParse({
     occurrenceId: id,
     memberId: String(formData.get("memberId") || membership.id),
@@ -43,5 +44,5 @@ export async function POST(request: Request, { params }: Params) {
     notes: parsed.success ? parsed.data.notes : undefined,
   });
 
-  return redirectTo(request, `/app?household=${occurrence.householdId}`);
+  return redirectTo(request, nextPath ?? `/app?household=${occurrence.householdId}`);
 }

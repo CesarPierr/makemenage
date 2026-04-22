@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { redirectTo } from "@/lib/request";
+import { normalizeNextPath, redirectTo } from "@/lib/request";
 import { reopenOccurrence } from "@/lib/scheduling/service";
 
 type Params = {
@@ -30,6 +30,7 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const formData = await request.formData();
+  const nextPath = normalizeNextPath(formData.get("nextPath")?.toString());
 
   await reopenOccurrence({
     occurrenceId: id,
@@ -37,5 +38,5 @@ export async function POST(request: Request, { params }: Params) {
     notes: formData.get("notes")?.toString() || undefined,
   });
 
-  return redirectTo(request, `/app?household=${occurrence.householdId}`);
+  return redirectTo(request, nextPath ?? `/app?household=${occurrence.householdId}`);
 }

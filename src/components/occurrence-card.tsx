@@ -26,6 +26,7 @@ type OccurrenceCardProps = {
   members: { id: string; displayName: string }[];
   currentMemberId?: string | null;
   compact?: boolean;
+  returnTo?: string;
 };
 
 function getStatusLabel(status: string) {
@@ -151,6 +152,7 @@ export function OccurrenceCard({
   members,
   currentMemberId,
   compact = false,
+  returnTo,
 }: OccurrenceCardProps) {
   const canEditOccurrence = occurrence.status !== "cancelled";
   const taskColor = occurrence.taskTemplate.color ?? "#D8643D";
@@ -244,6 +246,7 @@ export function OccurrenceCard({
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           <form action={`/api/occurrences/${occurrence.id}/complete`} method="post">
             <input name="memberId" type="hidden" value={currentMemberId ?? ""} />
+            {returnTo ? <input name="nextPath" type="hidden" value={returnTo} /> : null}
             <button
               className="w-full rounded-[1.2rem] border border-[rgba(56,115,93,0.16)] bg-[rgba(56,115,93,0.12)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[rgba(56,115,93,0.18)] hover:shadow-[0_12px_24px_rgba(56,115,93,0.12)]"
               type="submit"
@@ -258,6 +261,7 @@ export function OccurrenceCard({
 
           <form action={`/api/occurrences/${occurrence.id}/skip`} method="post">
             <input name="memberId" type="hidden" value={currentMemberId ?? ""} />
+            {returnTo ? <input name="nextPath" type="hidden" value={returnTo} /> : null}
             <button
               className="w-full rounded-[1.2rem] border border-[rgba(30,31,34,0.08)] bg-[rgba(30,31,34,0.04)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[rgba(30,31,34,0.07)] hover:shadow-[0_12px_24px_rgba(30,31,34,0.08)]"
               type="submit"
@@ -273,6 +277,7 @@ export function OccurrenceCard({
           {archived || occurrence.status === "rescheduled" ? (
             <form action={`/api/occurrences/${occurrence.id}/reopen`} method="post">
               <input name="memberId" type="hidden" value={currentMemberId ?? ""} />
+              {returnTo ? <input name="nextPath" type="hidden" value={returnTo} /> : null}
               <button
                 className="w-full rounded-[1.2rem] border border-[rgba(47,109,136,0.16)] bg-[rgba(47,109,136,0.1)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[rgba(47,109,136,0.16)] hover:shadow-[0_12px_24px_rgba(47,109,136,0.12)]"
                 type="submit"
@@ -306,6 +311,7 @@ export function OccurrenceCard({
               style={{ borderColor: hexToRgba(taskColor, 0.16) }}
             >
               <input name="memberId" type="hidden" value={currentMemberId ?? ""} />
+              {returnTo ? <input name="nextPath" type="hidden" value={returnTo} /> : null}
               <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-3">Valider avec détail</label>
               <input
                 className="field"
@@ -334,6 +340,7 @@ export function OccurrenceCard({
               style={{ borderColor: hexToRgba(taskColor, 0.16) }}
             >
               <input name="memberId" type="hidden" value={currentMemberId ?? ""} />
+              {returnTo ? <input name="nextPath" type="hidden" value={returnTo} /> : null}
               <input
                 className="field"
                 defaultValue={occurrence.status === "skipped" ? occurrence.notes ?? "" : ""}
@@ -354,6 +361,7 @@ export function OccurrenceCard({
                 style={{ borderColor: hexToRgba(taskColor, 0.16) }}
               >
                 <input name="memberId" type="hidden" value={currentMemberId ?? ""} />
+                {returnTo ? <input name="nextPath" type="hidden" value={returnTo} /> : null}
                 <label className="text-sm font-semibold text-[var(--ink-950)]">Reporter</label>
                 <input className="field" name="date" required type="date" />
                 <button className="btn-quiet px-4 py-3 text-sm font-semibold" type="submit">
@@ -368,6 +376,7 @@ export function OccurrenceCard({
                 style={{ borderColor: hexToRgba(taskColor, 0.16) }}
               >
                 <input name="memberId" type="hidden" value={currentMemberId ?? ""} />
+                {returnTo ? <input name="nextPath" type="hidden" value={returnTo} /> : null}
                 <label className="text-sm font-semibold text-[var(--ink-950)]">Réattribuer</label>
                 <select className="field" defaultValue={occurrence.assignedMember?.id ?? ""} name="assignedMemberId">
                   <option value="">Choisir un membre</option>
