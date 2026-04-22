@@ -49,6 +49,32 @@ describe("assignment engine", () => {
     expect(picks).toEqual(["A", "B", "C", "A"]);
   });
 
+  it("continues rotation from historical assignments when sequence restarts", () => {
+    const pick = pickAssignee({
+      sequenceIndex: 0,
+      rule: {
+        mode: "strict_alternation",
+        eligibleMemberIds: ["A", "B"],
+        rotationOrder: ["A", "B"],
+      },
+      members,
+      scheduledDate: new Date("2026-01-15"),
+      absences: [],
+      estimatedMinutes: 20,
+      existingOccurrences: [
+        {
+          sourceGenerationKey: "task-1:2026-01-01",
+          scheduledDate: new Date("2026-01-01"),
+          dueDate: new Date("2026-01-01"),
+          assignedMemberId: "A",
+          status: "planned",
+        },
+      ],
+    });
+
+    expect(pick).toBe("B");
+  });
+
   it("rebalances when a member is absent", () => {
     const pick = pickAssignee({
       sequenceIndex: 1,

@@ -1,7 +1,6 @@
-import { describeRecurrence } from "@/lib/scheduling/recurrence";
 import { CopyValueButton } from "@/components/copy-value-button";
+import { TaskSettingsList } from "@/components/task-settings-list";
 import { requireUser } from "@/lib/auth";
-import { hexToRgba } from "@/lib/colors";
 import { db } from "@/lib/db";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 
@@ -10,6 +9,7 @@ type SettingsPageProps = {
     household?: string;
     invite?: string;
     leave?: string;
+    rebalance?: string;
   }>;
 };
 
@@ -43,7 +43,35 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           ? { tone: "error" as const, text: "Impossible de quitter ce foyer: votre compte est le dernier encore relié au foyer." }
           : params.leave === "last_manager"
             ? { tone: "error" as const, text: "Impossible de quitter ce foyer: il faut d’abord qu’un autre compte garde un rôle owner/admin." }
+              : params.rebalance === "done"
+                ? { tone: "success" as const, text: "Rééquilibrage terminé sans écraser les modifications manuelles." }
+                : params.rebalance === "done_overwrite"
+                  ? { tone: "success" as const, text: "Rééquilibrage terminé en écrasant les modifications manuelles futures." }
             : null;
+  const manualFutureOverrides = context.tasks.length
+    ? await db.taskOccurrence.findMany({
+        where: {
+          householdId: context.household.id,
+          taskTemplateId: {
+            in: context.tasks.map((task) => task.id),
+          },
+          status: {
+            in: ["planned", "due", "overdue", "rescheduled"],
+          },
+          scheduledDate: {
+            gte: new Date(),
+          },
+          isManuallyModified: true,
+        },
+        select: {
+          taskTemplateId: true,
+        },
+      })
+    : [];
+  const manualOverridesByTaskId = manualFutureOverrides.reduce<Record<string, number>>((acc, occurrence) => {
+    acc[occurrence.taskTemplateId] = (acc[occurrence.taskTemplateId] ?? 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-4">
@@ -288,50 +316,41 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               </button>
             </form>
           </article>
+
+          <article className="app-surface rounded-[2rem] p-5 sm:p-6">
+            <p className="section-kicker">Réassignation automatique</p>
+            <h3 className="display-title mt-2 text-3xl">Recalculer l&apos;équilibrage</h3>
+            <p className="mt-3 text-sm leading-6 text-[var(--ink-700)]">
+              Recalcule les occurrences futures après ajout/suppression de membre ou changement de règle. Les modifications manuelles restent protégées par défaut.
+            </p>
+            <form action={`/api/households/${context.household.id}/recalculate`} method="post" className="mt-5 compact-form-grid">
+              <label className="field-label">
+                <span className="inline-flex items-start gap-3 rounded-[1rem] border border-[var(--line)] bg-white/70 px-4 py-3 font-medium text-[var(--ink-950)]">
+                  <input name="forceOverwriteManual" type="checkbox" className="mt-1" />
+                  <span>Écraser les modifications manuelles futures pendant ce recalcul</span>
+                </span>
+              </label>
+              <button className="btn-primary w-full px-5 py-3 font-semibold" type="submit">
+                Recalculer et rééquilibrer
+              </button>
+            </form>
+          </article>
         </section>
       ) : null}
 
       <section className="app-surface rounded-[2rem] p-5 sm:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="section-kicker">Règles actives</p>
-            <h3 className="display-title mt-2 text-3xl">Tâches configurées</h3>
+            <p className="section-kicker">Meta-tâches</p>
+            <h3 className="display-title mt-2 text-3xl">Récapitulatif et édition</h3>
           </div>
         </div>
-        <div className="mt-5 space-y-3">
-          {context.tasks.map((task) => (
-            <article
-              key={task.id}
-              className="soft-panel p-4"
-              style={{
-                borderColor: hexToRgba(task.color ?? "#D8643D", 0.18),
-                background: `linear-gradient(135deg, ${hexToRgba(task.color ?? "#D8643D", 0.1)}, rgba(255, 255, 255, 0.72))`,
-              }}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="size-3 rounded-full" style={{ backgroundColor: task.color ?? "#D8643D" }} />
-                    <h4 className="text-lg font-semibold">{task.title}</h4>
-                  </div>
-                  <p className="text-sm text-[var(--ink-700)]">
-                    {describeRecurrence({
-                      type: task.recurrenceRule.type,
-                      interval: task.recurrenceRule.interval,
-                      weekdays: Array.isArray(task.recurrenceRule.weekdays)
-                        ? task.recurrenceRule.weekdays.map(Number)
-                        : undefined,
-                      dayOfMonth: task.recurrenceRule.dayOfMonth,
-                      anchorDate: task.recurrenceRule.anchorDate,
-                      dueOffsetDays: task.recurrenceRule.dueOffsetDays,
-                    })}
-                  </p>
-                </div>
-                <span className="stat-pill px-3 py-1 text-sm capitalize">{task.assignmentRule.mode}</span>
-              </div>
-            </article>
-          ))}
-        </div>
+        <TaskSettingsList 
+          tasks={context.tasks} 
+          members={context.household.members} 
+          householdId={context.household.id} 
+          manualOverridesByTaskId={manualOverridesByTaskId}
+        />
       </section>
     </div>
   );

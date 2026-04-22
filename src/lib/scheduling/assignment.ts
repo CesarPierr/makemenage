@@ -68,6 +68,25 @@ export function pickAssignee(params: {
   );
 
   if (rule.mode === "strict_alternation" || rule.mode === "round_robin") {
+    const priorAssignments = existingOccurrences
+      .filter(
+        (occurrence) =>
+          occurrence.status !== "cancelled" &&
+          occurrence.assignedMemberId &&
+          rotation.includes(occurrence.assignedMemberId) &&
+          startOfDay(occurrence.scheduledDate) < startOfDay(scheduledDate),
+      )
+      .sort((left, right) => left.scheduledDate.getTime() - right.scheduledDate.getTime());
+
+    const lastAssignedMemberId = priorAssignments.at(-1)?.assignedMemberId ?? null;
+
+    if (lastAssignedMemberId) {
+      const currentIndex = rotation.indexOf(lastAssignedMemberId);
+      if (currentIndex >= 0) {
+        return rotation[(currentIndex + 1) % rotation.length] ?? pool[0]?.id ?? null;
+      }
+    }
+
     return rotation[sequenceIndex % rotation.length] ?? pool[0]?.id ?? null;
   }
 

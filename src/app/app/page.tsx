@@ -294,13 +294,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </section>
 
       {canManageHousehold(context.membership.role) ? (
-        <section className="app-surface rounded-[2rem] p-5 sm:p-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="section-kicker">Ajout rapide</p>
-              <h3 className="display-title mt-2 text-3xl">Créer une nouvelle tâche</h3>
+        <details className="app-surface rounded-[2rem] p-5 sm:p-6 group">
+          <summary className="cursor-pointer select-none list-none outline-none focus:outline-none">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="section-kicker">Ajout rapide</p>
+                <h3 className="display-title mt-2 text-3xl flex items-center gap-2 text-[var(--coral-600)] hover:underline">
+                  <span className="group-open:hidden">▶</span>
+                  <span className="hidden group-open:inline">▼</span>
+                  Créer une nouvelle tâche
+                </h3>
+              </div>
             </div>
-          </div>
+          </summary>
 
           <form action="/api/tasks" method="post" className="mt-6 compact-form-grid">
             <input type="hidden" name="householdId" value={context.household.id} />
@@ -351,37 +357,44 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </select>
               </label>
               <label className="field-label">
-                <span>Intervalle</span>
+                <span>Intervalle (Valeur de X)</span>
                 <input className="field" type="number" min="1" name="interval" defaultValue="1" required />
               </label>
               <label className="field-label">
                 <span>Attribution</span>
                 <select className="field" name="assignmentMode" defaultValue="strict_alternation">
-                  <option value="fixed">Fixe</option>
-                  <option value="manual">Manuelle</option>
-                  <option value="strict_alternation">Alternance stricte</option>
-                  <option value="round_robin">Round-robin</option>
-                  <option value="least_assigned_count">Moins de tâches</option>
-                  <option value="least_assigned_minutes">Moins de minutes</option>
+                  <option value="fixed">Fixe (toujours la même personne)</option>
+                  <option value="manual">Manuelle (choix à chaque fois)</option>
+                  <option value="strict_alternation">Alternance (chacun son tour)</option>
+                  <option value="round_robin">Round-robin (distribution équitable)</option>
+                  <option value="least_assigned_count">Équité : moins de tâches</option>
+                  <option value="least_assigned_minutes">Équité : moins de temps</option>
                 </select>
+                <span className="field-help">
+                  Alternance/round-robin = tour de rôle. Équité = répartition selon charge cumulée.
+                </span>
               </label>
             </div>
             <label className="field-label">
               <span>Membres concernés</span>
-              <span className="field-help">Appui long pour en choisir plusieurs sur mobile.</span>
-              <select className="field" name="eligibleMemberIds" multiple required size={Math.min(context.household.members.length, 5)}>
+              <span className="field-help">Tout le monde est sélectionné par défaut. Décochez les exceptions.</span>
+              <div className="grid gap-2 sm:grid-cols-2">
                 {context.household.members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.displayName}
-                  </option>
+                  <label
+                    key={member.id}
+                    className="inline-flex items-center gap-3 rounded-[0.9rem] border border-[var(--line)] bg-white/70 px-3 py-2"
+                  >
+                    <input type="checkbox" name="eligibleMemberIds" value={member.id} defaultChecked />
+                    <span>{member.displayName}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
             </label>
             <button className="btn-primary px-5 py-3 font-semibold" type="submit">
               Créer la tâche
             </button>
           </form>
-        </section>
+        </details>
       ) : null}
     </div>
   );

@@ -46,7 +46,7 @@ describe("household management", () => {
   });
 
   it("picks the first unused palette color", () => {
-    expect(pickNextMemberColor(["#E86A33", "#D64550"])).toBe("#1F6E8C");
+    expect(pickNextMemberColor(["#C56A3A", "#B65766"])).toBe("#2E6D88");
   });
 
   it("accepts an active invite and creates a linked member", async () => {

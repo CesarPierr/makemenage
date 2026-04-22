@@ -5,6 +5,7 @@ import { parseDateInput } from "@/lib/date-input";
 import { db } from "@/lib/db";
 import { canManageHousehold } from "@/lib/households";
 import { redirectTo } from "@/lib/request";
+import { syncHouseholdOccurrences } from "@/lib/scheduling/service";
 import { taskTemplateSchema } from "@/lib/validation";
 
 export async function GET(request: Request) {
@@ -43,8 +44,24 @@ export async function POST(request: Request) {
   const user = await requireUser();
   const formData = await request.formData();
   const householdId = String(formData.get("householdId"));
-  const eligibleMemberIds = formData.getAll("eligibleMemberIds").map(String).filter(Boolean);
+  const requestedEligibleMemberIds = formData.getAll("eligibleMemberIds").map(String).filter(Boolean);
   const assignmentMode = String(formData.get("assignmentMode"));
+  const householdMembers = await db.householdMember.findMany({
+    where: {
+      householdId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+  const defaultEligibleMemberIds = householdMembers.map((member) => member.id);
+  const eligibleMemberIds = requestedEligibleMemberIds.length
+    ? requestedEligibleMemberIds
+    : defaultEligibleMemberIds;
   const parsedTask = taskTemplateSchema.safeParse({
     householdId,
     title: formData.get("title"),
@@ -132,6 +149,8 @@ export async function POST(request: Request) {
       createdByMemberId: membership.id,
     },
   });
+
+  await syncHouseholdOccurrences(householdId);
 
   return redirectTo(request, `/app?household=${householdId}`);
 }
