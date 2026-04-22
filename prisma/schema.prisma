@@ -56,6 +56,10 @@ enum OccurrenceActionType {
   cancelled
 }
 
+enum IntegrationProvider {
+  mcp_openclaw
+}
+
 model User {
   id                 String             @id @default(cuid())
   email              String             @unique
@@ -93,6 +97,7 @@ model Household {
   createdBy       User              @relation("HouseholdOwner", fields: [createdByUserId], references: [id])
   members         HouseholdMember[]
   invites         HouseholdInvite[]
+  integrations    HouseholdIntegration[]
   tasks           TaskTemplate[]
   occurrences     TaskOccurrence[]
 
@@ -144,6 +149,24 @@ model HouseholdInvite {
 
   @@index([householdId, createdAt])
   @@index([expiresAt])
+}
+
+model HouseholdIntegration {
+  id            String              @id @default(cuid())
+  householdId   String
+  provider      IntegrationProvider
+  isEnabled     Boolean             @default(false)
+  serverUrl     String?
+  clientLabel   String?
+  apiKeyHash    String?
+  apiKeyPreview String?
+  config        Json?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  household     Household           @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, provider])
+  @@index([provider, isEnabled])
 }
 
 model MemberAvailability {

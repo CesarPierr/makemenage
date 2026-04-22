@@ -24,6 +24,8 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
   const closedAssigned = myOccurrences.filter((occurrence) =>
     ["completed", "skipped", "cancelled"].includes(occurrence.status),
   );
+  const visibleUpcomingAssigned = upcomingAssigned.slice(0, 3);
+  const hiddenUpcomingAssigned = upcomingAssigned.slice(3);
   const manualFutureOverrides =
     manageable && context.tasks.length
       ? await db.taskOccurrence.findMany({
@@ -114,7 +116,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
           </span>
         </div>
         {upcomingAssigned.length ? (
-          upcomingAssigned.map((occurrence) => (
+          visibleUpcomingAssigned.map((occurrence) => (
             <OccurrenceCard
               key={occurrence.id}
               occurrence={occurrence}
@@ -127,6 +129,23 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
             Aucun élément ne vous est attribué pour le moment.
           </div>
         )}
+        {hiddenUpcomingAssigned.length ? (
+          <details className="app-surface rounded-[1.8rem] p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-[var(--sky-600)]">
+              Afficher plus ({hiddenUpcomingAssigned.length})
+            </summary>
+            <div className="mt-4 space-y-4">
+              {hiddenUpcomingAssigned.map((occurrence) => (
+                <OccurrenceCard
+                  key={occurrence.id}
+                  occurrence={occurrence}
+                  members={context.household.members}
+                  currentMemberId={context.currentMember?.id}
+                />
+              ))}
+            </div>
+          </details>
+        ) : null}
       </section>
 
       {manageable ? (

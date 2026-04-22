@@ -1,6 +1,14 @@
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { CheckCircle2, CircleDashed, RotateCcw, Settings2 } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  CircleDashed,
+  Clock3,
+  RotateCcw,
+  Settings2,
+  SkipForward,
+} from "lucide-react";
 
 import { hexToRgba } from "@/lib/colors";
 import { formatMinutes } from "@/lib/utils";
@@ -90,6 +98,54 @@ function getStatusTone(status: string, taskColor: string) {
   };
 }
 
+function getStatusMeta(status: string) {
+  if (status === "completed") {
+    return {
+      label: "Terminée",
+      hint: "Déjà faite",
+      icon: CheckCircle2,
+    };
+  }
+
+  if (status === "skipped") {
+    return {
+      label: "Sautée",
+      hint: "Mise de côté",
+      icon: SkipForward,
+    };
+  }
+
+  if (status === "rescheduled") {
+    return {
+      label: "Reportée",
+      hint: "Nouvelle date prévue",
+      icon: RotateCcw,
+    };
+  }
+
+  if (status === "overdue") {
+    return {
+      label: "En retard",
+      hint: "À rattraper",
+      icon: AlertCircle,
+    };
+  }
+
+  if (status === "due") {
+    return {
+      label: "Aujourd’hui",
+      hint: "À faire maintenant",
+      icon: Clock3,
+    };
+  }
+
+  return {
+    label: "À faire",
+    hint: "Prévue à venir",
+    icon: CircleDashed,
+  };
+}
+
 export function OccurrenceCard({
   occurrence,
   members,
@@ -100,27 +156,50 @@ export function OccurrenceCard({
   const taskColor = occurrence.taskTemplate.color ?? "#D8643D";
   const archived = ["completed", "skipped", "cancelled"].includes(occurrence.status);
   const statusTone = getStatusTone(occurrence.status, taskColor);
+  const statusMeta = getStatusMeta(occurrence.status);
+  const StatusIcon = statusMeta.icon;
 
   return (
     <article
       className="app-surface rounded-[1.7rem] p-4 sm:p-5"
       style={{
         borderColor: statusTone.border,
-        background: `linear-gradient(135deg, ${statusTone.surface}, rgba(255, 255, 255, 0.9))`,
+        background: `linear-gradient(135deg, ${statusTone.surface}, rgba(255, 255, 255, 0.94))`,
         boxShadow: `0 18px 50px ${hexToRgba(taskColor, 0.08)}`,
       }}
     >
-      <div
-        className="mb-4 h-1.5 w-full rounded-full"
-        style={{ background: `linear-gradient(90deg, ${statusTone.accent}, ${hexToRgba(taskColor, 0.42)})` }}
-      />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] border px-3 py-3" style={{
+        borderColor: statusTone.border,
+        backgroundColor: statusTone.pillBackground,
+      }}>
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            className="flex size-10 shrink-0 items-center justify-center rounded-full"
+            style={{ backgroundColor: statusTone.surface, color: statusTone.accent }}
+          >
+            <StatusIcon className="size-4.5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em]" style={{ color: statusTone.accent }}>
+              Statut
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-semibold" style={{ color: statusTone.pillColor }}>
+                {statusMeta.label}
+              </p>
+              <span className="text-sm text-[var(--ink-700)]">{statusMeta.hint}</span>
+            </div>
+          </div>
+        </div>
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ink-700)]">
+          {format(occurrence.scheduledDate, "EEE d MMM", { locale: fr })}
+        </span>
+      </div>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="size-3 rounded-full" style={{ backgroundColor: taskColor }} />
-            <p className="text-sm uppercase tracking-[0.18em]" style={{ color: statusTone.accent }}>
-              {format(occurrence.scheduledDate, "EEE d MMM", { locale: fr })}
-            </p>
+            <p className="text-sm uppercase tracking-[0.18em] text-[var(--ink-700)]">Couleur de tâche</p>
           </div>
           <h3 className="mt-1 text-lg font-semibold">{occurrence.taskTemplate.title}</h3>
           <div className="mt-3 flex flex-wrap gap-2 text-sm text-[var(--ink-700)]">
@@ -150,7 +229,7 @@ export function OccurrenceCard({
         <span
           className="stat-pill shrink-0 px-3 py-1 text-xs font-semibold"
           style={{
-            backgroundColor: statusTone.pillBackground,
+            backgroundColor: "rgba(255,255,255,0.86)",
             borderColor: statusTone.border,
             color: statusTone.pillColor,
           }}

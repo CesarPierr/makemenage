@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return redirectTo(request, "/app/settings");
+    return redirectTo(request, "/app/settings?panel=planning");
   }
 
   const target = await db.householdMember.findUnique({
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   });
 
   if (!target) {
-    return redirectTo(request, "/app/settings");
+    return redirectTo(request, "/app/settings?panel=planning");
   }
 
   const membership = await db.householdMember.findFirst({
@@ -49,5 +49,5 @@ export async function POST(request: Request) {
 
   await syncHouseholdOccurrences(target.householdId);
 
-  return redirectTo(request, `/app/settings?household=${target.householdId}`);
+  return redirectTo(request, `/app/settings?household=${target.householdId}&panel=planning`);
 }

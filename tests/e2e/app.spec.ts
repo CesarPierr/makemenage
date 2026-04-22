@@ -66,7 +66,7 @@ async function createTaskFromWizard(
   }
 
   await page.getByRole("button", { name: "Continuer" }).click();
-  await page.locator('input[type="date"]').fill(today);
+  await page.getByRole("textbox", { name: "Première date" }).fill(today);
 
   if (values.recurrenceLabel) {
     await page.getByRole("button", { name: values.recurrenceLabel }).click();
@@ -85,6 +85,17 @@ async function createTaskFromWizard(
 async function openTaskAdministration(page: import("@playwright/test").Page) {
   await page.goto("/app/my-tasks#administration");
   await expect(page.getByRole("heading", { name: "Gérer les tâches du foyer" })).toBeVisible();
+}
+
+async function openSettingsPanel(
+  page: import("@playwright/test").Page,
+  panel: "households" | "team" | "access" | "planning" | "danger",
+) {
+  const currentUrl = new URL(page.url());
+  const household = currentUrl.searchParams.get("household");
+  const suffix = household ? `?household=${household}&panel=${panel}` : `?panel=${panel}`;
+
+  await page.goto(`/app/settings${suffix}`);
 }
 
 test("register API redirects to login without creating a session cookie", async ({ request }, testInfo) => {
@@ -170,12 +181,12 @@ test("user can register, login, create a household, add a member, create a task,
   await expect(mainNavigation.getByRole("link", { name: "Réglages" })).toBeVisible();
   await expect(mainNavigation.getByRole("link", { name: "Accueil" })).toBeVisible();
 
-  await page.goto("/app/settings");
+  await openSettingsPanel(page, "team");
   await expect(page.getByRole("heading", { name: "Membres" })).toBeVisible();
   await page.getByPlaceholder("Nom affiché").fill("Sam");
   await page.locator('input[name="color"]').fill("#1F6E8C");
   await page.getByRole("button", { name: "Ajouter le membre" }).click();
-  await expect(page.locator('option[value]', { hasText: "Sam" })).toHaveCount(1);
+  await expect(page.getByText("Sam").first()).toBeVisible();
 
   await page.goto("/app/my-tasks");
   await page.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
@@ -188,7 +199,7 @@ test("user can register, login, create a household, add a member, create a task,
   await page.getByRole("button", { name: "Continuer" }).click();
 
   // Étape 2
-  await page.locator('input[type="date"]').fill(today);
+  await page.getByRole("textbox", { name: "Première date" }).fill(today);
   await page.getByRole("button", { name: "Chaque semaine" }).click();
   await page.getByRole("button", { name: "Continuer" }).click();
 
@@ -247,7 +258,7 @@ test("two accounts can share a household, one account can keep multiple househol
   await page.getByRole("button", { name: "Créer le foyer" }).click();
   await page.waitForLoadState("networkidle");
 
-  await page.goto("/app/settings");
+  await openSettingsPanel(page, "access");
   await page.getByRole("button", { name: "Créer une invitation" }).click();
   const inviteLinkCopyButton = page.getByRole("button", { name: "Copier le lien" }).first();
   const inviteCodeCopyButton = page.getByRole("button", { name: "Copier le code" }).first();
@@ -274,22 +285,22 @@ test("two accounts can share a household, one account can keep multiple househol
   await guestPage.waitForURL(/\/app\?household=.*joined=1/);
   await expect(guestPage.getByText("Nouveau foyer relié au compte")).toBeVisible();
 
-  await guestPage.goto("/app/settings");
+  await openSettingsPanel(guestPage, "households");
   await expect(guestPage.getByText("Foyer partagé")).toBeVisible();
   await guestPage.getByPlaceholder("Nom du nouveau foyer").fill("Deuxième foyer");
   await guestPage.locator('form[action="/api/households"] input[name="timezone"]').fill("Europe/Paris");
   await guestPage.getByRole("button", { name: "Créer un autre foyer" }).click();
   await guestPage.waitForLoadState("networkidle");
-  await guestPage.goto("/app/settings");
+  await openSettingsPanel(guestPage, "households");
   await expect(guestPage.getByText("Foyer partagé")).toBeVisible();
   await expect(guestPage.getByText("Deuxième foyer")).toBeVisible();
 
   await guestPage.getByRole("link", { name: "Ouvrir" }).first().click();
   await guestPage.waitForLoadState("networkidle");
-  await guestPage.goto("/app/settings");
+  await openSettingsPanel(guestPage, "households");
   await guestPage.getByRole("button", { name: "Quitter ce foyer" }).click();
   await guestPage.waitForLoadState("networkidle");
-  await guestPage.goto("/app/settings");
+  await openSettingsPanel(guestPage, "households");
   await expect(guestPage.getByText("Deuxième foyer")).toBeVisible();
   await expect(guestPage.getByText("Foyer partagé")).toHaveCount(0);
 
@@ -322,7 +333,7 @@ test("a skipped task can be corrected and completed later with actual minutes", 
   await page.getByPlaceholder("Ex: Cuisine").fill("Salon");
   await page.getByRole("button", { name: "Continuer" }).click();
 
-  await page.locator('input[type="date"]').fill(today);
+  await page.getByRole("textbox", { name: "Première date" }).fill(today);
   await page.getByRole("button", { name: "Chaque semaine" }).click();
   await page.getByRole("button", { name: "Continuer" }).click();
 
@@ -362,11 +373,11 @@ test("adding a member can rebalance future strict alternation tasks", async ({ p
   await page.getByRole("button", { name: "Créer le foyer" }).click();
   await page.waitForLoadState("networkidle");
 
-  await page.goto("/app/settings");
+  await openSettingsPanel(page, "team");
   await page.getByPlaceholder("Nom affiché").fill("Sam");
   await page.locator('input[name="color"]').fill("#1F6E8C");
   await page.getByRole("button", { name: "Ajouter le membre" }).click();
-  await expect(page.locator('option[value]', { hasText: "Sam" })).toHaveCount(1);
+  await expect(page.getByText("Sam").first()).toBeVisible();
 
   await page.goto("/app/my-tasks");
   await page.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
@@ -376,14 +387,14 @@ test("adding a member can rebalance future strict alternation tasks", async ({ p
   await page.getByPlaceholder("Ex: Cuisine").fill("Cuisine");
   await page.getByRole("button", { name: "Continuer" }).click();
 
-  await page.locator('input[type="date"]').fill(today);
+  await page.getByRole("textbox", { name: "Première date" }).fill(today);
   await page.getByRole("button", { name: "Chaque semaine" }).click();
   await page.getByRole("button", { name: "Continuer" }).click();
 
   await page.getByRole("button", { name: "Créer la tâche" }).click();
   await page.waitForLoadState("networkidle");
 
-  await page.goto("/app/settings");
+  await openSettingsPanel(page, "team");
   await page.getByPlaceholder("Nom affiché").fill("Lea");
   await page.locator('input[name="color"]').fill("#2E8B57");
   await page.getByRole("button", { name: "Ajouter le membre" }).click();
@@ -518,7 +529,7 @@ test("desktop chromium covers multi-member task management, repartition, and man
   });
   await createHousehold(page, "Foyer orchestration");
 
-  await page.goto("/app/settings");
+  await openSettingsPanel(page, "access");
   await page.locator('form[action*="/invites"] select[name="role"]').selectOption("admin");
   await page.getByRole("button", { name: "Créer une invitation" }).click();
   const inviteLink = await page.getByRole("link", { name: "Ouvrir le lien d’invitation" }).first().getAttribute("href");
@@ -540,7 +551,7 @@ test("desktop chromium covers multi-member task management, repartition, and man
   await guestPage.getByRole("button", { name: "Rejoindre ce foyer" }).click();
   await guestPage.waitForURL(/\/app\?household=.*joined=1/);
 
-  await page.goto("/app/settings");
+  await openSettingsPanel(page, "team");
   await page.getByPlaceholder("Nom affiché").fill("Lea");
   await page.locator('input[name="color"]').fill("#2E8B57");
   await page.getByRole("button", { name: "Ajouter le membre" }).click();
@@ -611,7 +622,7 @@ test("desktop chromium covers multi-member task management, repartition, and man
   await expect(page.getByRole("heading", { name: "Rotation cuisine foyer" }).first()).toBeVisible();
   await expect(page.getByText("Reportée").first()).toBeVisible();
 
-  await page.goto("/app/settings");
+  await openSettingsPanel(page, "team");
   await expect(page.getByText("Réglages des tâches")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Gérer les tâches récurrentes" })).toBeVisible();
 

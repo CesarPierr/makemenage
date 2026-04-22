@@ -21,5 +21,5 @@ export async function POST(request: Request, { params }: Params) {
     );
   }
 
-  return redirectTo(request, `/app/settings?household=${id}&leave=${result.status}`);
+  return redirectTo(request, `/app/settings?household=${id}&panel=households&leave=${result.status}`);
 }
