@@ -10,6 +10,7 @@ type SettingsPageProps = {
     invite?: string;
     leave?: string;
     rebalance?: string;
+    delete?: string;
   }>;
 };
 
@@ -43,6 +44,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           ? { tone: "error" as const, text: "Impossible de quitter ce foyer: votre compte est le dernier encore relié au foyer." }
           : params.leave === "last_manager"
             ? { tone: "error" as const, text: "Impossible de quitter ce foyer: il faut d’abord qu’un autre compte garde un rôle owner/admin." }
+              : params.delete === "confirm_required"
+                ? { tone: "error" as const, text: "Veuillez confirmer la suppression du foyer." }
+                : params.delete === "forbidden"
+                  ? { tone: "error" as const, text: "Seul un owner peut supprimer le foyer." }
+                  : params.delete === "not_found"
+                    ? { tone: "error" as const, text: "Foyer introuvable ou accès refusé." }
               : params.rebalance === "done"
                 ? { tone: "success" as const, text: "Rééquilibrage terminé sans écraser les modifications manuelles." }
                 : params.rebalance === "done_overwrite"
@@ -325,6 +332,13 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             </p>
             <form action={`/api/households/${context.household.id}/recalculate`} method="post" className="mt-5 compact-form-grid">
               <label className="field-label">
+                <span>Gestion de la charge après tâches sautées/absence</span>
+                <select className="field" name="skipLoadPolicy" defaultValue="no_carry_over">
+                  <option value="carry_over">Report de charge (rattrapage ensuite)</option>
+                  <option value="no_carry_over">Sans report (reprise normale)</option>
+                </select>
+              </label>
+              <label className="field-label">
                 <span className="inline-flex items-start gap-3 rounded-[1rem] border border-[var(--line)] bg-white/70 px-4 py-3 font-medium text-[var(--ink-950)]">
                   <input name="forceOverwriteManual" type="checkbox" className="mt-1" />
                   <span>Écraser les modifications manuelles futures pendant ce recalcul</span>
@@ -335,6 +349,27 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               </button>
             </form>
           </article>
+
+          {context.membership.role === "owner" ? (
+            <article className="app-surface rounded-[2rem] p-5 sm:p-6 border border-red-200/70">
+              <p className="section-kicker text-red-700">Zone sensible</p>
+              <h3 className="display-title mt-2 text-3xl text-red-900">Supprimer ce foyer</h3>
+              <p className="mt-3 text-sm leading-6 text-[var(--ink-700)]">
+                Cette action supprime le foyer et toutes ses données (tâches, occurrences, historique, invitations).
+              </p>
+              <form action={`/api/households/${context.household.id}/delete`} method="post" className="mt-5 compact-form-grid">
+                <label className="field-label">
+                  <span className="inline-flex items-start gap-3 rounded-[1rem] border border-red-200 bg-red-50 px-4 py-3 font-medium text-red-900">
+                    <input name="confirmDelete" type="checkbox" className="mt-1" />
+                    <span>Je confirme la suppression définitive de ce foyer.</span>
+                  </span>
+                </label>
+                <button className="btn-primary w-full px-5 py-3 font-semibold bg-red-700 hover:bg-red-800 border-none" type="submit">
+                  Supprimer le foyer
+                </button>
+              </form>
+            </article>
+          ) : null}
         </section>
       ) : null}
 

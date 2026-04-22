@@ -86,14 +86,14 @@ function mapAssignmentRule(rule: {
   preserveRotationOnReschedule: boolean;
   rebalanceOnMemberAbsence: boolean;
   lockAssigneeAfterGeneration: boolean;
-}): AssignmentRuleInput {
+}, options?: { preserveRotationOnSkip?: boolean | null }): AssignmentRuleInput {
   return {
     mode: rule.mode,
     eligibleMemberIds: parseStringArray(rule.eligibleMemberIds),
     fixedMemberId: rule.fixedMemberId,
     rotationOrder: parseStringArray(rule.rotationOrder),
     fairnessWindowDays: rule.fairnessWindowDays,
-    preserveRotationOnSkip: rule.preserveRotationOnSkip,
+    preserveRotationOnSkip: options?.preserveRotationOnSkip ?? rule.preserveRotationOnSkip,
     preserveRotationOnReschedule: rule.preserveRotationOnReschedule,
     rebalanceOnMemberAbsence: rule.rebalanceOnMemberAbsence,
     lockAssigneeAfterGeneration: rule.lockAssigneeAfterGeneration,
@@ -131,7 +131,14 @@ function mapExistingOccurrences(
   }));
 }
 
-export async function syncHouseholdOccurrences(householdId: string) {
+export async function syncHouseholdOccurrences(
+  householdId: string,
+  options?: {
+    taskId?: string;
+    forceOverwriteManual?: boolean;
+    preserveRotationOnSkipOverride?: boolean | null;
+  },
+) {
   const household = await db.household.findUnique({
     where: {
       id: householdId,
@@ -145,6 +152,7 @@ export async function syncHouseholdOccurrences(householdId: string) {
       tasks: {
         where: {
           isActive: true,
+          ...(options?.taskId ? { id: options.taskId } : {}),
         },
         include: {
           recurrenceRule: true,
@@ -179,7 +187,9 @@ export async function syncHouseholdOccurrences(householdId: string) {
       startsOn: task.startsOn,
       endsOn: task.endsOn,
       recurrence: mapRecurrenceRule(task.recurrenceRule),
-      assignment: mapAssignmentRule(task.assignmentRule),
+      assignment: mapAssignmentRule(task.assignmentRule, {
+        preserveRotationOnSkip: options?.preserveRotationOnSkipOverride ?? null,
+      }),
     };
 
     const existingOccurrences = mapExistingOccurrences(task.occurrences);
@@ -227,17 +237,19 @@ export async function syncHouseholdOccurrences(householdId: string) {
         continue;
       }
 
-      if (
-        existing.isManuallyModified ||
-        ["completed", "skipped", "rescheduled", "cancelled"].includes(existing.status)
-      ) {
+      const isPastOrDone = ["completed", "skipped", "cancelled"].includes(existing.status);
+      const isRescheduled = existing.status === "rescheduled";
+      const isProtected = (existing.isManuallyModified || isRescheduled) && !options?.forceOverwriteManual;
+
+      if (isPastOrDone || isProtected) {
         continue;
       }
 
       if (
         existing.assignedMemberId !== occurrence.assignedMemberId ||
         existing.scheduledDate.getTime() !== occurrence.scheduledDate.getTime() ||
-        existing.status !== occurrence.status
+        existing.status !== occurrence.status ||
+        (existing.isManuallyModified && options?.forceOverwriteManual)
       ) {
         await db.taskOccurrence.update({
           where: { id: existing.id },
@@ -246,22 +258,28 @@ export async function syncHouseholdOccurrences(householdId: string) {
             dueDate: occurrence.dueDate,
             assignedMemberId: occurrence.assignedMemberId,
             status: occurrence.status,
+            ...(options?.forceOverwriteManual ? { isManuallyModified: false } : {}),
           },
         });
       }
     }
 
     for (const existing of task.occurrences) {
+      const isPastOrDone = ["completed", "skipped", "cancelled"].includes(existing.status);
+      const isRescheduled = existing.status === "rescheduled";
+      const isProtected = (existing.isManuallyModified || isRescheduled) && !options?.forceOverwriteManual;
+
       if (
         existing.scheduledDate >= startOfDay(new Date()) &&
-        !existing.isManuallyModified &&
+        !isProtected &&
         !generatedKeys.has(existing.sourceGenerationKey) &&
-        !["completed", "skipped", "rescheduled", "cancelled"].includes(existing.status)
+        !isPastOrDone
       ) {
         await db.taskOccurrence.update({
           where: { id: existing.id },
           data: {
             status: "cancelled",
+            ...(options?.forceOverwriteManual ? { isManuallyModified: false } : {}),
           },
         });
       }
@@ -493,6 +511,59 @@ export async function reassignOccurrence(params: {
       },
       newValues: {
         assignedMemberId: params.assignedMemberId,
+        notes: params.notes ?? existing.notes,
+      },
+    },
+  });
+}
+
+export async function reopenOccurrence(params: {
+  occurrenceId: string;
+  actorMemberId?: string | null;
+  notes?: string;
+}) {
+  const existing = await db.taskOccurrence.findUnique({
+    where: {
+      id: params.occurrenceId,
+    },
+  });
+
+  if (!existing) {
+    return;
+  }
+
+  const reopenedStatus = startOfDay(existing.scheduledDate) < startOfDay(new Date()) ? "overdue" : "planned";
+  const occurrence = await db.taskOccurrence.update({
+    where: {
+      id: params.occurrenceId,
+    },
+    data: {
+      status: reopenedStatus,
+      completedAt: null,
+      completedByMemberId: null,
+      actualMinutes: null,
+      notes: params.notes ?? existing.notes,
+      isManuallyModified: true,
+    },
+  });
+
+  await db.occurrenceActionLog.create({
+    data: {
+      occurrenceId: occurrence.id,
+      actionType: "edited",
+      actorMemberId: params.actorMemberId ?? undefined,
+      previousValues: {
+        status: existing.status,
+        completedAt: existing.completedAt?.toISOString() ?? null,
+        completedByMemberId: existing.completedByMemberId,
+        actualMinutes: existing.actualMinutes,
+        notes: existing.notes,
+      },
+      newValues: {
+        status: reopenedStatus,
+        completedAt: null,
+        completedByMemberId: null,
+        actualMinutes: null,
         notes: params.notes ?? existing.notes,
       },
     },

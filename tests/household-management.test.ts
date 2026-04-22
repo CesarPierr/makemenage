@@ -8,6 +8,7 @@ const dbMocks = vi.hoisted(() => ({
   householdMemberFindMany: vi.fn(),
   householdMemberCreate: vi.fn(),
   householdMemberUpdate: vi.fn(),
+  householdDelete: vi.fn(),
   transaction: vi.fn(),
 }));
 
@@ -28,6 +29,9 @@ vi.mock("@/lib/db", () => ({
       create: dbMocks.householdMemberCreate,
       update: dbMocks.householdMemberUpdate,
     },
+    household: {
+      delete: dbMocks.householdDelete,
+    },
     $transaction: dbMocks.transaction,
   },
 }));
@@ -38,7 +42,13 @@ vi.mock("@/lib/scheduling/service", () => ({
 
 vi.mock("server-only", () => ({}));
 
-import { acceptHouseholdInvite, getInviteState, leaveHousehold, pickNextMemberColor } from "@/lib/household-management";
+import {
+  acceptHouseholdInvite,
+  deleteHousehold,
+  getInviteState,
+  leaveHousehold,
+  pickNextMemberColor,
+} from "@/lib/household-management";
 
 describe("household management", () => {
   beforeEach(() => {
@@ -192,6 +202,32 @@ describe("household management", () => {
         expiresAt: new Date("2026-05-01T00:00:00Z"),
       }),
     ).toBe("used");
+  });
+
+  it("deletes household when requester is owner", async () => {
+    dbMocks.householdMemberFindFirst
+      .mockResolvedValueOnce({
+        id: "member-owner",
+        role: "owner",
+      })
+      .mockResolvedValueOnce({
+        householdId: "house-2",
+      });
+
+    const result = await deleteHousehold({
+      householdId: "house-1",
+      userId: "user-1",
+    });
+
+    expect(dbMocks.householdDelete).toHaveBeenCalledWith({
+      where: {
+        id: "house-1",
+      },
+    });
+    expect(result).toEqual({
+      status: "deleted",
+      nextHouseholdId: "house-2",
+    });
   });
 });
 

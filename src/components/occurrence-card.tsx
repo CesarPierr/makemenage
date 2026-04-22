@@ -107,98 +107,131 @@ export function OccurrenceCard({
       ) : null}
 
       {!compact && canEditOccurrence ? (
-        <div className="mt-4 space-y-3">
-          <form
-            action={`/api/occurrences/${occurrence.id}/complete`}
-            method="post"
-            className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_1fr_auto]"
-            style={{ borderColor: hexToRgba(taskColor, 0.18) }}
-          >
-              <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
-              <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-3">
-                Valider la tâche
-              </label>
-              <input
-                className="field"
-                type="number"
-                min="0"
-                name="actualMinutes"
-                defaultValue={occurrence.actualMinutes ?? ""}
-                placeholder="Minutes réelles"
-              />
-              <input
-                className="field"
-                type="text"
-                name="notes"
-                defaultValue={occurrence.notes ?? ""}
-                placeholder="Note facultative"
-              />
-              <button className="btn-primary px-4 py-3 text-sm font-semibold" type="submit">
-                {occurrence.status === "completed" ? "Mettre à jour" : "Marquer faite"}
-              </button>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <form action={`/api/occurrences/${occurrence.id}/complete`} method="post">
+            <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
+            <button className="btn-primary px-3 py-2 text-sm font-semibold" type="submit">
+              Marquer terminée
+            </button>
           </form>
+          <form action={`/api/occurrences/${occurrence.id}/skip`} method="post">
+            <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
+            <button className="btn-secondary px-3 py-2 text-sm font-semibold" type="submit">
+              Marquer sautée
+            </button>
+          </form>
+          {isArchived || occurrence.status === "rescheduled" ? (
+            <form action={`/api/occurrences/${occurrence.id}/reopen`} method="post">
+              <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
+              <button className="btn-secondary px-3 py-2 text-sm font-semibold" type="submit">
+                Repasser à faire
+              </button>
+            </form>
+          ) : null}
+        </div>
+      ) : null}
 
-          <form
-            action={`/api/occurrences/${occurrence.id}/skip`}
-            method="post"
-            className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_auto]"
-            style={{ borderColor: hexToRgba(taskColor, 0.18) }}
-          >
+      {!compact && canEditOccurrence ? (
+        <details className="mt-4 group">
+          <summary className="cursor-pointer text-sm font-semibold text-[var(--coral-600)] hover:underline list-none select-none outline-none focus:outline-none">
+            <div className="flex items-center gap-2">
+              <span className="group-open:hidden">▶ Gérer cette tâche</span>
+              <span className="hidden group-open:inline">▼ Masquer les options</span>
+            </div>
+          </summary>
+          <div className="mt-4 space-y-3">
+            <form
+              action={`/api/occurrences/${occurrence.id}/complete`}
+              method="post"
+              className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_1fr_auto]"
+              style={{ borderColor: hexToRgba(taskColor, 0.18) }}
+            >
+                <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
+                <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-3">
+                  Valider la tâche
+                </label>
+                <input
+                  className="field"
+                  type="number"
+                  min="0"
+                  name="actualMinutes"
+                  defaultValue={occurrence.actualMinutes ?? ""}
+                  placeholder="Minutes réelles"
+                />
+                <input
+                  className="field"
+                  type="text"
+                  name="notes"
+                  defaultValue={occurrence.notes ?? ""}
+                  placeholder="Note facultative"
+                />
+                <button className="btn-primary px-4 py-3 text-sm font-semibold" type="submit">
+                  {occurrence.status === "completed" ? "Mettre à jour" : "Marquer faite"}
+                </button>
+            </form>
+
+            <form
+              action={`/api/occurrences/${occurrence.id}/skip`}
+              method="post"
+              className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_auto]"
+              style={{ borderColor: hexToRgba(taskColor, 0.18) }}
+            >
+                <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
+                <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-2">
+                  Marquer comme sautée
+                </label>
+                <input
+                  className="field"
+                  type="text"
+                  name="notes"
+                  defaultValue={occurrence.status === "skipped" ? occurrence.notes ?? "" : ""}
+                  placeholder="Pourquoi cette tâche est sautée ?"
+                />
+                <button className="btn-secondary px-4 py-3 text-sm font-semibold" type="submit">
+                  {occurrence.status === "skipped" ? "Mettre à jour" : "Sauter"}
+                </button>
+            </form>
+
+            <form
+              action={`/api/occurrences/${occurrence.id}/reschedule`}
+              method="post"
+              className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_auto]"
+              style={{ borderColor: hexToRgba(taskColor, 0.18) }}
+            >
               <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
               <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-2">
-                Marquer comme sautée
+                Reporter à une autre date
               </label>
-              <input
-                className="field"
-                type="text"
-                name="notes"
-                defaultValue={occurrence.status === "skipped" ? occurrence.notes ?? "" : ""}
-                placeholder="Pourquoi cette tâche est sautée ?"
-              />
+              <input className="field" type="date" name="date" required />
               <button className="btn-secondary px-4 py-3 text-sm font-semibold" type="submit">
-                {occurrence.status === "skipped" ? "Mettre à jour" : "Sauter"}
+                Reporter
               </button>
-          </form>
+            </form>
 
-          <form
-            action={`/api/occurrences/${occurrence.id}/reschedule`}
-            method="post"
-            className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_auto]"
-            style={{ borderColor: hexToRgba(taskColor, 0.18) }}
-          >
-            <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
-            <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-2">
-              Reporter à une autre date
-            </label>
-            <input className="field" type="date" name="date" required />
-            <button className="btn-secondary px-4 py-3 text-sm font-semibold" type="submit">
-              Reporter
-            </button>
-          </form>
-
-          <form
-            action={`/api/occurrences/${occurrence.id}/reassign`}
-            method="post"
-            className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_auto]"
-            style={{ borderColor: hexToRgba(taskColor, 0.18) }}
-          >
-            <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
-            <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-2">
-              Changer l&apos;attribution
-            </label>
-            <select className="field" name="assignedMemberId" defaultValue={occurrence.assignedMember?.id ?? ""}>
-              <option value="">Choisir un membre</option>
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.displayName}
-                </option>
-              ))}
-            </select>
-            <button className="btn-secondary px-4 py-3 text-sm font-semibold" type="submit">
-              Réassigner
-            </button>
-          </form>
-        </div>
+            <form
+              action={`/api/occurrences/${occurrence.id}/reassign`}
+              method="post"
+              className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_auto]"
+              style={{ borderColor: hexToRgba(taskColor, 0.18) }}
+            >
+              <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
+              <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-2">
+                Changer l&apos;attribution
+              </label>
+              <select className="field" name="assignedMemberId" defaultValue={occurrence.assignedMember?.id ?? ""}>
+                <option value="">Choisir un membre</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.displayName}
+                  </option>
+                ))}
+              </select>
+              <button className="btn-secondary px-4 py-3 text-sm font-semibold" type="submit">
+                Réassigner
+              </button>
+            </form>
+          </div>
+        </details>
       ) : null}
     </article>
   );

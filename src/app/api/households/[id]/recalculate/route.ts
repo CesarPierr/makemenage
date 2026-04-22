@@ -25,8 +25,18 @@ export async function POST(request: Request, { params }: Params) {
 
   const formData = await request.formData();
   const forceOverwriteManual = formData.get("forceOverwriteManual") === "on";
+  const skipLoadPolicy = String(formData.get("skipLoadPolicy") || "no_carry_over");
+  const preserveRotationOnSkipOverride =
+    skipLoadPolicy === "carry_over"
+      ? false
+      : skipLoadPolicy === "no_carry_over"
+        ? true
+        : null;
 
-  await syncHouseholdOccurrences(id, { forceOverwriteManual });
+  await syncHouseholdOccurrences(id, {
+    forceOverwriteManual,
+    preserveRotationOnSkipOverride,
+  });
 
   const result = forceOverwriteManual ? "done_overwrite" : "done";
   return redirectTo(request, `/app/settings?household=${id}&rebalance=${result}`);

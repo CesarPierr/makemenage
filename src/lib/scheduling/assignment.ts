@@ -72,6 +72,8 @@ export function pickAssignee(params: {
       .filter(
         (occurrence) =>
           occurrence.status !== "cancelled" &&
+          (occurrence.status !== "skipped" || rule.preserveRotationOnSkip !== false) &&
+          (occurrence.status !== "rescheduled" || rule.preserveRotationOnReschedule !== false) &&
           occurrence.assignedMemberId &&
           rotation.includes(occurrence.assignedMemberId) &&
           startOfDay(occurrence.scheduledDate) < startOfDay(scheduledDate),

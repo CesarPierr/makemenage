@@ -4,6 +4,9 @@ const dbMocks = vi.hoisted(() => ({
   taskTemplateFindMany: vi.fn(),
   assignmentRuleUpdate: vi.fn(),
   householdFindUnique: vi.fn(),
+  taskOccurrenceFindUnique: vi.fn(),
+  taskOccurrenceUpdate: vi.fn(),
+  occurrenceActionLogCreate: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -17,10 +20,17 @@ vi.mock("@/lib/db", () => ({
     household: {
       findUnique: dbMocks.householdFindUnique,
     },
+    taskOccurrence: {
+      findUnique: dbMocks.taskOccurrenceFindUnique,
+      update: dbMocks.taskOccurrenceUpdate,
+    },
+    occurrenceActionLog: {
+      create: dbMocks.occurrenceActionLogCreate,
+    },
   },
 }));
 
-import { addMemberToExistingAssignments } from "@/lib/scheduling/service";
+import { addMemberToExistingAssignments, reopenOccurrence } from "@/lib/scheduling/service";
 
 describe("scheduling service", () => {
   beforeEach(() => {
@@ -82,3 +92,47 @@ describe("scheduling service", () => {
     });
   });
 });
+
+describe("reopenOccurrence", () => {
+  it("resets completion and skipped metadata then logs the edit", async () => {
+    dbMocks.taskOccurrenceFindUnique.mockResolvedValue({
+      id: "occ-1",
+      status: "completed",
+      scheduledDate: new Date("2099-02-10"),
+      completedAt: new Date("2099-02-11"),
+      completedByMemberId: "member-1",
+      actualMinutes: 35,
+      notes: "fait",
+    });
+    dbMocks.taskOccurrenceUpdate.mockResolvedValue({
+      id: "occ-1",
+    });
+
+    await reopenOccurrence({
+      occurrenceId: "occ-1",
+      actorMemberId: "member-2",
+    });
+
+    expect(dbMocks.taskOccurrenceUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "occ-1" },
+        data: expect.objectContaining({
+          status: "planned",
+          completedAt: null,
+          completedByMemberId: null,
+          actualMinutes: null,
+        }),
+      }),
+    );
+    expect(dbMocks.occurrenceActionLogCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          occurrenceId: "occ-1",
+          actionType: "edited",
+          actorMemberId: "member-2",
+        }),
+      }),
+    );
+  });
+});
+

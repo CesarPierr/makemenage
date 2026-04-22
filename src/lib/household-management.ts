@@ -255,3 +255,58 @@ export async function leaveHousehold(params: {
     nextHouseholdId: nextMembership?.householdId ?? null,
   };
 }
+
+export async function deleteHousehold(params: {
+  householdId: string;
+  userId: string;
+}) {
+  const membership = await db.householdMember.findFirst({
+    where: {
+      householdId: params.householdId,
+      userId: params.userId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      role: true,
+    },
+  });
+
+  if (!membership) {
+    return {
+      status: "not_found" as const,
+      nextHouseholdId: null,
+    };
+  }
+
+  if (membership.role !== "owner") {
+    return {
+      status: "forbidden" as const,
+      nextHouseholdId: params.householdId,
+    };
+  }
+
+  await db.household.delete({
+    where: {
+      id: params.householdId,
+    },
+  });
+
+  const nextMembership = await db.householdMember.findFirst({
+    where: {
+      userId: params.userId,
+      isActive: true,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+    select: {
+      householdId: true,
+    },
+  });
+
+  return {
+    status: "deleted" as const,
+    nextHouseholdId: nextMembership?.householdId ?? null,
+  };
+}

@@ -140,4 +140,38 @@ describe("assignment engine", () => {
 
     expect(pick).toBe("C");
   });
+
+  it("keeps skipped member as next assignee when skip should carry over", () => {
+    const pick = pickAssignee({
+      sequenceIndex: 0,
+      rule: {
+        mode: "strict_alternation",
+        eligibleMemberIds: ["A", "B"],
+        rotationOrder: ["A", "B"],
+        preserveRotationOnSkip: false,
+      },
+      members,
+      scheduledDate: new Date("2026-02-10"),
+      absences: [],
+      estimatedMinutes: 30,
+      existingOccurrences: [
+        {
+          sourceGenerationKey: "task:2026-02-01",
+          scheduledDate: new Date("2026-02-01"),
+          dueDate: new Date("2026-02-01"),
+          assignedMemberId: "A",
+          status: "planned",
+        },
+        {
+          sourceGenerationKey: "task:2026-02-08",
+          scheduledDate: new Date("2026-02-08"),
+          dueDate: new Date("2026-02-08"),
+          assignedMemberId: "B",
+          status: "skipped",
+        },
+      ],
+    });
+
+    expect(pick).toBe("B");
+  });
 });

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { CalendarDays, History, LayoutGrid, ListTodo, LogOut, Settings2 } from "lucide-react";
 
 import { mobileSections } from "@/lib/constants";
@@ -15,7 +16,10 @@ type AppShellProps = {
 
 export function AppShell({ children, householdName, currentHouseholdId }: AppShellProps) {
   const pathname = usePathname();
-  const suffix = currentHouseholdId ? `?household=${currentHouseholdId}` : "";
+  const searchParams = useSearchParams();
+  const householdIdFromUrl = searchParams.get("household");
+  const activeHouseholdId = currentHouseholdId ?? householdIdFromUrl;
+  const suffix = activeHouseholdId ? `?household=${activeHouseholdId}` : "";
   const navIcons = {
     "/app": LayoutGrid,
     "/app/my-tasks": ListTodo,
