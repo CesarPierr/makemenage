@@ -44,8 +44,12 @@ export async function POST(request: Request) {
   const user = await requireUser();
   const formData = await request.formData();
   const householdId = String(formData.get("householdId"));
+  const startsOnRaw = String(formData.get("startsOn"));
+  const requestedRecurrenceType = String(formData.get("recurrenceType"));
+  const singleRun = requestedRecurrenceType === "single" || formData.get("singleRun") === "on";
+  const normalizedRecurrenceType = singleRun ? "daily" : requestedRecurrenceType;
   const requestedEligibleMemberIds = formData.getAll("eligibleMemberIds").map(String).filter(Boolean);
-  const assignmentMode = String(formData.get("assignmentMode"));
+  const assignmentMode = singleRun ? "fixed" : String(formData.get("assignmentMode"));
   const householdMembers = await db.householdMember.findMany({
     where: {
       householdId,
@@ -69,11 +73,12 @@ export async function POST(request: Request) {
     room: formData.get("room") || undefined,
     color: formData.get("color") || undefined,
     estimatedMinutes: formData.get("estimatedMinutes"),
-    startsOn: formData.get("startsOn"),
+    startsOn: startsOnRaw,
+    endsOn: singleRun ? startsOnRaw : formData.get("endsOn") || undefined,
     recurrence: {
-      type: formData.get("recurrenceType"),
+      type: normalizedRecurrenceType,
       interval: formData.get("interval"),
-      anchorDate: formData.get("startsOn"),
+      anchorDate: startsOnRaw,
       dueOffsetDays: 0,
     },
     assignment: {
@@ -103,15 +108,16 @@ export async function POST(request: Request) {
 
   const recurrenceRule = await db.recurrenceRule.create({
     data: {
-      type: String(formData.get("recurrenceType")) as
+      type: normalizedRecurrenceType as
         | "daily"
         | "every_x_days"
         | "weekly"
         | "every_x_weeks"
         | "monthly_simple",
-      interval: Number(formData.get("interval") ?? 1),
-      anchorDate: parseDateInput(String(formData.get("startsOn"))),
+      interval: singleRun ? 1 : Number(formData.get("interval") ?? 1),
+      anchorDate: parseDateInput(startsOnRaw),
       dueOffsetDays: 0,
+      config: singleRun ? { singleRun: true } : undefined,
     },
   });
 
@@ -144,6 +150,7 @@ export async function POST(request: Request) {
       estimatedMinutes: parsedTask.data.estimatedMinutes,
       priority: 2,
       startsOn: parsedTask.data.startsOn,
+      endsOn: singleRun ? parsedTask.data.startsOn : parsedTask.data.endsOn ?? null,
       recurrenceRuleId: recurrenceRule.id,
       assignmentRuleId: assignmentRule.id,
       createdByMemberId: membership.id,

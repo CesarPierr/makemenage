@@ -68,8 +68,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
 
   // Handle PUT as POST default
   const forceOverwriteManual = formData.get("forceOverwriteManual") === "on";
+  const startsOnRaw = String(formData.get("startsOn"));
+  const requestedRecurrenceType = String(formData.get("recurrenceType"));
+  const singleRun = requestedRecurrenceType === "single" || formData.get("singleRun") === "on";
+  const normalizedRecurrenceType = singleRun ? "daily" : requestedRecurrenceType;
   const requestedEligibleMemberIds = formData.getAll("eligibleMemberIds").map(String).filter(Boolean);
-  const assignmentMode = String(formData.get("assignmentMode"));
+  const assignmentMode = singleRun ? "fixed" : String(formData.get("assignmentMode"));
   const householdMembers = await db.householdMember.findMany({
     where: {
       householdId,
@@ -94,11 +98,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
     room: formData.get("room") || undefined,
     color: formData.get("color") || undefined,
     estimatedMinutes: formData.get("estimatedMinutes"),
-    startsOn: formData.get("startsOn"),
+    startsOn: startsOnRaw,
+    endsOn: singleRun ? startsOnRaw : formData.get("endsOn") || undefined,
     recurrence: {
-      type: formData.get("recurrenceType"),
+      type: normalizedRecurrenceType,
       interval: formData.get("interval"),
-      anchorDate: formData.get("startsOn"),
+      anchorDate: startsOnRaw,
       dueOffsetDays: 0,
     },
     assignment: {
@@ -139,8 +144,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
     where: { id: task.recurrenceRuleId },
     data: {
       type: parsedTask.data.recurrence.type,
-      interval: parsedTask.data.recurrence.interval,
+      interval: singleRun ? 1 : parsedTask.data.recurrence.interval,
       anchorDate: parsedTask.data.recurrence.anchorDate,
+      config: singleRun ? { singleRun: true } : undefined,
     },
   });
 
@@ -164,6 +170,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
       color: parsedTask.data.color,
       estimatedMinutes: parsedTask.data.estimatedMinutes,
       startsOn: parsedTask.data.startsOn,
+      endsOn: singleRun ? parsedTask.data.startsOn : parsedTask.data.endsOn ?? null,
     },
   });
 

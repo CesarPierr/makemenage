@@ -1,5 +1,3 @@
-import "server-only";
-
 import { startOfDay } from "date-fns";
 import type { AssignmentMode, HouseholdIntegration, OccurrenceStatus, RecurrenceType } from "@prisma/client";
 
@@ -47,6 +45,16 @@ function cleanOptionalText(value: string | null | undefined) {
   return trimmed ? trimmed : undefined;
 }
 
+function hasSingleRunConfig(config: unknown) {
+  return Boolean(
+    config &&
+      typeof config === "object" &&
+      !Array.isArray(config) &&
+      "singleRun" in config &&
+      (config as { singleRun?: unknown }).singleRun === true,
+  );
+}
+
 function serializeTask(task: {
   id: string;
   householdId: string;
@@ -68,6 +76,7 @@ function serializeTask(task: {
     dayOfMonth: number | null;
     anchorDate: Date;
     dueOffsetDays: number;
+    config: unknown;
   };
   assignmentRule: {
     mode: AssignmentMode;
@@ -100,6 +109,7 @@ function serializeTask(task: {
       dayOfMonth: task.recurrenceRule.dayOfMonth,
       anchorDate: task.recurrenceRule.anchorDate.toISOString(),
       dueOffsetDays: task.recurrenceRule.dueOffsetDays,
+      oneTime: hasSingleRunConfig(task.recurrenceRule.config),
     },
     assignment: {
       mode: task.assignmentRule.mode,
@@ -282,11 +292,12 @@ export async function createOpenClawTask(input: unknown) {
     const recurrenceRule = await tx.recurrenceRule.create({
       data: {
         type: parsed.recurrence.type,
-        interval: parsed.recurrence.interval,
+        interval: parsed.recurrence.oneTime ? 1 : parsed.recurrence.interval,
         weekdays: parsed.recurrence.weekdays,
         dayOfMonth: parsed.recurrence.dayOfMonth,
         anchorDate: parsed.recurrence.anchorDate ?? parsed.startsOn,
         dueOffsetDays: parsed.recurrence.dueOffsetDays,
+        config: parsed.recurrence.oneTime ? { singleRun: true } : undefined,
       },
     });
 
@@ -313,6 +324,7 @@ export async function createOpenClawTask(input: unknown) {
         estimatedMinutes: parsed.estimatedMinutes,
         priority: 2,
         startsOn: parsed.startsOn,
+        endsOn: parsed.recurrence.oneTime ? parsed.startsOn : null,
         recurrenceRuleId: recurrenceRule.id,
         assignmentRuleId: assignmentRule.id,
       },
@@ -377,8 +389,9 @@ export async function updateOpenClawTask(taskId: string, householdId: string, pa
           ? undefined
           : patch.recurrence?.dayOfMonth ?? existingTask.recurrenceRule.dayOfMonth ?? undefined,
       anchorDate: patch.recurrence?.anchorDate ?? nextStartsOn,
-      dueOffsetDays: patch.recurrence?.dueOffsetDays ?? existingTask.recurrenceRule.dueOffsetDays,
-    },
+        dueOffsetDays: patch.recurrence?.dueOffsetDays ?? existingTask.recurrenceRule.dueOffsetDays,
+        oneTime: patch.recurrence?.oneTime ?? hasSingleRunConfig(existingTask.recurrenceRule.config),
+      },
     assignment: {
       mode: nextAssignmentMode,
       eligibleMemberIds: nextEligibleMemberIds,
@@ -400,11 +413,12 @@ export async function updateOpenClawTask(taskId: string, householdId: string, pa
       },
       data: {
         type: nextTask.recurrence.type,
-        interval: nextTask.recurrence.interval,
+        interval: nextTask.recurrence.oneTime ? 1 : nextTask.recurrence.interval,
         weekdays: nextTask.recurrence.weekdays,
         dayOfMonth: nextTask.recurrence.dayOfMonth ?? null,
         anchorDate: nextTask.recurrence.anchorDate ?? nextTask.startsOn,
         dueOffsetDays: nextTask.recurrence.dueOffsetDays,
+        config: nextTask.recurrence.oneTime ? { singleRun: true } : undefined,
       },
     });
 
@@ -438,6 +452,7 @@ export async function updateOpenClawTask(taskId: string, householdId: string, pa
         color: nextTask.color,
         estimatedMinutes: nextTask.estimatedMinutes,
         startsOn: nextTask.startsOn,
+        endsOn: nextTask.recurrence.oneTime ? nextTask.startsOn : null,
       },
     });
   });
@@ -661,10 +676,20 @@ export async function buildOpenClawDiscovery(request: Request, householdId: stri
     return null;
   }
 
-  const tasksUrl = resolveAppUrl(request, "/api/integrations/mcp/openclaw/tasks").toString();
-  const upcomingUrl = resolveAppUrl(request, "/api/integrations/mcp/openclaw/upcoming").toString();
-  const rebalanceUrl = resolveAppUrl(request, "/api/integrations/mcp/openclaw/rebalance").toString();
-  const discoveryUrl = resolveAppUrl(request, "/api/integrations/mcp/openclaw/discovery").toString();
+  const tasksUrl = resolveAppUrl(request, "/api/integrations/mcp/openclaw/tasks");
+  tasksUrl.searchParams.set("householdId", householdId);
+
+  const upcomingUrl = resolveAppUrl(request, "/api/integrations/mcp/openclaw/upcoming");
+  upcomingUrl.searchParams.set("householdId", householdId);
+
+  const rebalanceUrl = resolveAppUrl(request, "/api/integrations/mcp/openclaw/rebalance");
+  rebalanceUrl.searchParams.set("householdId", householdId);
+
+  const discoveryUrl = resolveAppUrl(request, "/api/integrations/mcp/openclaw/discovery");
+  discoveryUrl.searchParams.set("householdId", householdId);
+
+  const householdIdQuery = encodeURIComponent(householdId);
+  const updateTaskTemplateUrl = `${resolveAppUrl(request, "/api/integrations/mcp/openclaw/tasks").toString()}/{taskId}?householdId=${householdIdQuery}`;
 
   return {
     provider: "mcp_openclaw",
@@ -679,31 +704,31 @@ export async function buildOpenClawDiscovery(request: Request, householdId: stri
     endpoints: {
       discovery: {
         method: "GET",
-        url: discoveryUrl,
+        url: discoveryUrl.toString(),
       },
       listTasks: {
         method: "GET",
-        url: tasksUrl,
+        url: tasksUrl.toString(),
       },
       addTask: {
         method: "POST",
-        url: tasksUrl,
+        url: tasksUrl.toString(),
       },
       updateTask: {
         method: "PATCH",
-        urlTemplate: `${tasksUrl}/{taskId}`,
+        urlTemplate: updateTaskTemplateUrl,
       },
       deleteTask: {
         method: "DELETE",
-        urlTemplate: `${tasksUrl}/{taskId}`,
+        urlTemplate: updateTaskTemplateUrl,
       },
       listUpcoming: {
         method: "GET",
-        url: upcomingUrl,
+        url: upcomingUrl.toString(),
       },
       rebalance: {
         method: "POST",
-        url: rebalanceUrl,
+        url: rebalanceUrl.toString(),
       },
     },
     mcpReady: {

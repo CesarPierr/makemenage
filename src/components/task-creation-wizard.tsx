@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CalendarClock, Check, ChevronLeft, ChevronRight, Plus, TimerReset } from "lucide-react";
 
-import { taskPalette } from "@/lib/constants";
+import { roomSuggestions, taskPalette } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 type TaskCreationWizardProps = {
@@ -12,6 +12,7 @@ type TaskCreationWizardProps = {
 };
 
 type DraftTask = {
+  kind: "single" | "recurring";
   title: string;
   estimatedMinutes: string;
   category: string;
@@ -43,6 +44,7 @@ const assignmentOptions = [
 
 function buildInitialDraft(memberIds: string[]): DraftTask {
   return {
+    kind: "recurring",
     title: "",
     estimatedMinutes: "20",
     category: "",
@@ -62,6 +64,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
   const [isStep3Armed, setIsStep3Armed] = useState(false);
   const [draft, setDraft] = useState<DraftTask>(() => buildInitialDraft(members.map((member) => member.id)));
 
+  const isSingleTask = draft.kind === "single";
   const everyXMode = draft.recurrenceType === "every_x_days" || draft.recurrenceType === "every_x_weeks";
 
   useEffect(() => {
@@ -78,6 +81,14 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
   }
 
   function toggleMember(memberId: string) {
+    if (draft.kind === "single" || draft.assignmentMode === "fixed") {
+      setDraft((current) => ({
+        ...current,
+        eligibleMemberIds: [memberId],
+      }));
+      return;
+    }
+
     setDraft((current) => ({
       ...current,
       eligibleMemberIds: current.eligibleMemberIds.includes(memberId)
@@ -107,7 +118,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
           <div>
             <p className="section-kicker">Nouvelle tâche</p>
             <h3 className="display-title mt-1 text-2xl">Créer une nouvelle tâche</h3>
-            <p className="mt-1 text-sm text-[var(--ink-700)]">Une saisie courte, puis réglages essentiels.</p>
+            <p className="mt-1 text-sm text-[var(--ink-700)]">Simple une fois ou récurrente, sans configuration lourde.</p>
           </div>
         </button>
       ) : (
@@ -116,7 +127,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
             <div>
               <p className="section-kicker">Étape {step} / 3</p>
               <h3 className="display-title mt-1 text-2xl">
-                {step === 1 ? "La tâche" : step === 2 ? "Le rythme" : "L’attribution"}
+                {step === 1 ? "La tâche" : step === 2 ? (isSingleTask ? "La date" : "Le rythme") : (isSingleTask ? "L’attribution" : "L’attribution")}
               </h3>
             </div>
             <button className="btn-quiet px-4 py-2 text-sm font-semibold" onClick={resetWizard} type="button">
@@ -148,15 +159,86 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
             <input name="room" type="hidden" value={draft.room} />
             <input name="color" type="hidden" value={draft.color} />
             <input name="startsOn" type="hidden" value={draft.startsOn} />
-            <input name="recurrenceType" type="hidden" value={draft.recurrenceType} />
-            <input name="interval" type="hidden" value={draft.interval || "1"} />
-            <input name="assignmentMode" type="hidden" value={draft.assignmentMode} />
+            <input name="endsOn" type="hidden" value={isSingleTask ? draft.startsOn : ""} />
+            <input name="singleRun" type="hidden" value={isSingleTask ? "on" : ""} />
+            <input name="recurrenceType" type="hidden" value={isSingleTask ? "single" : draft.recurrenceType} />
+            <input name="interval" type="hidden" value={isSingleTask ? "1" : draft.interval || "1"} />
+            <input name="assignmentMode" type="hidden" value={isSingleTask ? "fixed" : draft.assignmentMode} />
             {draft.eligibleMemberIds.map((memberId) => (
               <input key={memberId} name="eligibleMemberIds" type="hidden" value={memberId} />
             ))}
 
             {step === 1 ? (
               <div className="compact-stack">
+                <div className="field-label">
+                  <span>Format</span>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                      className={cn(
+                        "soft-panel group relative overflow-hidden px-4 py-3 text-left transition-all",
+                        isSingleTask
+                          ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] shadow-sm"
+                          : "hover:bg-white/50",
+                      )}
+                      onClick={() =>
+                        setDraft((current) => ({
+                          ...current,
+                          kind: "single",
+                          assignmentMode: "fixed",
+                          eligibleMemberIds: current.eligibleMemberIds[0]
+                            ? [current.eligibleMemberIds[0]]
+                            : members[0]
+                              ? [members[0].id]
+                              : [],
+                        }))
+                      }
+                      type="button"
+                    >
+                      {isSingleTask && (
+                        <div className="absolute right-3 top-3 flex size-5 items-center justify-center rounded-full bg-[var(--sky-500)] text-white shadow-sm">
+                          <Check className="size-3" />
+                        </div>
+                      )}
+                      <p className={cn("font-semibold transition-colors", isSingleTask && "text-[var(--sky-700)]")}>
+                        Tâche simple
+                      </p>
+                      <p className="text-sm text-[var(--ink-700)]">Une seule date, une seule personne.</p>
+                    </button>
+                    <button
+                      className={cn(
+                        "soft-panel group relative overflow-hidden px-4 py-3 text-left transition-all",
+                        !isSingleTask
+                          ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] shadow-sm"
+                          : "hover:bg-white/50",
+                      )}
+                      onClick={() =>
+                        setDraft((current) => ({
+                          ...current,
+                          kind: "recurring",
+                          assignmentMode:
+                            current.assignmentMode === "fixed" && current.eligibleMemberIds.length <= 1
+                              ? "strict_alternation"
+                              : current.assignmentMode,
+                          eligibleMemberIds:
+                            current.eligibleMemberIds.length > 1
+                              ? current.eligibleMemberIds
+                              : members.map((member) => member.id),
+                        }))
+                      }
+                      type="button"
+                    >
+                      {!isSingleTask && (
+                        <div className="absolute right-3 top-3 flex size-5 items-center justify-center rounded-full bg-[var(--sky-500)] text-white shadow-sm">
+                          <Check className="size-3" />
+                        </div>
+                      )}
+                      <p className={cn("font-semibold transition-colors", !isSingleTask && "text-[var(--sky-700)]")}>
+                        Tâche récurrente
+                      </p>
+                      <p className="text-sm text-[var(--ink-700)]">Revient automatiquement selon un rythme.</p>
+                    </button>
+                  </div>
+                </div>
                 <label className="field-label">
                   <span>Nom</span>
                   <input
@@ -189,6 +271,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                     <span>Pièce</span>
                     <input
                       className="field"
+                      list="room-suggestions"
                       onChange={(event) => updateDraft("room", event.currentTarget.value)}
                       placeholder="Ex: Cuisine"
                       type="text"
@@ -196,6 +279,11 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                     />
                   </label>
                 </div>
+                <datalist id="room-suggestions">
+                  {roomSuggestions.map((room) => (
+                    <option key={room} value={room} />
+                  ))}
+                </datalist>
                 <label className="field-label">
                   <span>Catégorie</span>
                   <input
@@ -238,7 +326,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
             {step === 2 ? (
               <div className="compact-stack">
                 <label className="field-label">
-                  <span>Première date</span>
+                  <span>{isSingleTask ? "Date" : "Première date"}</span>
                   <input
                     className="field"
                     onChange={(event) => updateDraft("startsOn", event.currentTarget.value)}
@@ -247,53 +335,73 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                     value={draft.startsOn}
                   />
                 </label>
-                <div className="field-label">
-                  <span>Répétition</span>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {recurrenceOptions.map((option) => {
-                      const Icon = option.icon;
-
-                      return (
-                        <button
-                          className={cn(
-                            "soft-panel flex items-center gap-3 px-4 py-3 text-left",
-                            draft.recurrenceType === option.value && "border-[rgba(47,109,136,0.28)] bg-white",
-                          )}
-                          key={option.value}
-                          onClick={() => updateDraft("recurrenceType", option.value)}
-                          type="button"
-                        >
-                          <span className="flex size-9 items-center justify-center rounded-full bg-[rgba(47,109,136,0.12)] text-[var(--sky-600)]">
-                            <Icon className="size-4" />
-                          </span>
-                          <span className="font-semibold">{option.label}</span>
-                        </button>
-                      );
-                    })}
+                {isSingleTask ? (
+                  <div className="soft-panel px-4 py-4 text-sm leading-6 text-[var(--ink-700)]">
+                    Une seule occurrence sera créée à cette date, puis la tâche disparaîtra naturellement du planning futur.
                   </div>
-                </div>
-                {everyXMode ? (
-                  <label className="field-label">
-                    <span>Valeur de X</span>
-                    <input
-                      className="field"
-                      inputMode="numeric"
-                      min="1"
-                      onChange={(event) => updateDraft("interval", event.currentTarget.value)}
-                      onFocus={(event) => event.currentTarget.select()}
-                      required
-                      type="number"
-                      value={draft.interval}
-                    />
-                  </label>
-                ) : null}
+                ) : (
+                  <>
+                    <div className="field-label">
+                      <span>Répétition</span>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {recurrenceOptions.map((option) => {
+                          const Icon = option.icon;
+                          const active = draft.recurrenceType === option.value;
+                          return (
+                            <button
+                              className={cn(
+                                "soft-panel group relative flex items-center gap-3 overflow-hidden px-4 py-3 text-left transition-all",
+                                active ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] shadow-sm" : "hover:bg-white/50",
+                              )}
+                              key={option.value}
+                              onClick={() => updateDraft("recurrenceType", option.value)}
+                              type="button"
+                            >
+                              <span
+                                className={cn(
+                                  "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors",
+                                  active ? "bg-[var(--sky-500)] text-white shadow-sm" : "bg-[rgba(47,109,136,0.12)] text-[var(--sky-600)]",
+                                )}
+                              >
+                                <Icon className="size-4" />
+                              </span>
+                              <span className={cn("font-semibold transition-colors", active && "text-[var(--sky-700)]")}>
+                                {option.label}
+                              </span>
+                              {active && (
+                                <div className="absolute right-2 top-2">
+                                  <Check className="size-3 text-[var(--sky-500)]" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {everyXMode ? (
+                      <label className="field-label">
+                        <span>Valeur de X</span>
+                        <input
+                          className="field"
+                          inputMode="numeric"
+                          min="1"
+                          onChange={(event) => updateDraft("interval", event.currentTarget.value)}
+                          onFocus={(event) => event.currentTarget.select()}
+                          required
+                          type="number"
+                          value={draft.interval}
+                        />
+                      </label>
+                    ) : null}
+                  </>
+                )}
               </div>
             ) : null}
 
             {step === 3 ? (
               <div className="compact-stack">
                 <div className="field-label">
-                  <span>Membres concernés</span>
+                  <span>{isSingleTask ? "Personne assignée" : "Membres concernés"}</span>
                   <div className="flex flex-wrap gap-2">
                     {members.map((member) => {
                       const active = draft.eligibleMemberIds.includes(member.id);
@@ -303,8 +411,8 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                           className={cn(
                             "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all",
                             active
-                              ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] text-[var(--sky-600)]"
-                              : "border-[var(--line)] bg-white/70 text-[var(--ink-700)]",
+                              ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.16)] text-[var(--sky-700)] shadow-[0_12px_24px_rgba(47,109,136,0.12)]"
+                              : "border-[var(--line)] bg-white/70 text-[var(--ink-700)] hover:-translate-y-0.5 hover:border-[rgba(47,109,136,0.18)] hover:bg-white",
                           )}
                           key={member.id}
                           onClick={() => toggleMember(member.id)}
@@ -321,28 +429,46 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                     })}
                   </div>
                   {draft.eligibleMemberIds.length === 0 ? (
-                    <span className="field-help">Choisissez au moins une personne.</span>
+                    <span className="field-help">
+                      {isSingleTask ? "Choisissez la personne qui doit faire cette tâche." : "Choisissez au moins une personne."}
+                    </span>
                   ) : null}
                 </div>
-                <div className="field-label">
-                  <span>Attribution</span>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {assignmentOptions.map((option) => (
-                      <button
-                        className={cn(
-                          "soft-panel px-4 py-3 text-left",
-                          draft.assignmentMode === option.value && "border-[rgba(47,109,136,0.28)] bg-white",
-                        )}
-                        key={option.value}
-                        onClick={() => updateDraft("assignmentMode", option.value)}
-                        type="button"
-                      >
-                        <p className="font-semibold">{option.label}</p>
-                        <p className="text-sm text-[var(--ink-700)]">{option.hint}</p>
-                      </button>
-                    ))}
+                {isSingleTask ? (
+                  <div className="soft-panel px-4 py-4 text-sm leading-6 text-[var(--ink-700)]">
+                    Attribution fixe automatique pour cette unique occurrence.
                   </div>
-                </div>
+                ) : (
+                  <div className="field-label">
+                    <span>Attribution</span>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {assignmentOptions.map((option) => {
+                        const active = draft.assignmentMode === option.value;
+                        return (
+                          <button
+                            className={cn(
+                              "soft-panel group relative overflow-hidden px-4 py-3 text-left transition-all",
+                              active ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] shadow-sm" : "hover:bg-white/50",
+                            )}
+                            key={option.value}
+                            onClick={() => updateDraft("assignmentMode", option.value)}
+                            type="button"
+                          >
+                            <p className={cn("font-semibold transition-colors", active && "text-[var(--sky-700)]")}>
+                              {option.label}
+                            </p>
+                            <p className="text-sm text-[var(--ink-700)]">{option.hint}</p>
+                            {active && (
+                              <div className="absolute right-3 top-3 flex size-4 items-center justify-center rounded-full bg-[var(--sky-500)] text-white">
+                                <Check className="size-2.5" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : null}
 
@@ -379,7 +505,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                   disabled={!isStep3Armed || !draft.title.trim() || draft.eligibleMemberIds.length === 0}
                   type="submit"
                 >
-                  Créer la tâche
+                  {isSingleTask ? "Créer la tâche simple" : "Créer la tâche"}
                 </button>
               )}
             </div>

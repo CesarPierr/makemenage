@@ -1,0 +1,113 @@
+"use client";
+
+import { useState } from "react";
+import { CloudSync, Download, Globe, Share2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { CalendarSyncPanel } from "./calendar-sync-panel";
+
+type CalendarSidebarProps = {
+  householdFeedUrl: string;
+  personalFeedUrl?: string | null;
+  householdId: string;
+};
+
+export function CalendarSidebar({ householdFeedUrl, personalFeedUrl, householdId }: CalendarSidebarProps) {
+  const [activeTab, setActiveTab] = useState<"sync" | "export" | null>(null);
+
+  const toggleTab = (tab: "sync" | "export") => {
+    setActiveTab(activeTab === tab ? null : tab);
+  };
+
+  return (
+    <aside className="space-y-4">
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => toggleTab("sync")}
+          className={cn(
+            "flex flex-col items-center gap-2 rounded-2xl border-2 px-4 py-6 transition-all duration-300 group",
+            activeTab === "sync"
+              ? "bg-[var(--ink-950)] text-white border-[var(--ink-950)] shadow-xl shadow-black/10 scale-[1.02]"
+              : "bg-white border-[var(--line)] text-[var(--ink-700)] hover:border-[var(--ink-300)] hover:bg-[var(--ink-50)]"
+          )}
+        >
+          <div className={cn(
+            "flex size-12 items-center justify-center rounded-full transition-colors",
+            activeTab === "sync" ? "bg-white/10" : "bg-[var(--ink-50)] group-hover:bg-white"
+          )}>
+            <CloudSync className="size-6" />
+          </div>
+          <span className="text-sm font-bold">Synchroniser</span>
+        </button>
+
+        <button
+          onClick={() => toggleTab("export")}
+          className={cn(
+            "flex flex-col items-center gap-2 rounded-2xl border-2 px-4 py-6 transition-all duration-300 group",
+            activeTab === "export"
+              ? "bg-[var(--ink-950)] text-white border-[var(--ink-950)] shadow-xl shadow-black/10 scale-[1.02]"
+              : "bg-white border-[var(--line)] text-[var(--ink-700)] hover:border-[var(--ink-300)] hover:bg-[var(--ink-50)]"
+          )}
+        >
+          <div className={cn(
+            "flex size-12 items-center justify-center rounded-full transition-colors",
+            activeTab === "export" ? "bg-white/10" : "bg-[var(--ink-50)] group-hover:bg-white"
+          )}>
+            <Download className="size-6" />
+          </div>
+          <span className="text-sm font-bold">Exporter</span>
+        </button>
+      </div>
+
+      <div className="relative">
+        {activeTab === "sync" && (
+          <div className="app-surface rounded-[2rem] p-6 animate-in fade-in zoom-in-95 duration-300 origin-top">
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[var(--ink-950)]">
+                <CloudSync className="size-5" />
+                <h3 className="font-bold">Abonnement iCal</h3>
+              </div>
+              <button onClick={() => setActiveTab(null)} className="text-xs font-bold text-[var(--ink-500)] hover:text-[var(--ink-950)]">Fermer</button>
+            </div>
+            <CalendarSyncPanel
+              householdFeedUrl={householdFeedUrl}
+              personalFeedUrl={personalFeedUrl}
+            />
+          </div>
+        )}
+
+        {activeTab === "export" && (
+          <div className="app-surface rounded-[2rem] p-6 animate-in fade-in zoom-in-95 duration-300 origin-top">
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[var(--ink-950)]">
+                <Download className="size-5" />
+                <h3 className="font-bold">Télécharger</h3>
+              </div>
+              <button onClick={() => setActiveTab(null)} className="text-xs font-bold text-[var(--ink-500)] hover:text-[var(--ink-950)]">Fermer</button>
+            </div>
+            <div className="grid gap-3">
+              <a
+                className="btn-secondary flex items-center justify-between gap-3 px-5 py-4 text-sm font-bold transition-all hover:bg-[var(--ink-950)] hover:text-white"
+                href={`/api/calendar/feed.ics?household=${householdId}`}
+              >
+                <span>Export complet foyer</span>
+                <Share2 className="size-4 opacity-50" />
+              </a>
+              {personalFeedUrl ? (
+                <a
+                  className="btn-secondary flex items-center justify-between gap-3 px-5 py-4 text-sm font-bold transition-all hover:bg-[var(--ink-950)] hover:text-white"
+                  href={`/api/calendar/member/${personalFeedUrl.split("/")[6]}/feed.ics?household=${householdId}`}
+                >
+                  <span>Export personnel</span>
+                  <Globe className="size-4 opacity-50" />
+                </a>
+              ) : null}
+            </div>
+            <p className="mt-4 text-center text-xs text-[var(--ink-500)]">
+              Fichier .ics compatible Google, Apple & Outlook
+            </p>
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}

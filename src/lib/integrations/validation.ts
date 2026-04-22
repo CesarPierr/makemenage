@@ -44,6 +44,7 @@ export const integrationTaskDefinitionSchema = z.object({
     dayOfMonth: z.coerce.number().int().min(1).max(31).optional(),
     anchorDate: dateInputSchema.optional(),
     dueOffsetDays: z.coerce.number().int().min(0).max(30).default(0),
+    oneTime: z.boolean().default(false),
   }),
   assignment: z
     .object({
@@ -89,6 +90,7 @@ export const integrationTaskPatchSchema = z.object({
       dayOfMonth: z.coerce.number().int().min(1).max(31).nullable().optional(),
       anchorDate: dateInputSchema.optional(),
       dueOffsetDays: z.coerce.number().int().min(0).max(30).optional(),
+      oneTime: z.boolean().optional(),
     })
     .optional(),
   assignment: z

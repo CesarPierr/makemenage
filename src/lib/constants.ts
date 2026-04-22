@@ -47,3 +47,18 @@ export const mobileSections = [
   { href: "/app/history", label: "Journal" },
   { href: "/app/settings", label: "Réglages" },
 ];
+
+export const roomSuggestions = [
+  "Tout l'appartement",
+  "Cuisine",
+  "Salon",
+  "Salle de bain",
+  "Toilettes",
+  "Entrée",
+  "Chambre parentale",
+  "Chambre enfant",
+  "Bureau",
+  "Buanderie",
+  "Balcon",
+  "Cave / garage",
+];

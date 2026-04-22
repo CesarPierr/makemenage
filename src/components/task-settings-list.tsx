@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { describeRecurrence } from "@/lib/scheduling/recurrence";
 import { hexToRgba } from "@/lib/colors";
-import { taskPalette } from "@/lib/constants";
+import { roomSuggestions, taskPalette } from "@/lib/constants";
 import { Dialog } from "@/components/ui/dialog";
 
 type Task = {
@@ -15,6 +15,7 @@ type Task = {
   room: string | null;
   color: string | null;
   startsOn: Date | string;
+  endsOn?: Date | string | null;
   recurrenceRule: {
     type: "daily" | "every_x_days" | "weekly" | "every_x_weeks" | "monthly_simple";
     interval: number;
@@ -22,6 +23,7 @@ type Task = {
     dayOfMonth: number | null;
     anchorDate: Date;
     dueOffsetDays: number;
+    config?: unknown;
   };
   assignmentRule: {
     mode:
@@ -34,6 +36,24 @@ type Task = {
     eligibleMemberIds: unknown;
   };
 };
+
+function isSingleRunTask(task: Task | null) {
+  if (!task) {
+    return false;
+  }
+
+  const config = task.recurrenceRule.config;
+
+  if (config && typeof config === "object" && !Array.isArray(config) && "singleRun" in config) {
+    return (config as { singleRun?: unknown }).singleRun === true;
+  }
+
+  if (!task.endsOn) {
+    return false;
+  }
+
+  return new Date(task.endsOn).toDateString() === new Date(task.startsOn).toDateString();
+}
 
 const assignmentLabels: Record<string, { label: string; description: string }> = {
   fixed: {
@@ -73,6 +93,7 @@ export function TaskSettingsList({
 }) {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
+  const [editingRecurrenceType, setEditingRecurrenceType] = useState<string>("weekly");
 
   const manualOverrideCountForDelete = deletingTask ? (manualOverridesByTaskId[deletingTask.id] ?? 0) : 0;
 
@@ -97,6 +118,12 @@ export function TaskSettingsList({
           >
             <input type="hidden" name="_method" value="PUT" />
             <input type="hidden" name="householdId" value={householdId} />
+            <input type="hidden" name="singleRun" value={editingRecurrenceType === "single" ? "on" : ""} />
+            <input
+              type="hidden"
+              name="endsOn"
+              value={editingRecurrenceType === "single" ? new Date(editingTask.startsOn).toISOString().split("T")[0] : ""}
+            />
             
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="field-label">
@@ -113,9 +140,14 @@ export function TaskSettingsList({
               </label>
               <label className="field-label">
                 <span>Pièce</span>
-                <input className="field" type="text" name="room" defaultValue={editingTask.room || ""} />
+                <input className="field" type="text" name="room" list="task-room-suggestions" defaultValue={editingTask.room || ""} />
               </label>
             </div>
+            <datalist id="task-room-suggestions">
+              {roomSuggestions.map((room) => (
+                <option key={room} value={room} />
+              ))}
+            </datalist>
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <span className="text-sm font-semibold text-[var(--ink-950)]">Couleur</span>
@@ -142,7 +174,13 @@ export function TaskSettingsList({
                 </label>
                 <label className="field-label">
                   <span>Répétition</span>
-                  <select className="field" name="recurrenceType" defaultValue={editingTask.recurrenceRule.type}>
+                  <select
+                    className="field"
+                    name="recurrenceType"
+                    onChange={(event) => setEditingRecurrenceType(event.currentTarget.value)}
+                    value={editingRecurrenceType}
+                  >
+                    <option value="single">Une seule fois</option>
                     <option value="daily">Tous les jours</option>
                     <option value="every_x_days">Tous les X jours</option>
                     <option value="weekly">Chaque semaine</option>
@@ -150,10 +188,14 @@ export function TaskSettingsList({
                     <option value="monthly_simple">Chaque mois</option>
                   </select>
                 </label>
-                <label className="field-label">
-                  <span>Intervalle (X)</span>
-                  <input className="field" type="number" min="1" name="interval" defaultValue={editingTask.recurrenceRule.interval} required onFocus={(event) => event.currentTarget.select()} />
-                </label>
+                {editingRecurrenceType === "single" ? (
+                  <input type="hidden" name="interval" value="1" />
+                ) : (
+                  <label className="field-label">
+                    <span>Intervalle (X)</span>
+                    <input className="field" type="number" min="1" name="interval" defaultValue={editingTask.recurrenceRule.interval} required onFocus={(event) => event.currentTarget.select()} />
+                  </label>
+                )}
                 <label className="field-label">
                   <span>Attribution</span>
                   <select className="field" name="assignmentMode" defaultValue={editingTask.assignmentRule.mode}>
@@ -221,6 +263,7 @@ export function TaskSettingsList({
                   dayOfMonth: task.recurrenceRule.dayOfMonth,
                   anchorDate: task.recurrenceRule.anchorDate,
                   dueOffsetDays: task.recurrenceRule.dueOffsetDays,
+                  config: task.recurrenceRule.config,
                 })}
               </p>
               <p className="mt-1 text-sm text-[var(--ink-700)]">
@@ -238,7 +281,10 @@ export function TaskSettingsList({
             <div className="flex items-center gap-3">
               <span className="stat-pill px-3 py-1 text-sm">{method.label}</span>
               <button 
-                onClick={() => setEditingTask(task)}
+                onClick={() => {
+                  setEditingTask(task);
+                  setEditingRecurrenceType(isSingleRunTask(task) ? "single" : task.recurrenceRule.type);
+                }}
                 className="text-sm font-semibold text-[var(--coral-600)] hover:underline"
               >
                 Modifier

@@ -60,7 +60,11 @@ export function pickAssignee(params: {
   }
 
   if (rule.mode === "fixed") {
-    return pool.find((member) => member.id === rule.fixedMemberId)?.id ?? null;
+    return (
+      pool.find((member) => member.id === rule.fixedMemberId)?.id ??
+      pool[0]?.id ??
+      null
+    );
   }
 
   const rotation = (rule.rotationOrder?.length ? rule.rotationOrder : pool.map((member) => member.id)).filter(

@@ -20,12 +20,18 @@ export function generateOccurrences(params: {
   rangeEnd: Date;
 }) {
   const { template, members, absences, existingOccurrences, rangeStart, rangeEnd } = params;
+  const today = startOfDay(new Date());
   const recurrenceDates = generateRecurrenceDates(template.recurrence, rangeStart, rangeEnd).filter(
     (date) => date >= startOfDay(template.startsOn) && (!template.endsOn || date <= startOfDay(template.endsOn)),
   );
 
   const generated: GeneratedOccurrence[] = [];
-  const mergedExisting = [...existingOccurrences];
+  const mergedExisting = existingOccurrences.filter(
+    (occurrence) =>
+      occurrence.isManuallyModified ||
+      ["completed", "skipped", "rescheduled", "cancelled"].includes(occurrence.status) ||
+      startOfDay(occurrence.scheduledDate) < today,
+  );
 
   recurrenceDates.forEach((scheduledDate, sequenceIndex) => {
     const sourceGenerationKey = buildGenerationKey(template.id, scheduledDate);

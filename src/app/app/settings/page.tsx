@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import { CopyValueButton } from "@/components/copy-value-button";
@@ -7,6 +8,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 import { getOpenClawIntegrationSettings } from "@/lib/integrations/openclaw";
+import { cn } from "@/lib/utils";
 
 type SettingsPanel = "households" | "team" | "access" | "planning" | "integrations" | "danger";
 
@@ -17,6 +19,7 @@ type SettingsPageProps = {
     invite?: string;
     leave?: string;
     rebalance?: string;
+    absence?: string;
     delete?: string;
     member?: string;
     integration?: string;
@@ -51,6 +54,26 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const appBaseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
   const householdMemberships = user.memberships;
   const openClawSettings = manageable ? await getOpenClawIntegrationSettings(context.household.id) : null;
+  const upcomingAbsences = manageable
+    ? context.household.members
+        .flatMap((member) =>
+          member.availabilities
+            .filter((availability) => availability.type === "date_range_absence")
+            .map((availability) => ({
+              id: availability.id,
+              startDate: availability.startDate,
+              endDate: availability.endDate,
+              notes: availability.notes,
+              member: {
+                id: member.id,
+                displayName: member.displayName,
+                color: member.color,
+              },
+            })),
+        )
+        .filter((absence) => absence.endDate >= new Date(new Date().setHours(0, 0, 0, 0)))
+        .sort((left, right) => left.startDate.getTime() - right.startDate.getTime())
+    : [];
   const feedbackMessage =
     params.invite === "created"
       ? { tone: "success" as const, text: "Invitation créée." }
@@ -74,6 +97,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                         ? { tone: "success" as const, text: "Rééquilibrage terminé." }
                         : params.rebalance === "done_overwrite"
                           ? { tone: "success" as const, text: "Rééquilibrage terminé avec écrasement des modifications futures." }
+                          : params.absence === "saved"
+                            ? { tone: "success" as const, text: "Absence enregistrée et planning réajusté." }
+                            : params.absence === "removed"
+                              ? { tone: "success" as const, text: "Absence annulée et planning recalculé." }
+                              : params.absence === "invalid"
+                                ? { tone: "error" as const, text: "Impossible d’enregistrer cette absence." }
+                                : params.absence === "forbidden"
+                                  ? { tone: "error" as const, text: "Vous ne pouvez pas modifier cette absence." }
                           : params.integration === "saved"
                             ? { tone: "success" as const, text: "Réglages OpenClaw enregistrés." }
                             : params.integration === "disabled"
@@ -206,7 +237,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         ) : null}
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="flex flex-wrap gap-2 overflow-x-auto pb-2 no-scrollbar">
         {panelCards.map((panel) => {
           const active = activePanel === panel.id;
 
@@ -214,25 +245,46 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <Link
               key={panel.id}
               href={panelBaseHref(panel.id)}
-              className="app-surface rounded-[1.7rem] p-4 transition-all hover:-translate-y-0.5"
-              style={{
-                borderColor: active ? "rgba(47, 109, 136, 0.18)" : undefined,
-                background: active
-                  ? "linear-gradient(135deg, rgba(47, 109, 136, 0.1), rgba(255,255,255,0.92))"
-                  : undefined,
-              }}
+              className={cn(
+                "flex shrink-0 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all",
+                active
+                  ? "bg-white text-[var(--ink-950)] border-2 border-[var(--ink-950)] shadow-xl scale-105"
+                  : "bg-white/80 border border-[var(--line)] text-[var(--ink-700)] hover:bg-white hover:border-[var(--ink-300)]",
+              )}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--ink-950)]">{panel.label}</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--ink-700)]">{panel.description}</p>
-                </div>
-                <span className="stat-pill px-3 py-1 text-xs font-semibold">{panel.stat}</span>
-              </div>
+              {panel.label}
+              <span className={cn(
+                "rounded-full px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider",
+                active ? "bg-[var(--ink-950)] text-white" : "bg-[var(--line)] text-[var(--ink-500)]"
+              )}>
+                {panel.stat}
+              </span>
             </Link>
           );
         })}
       </section>
+
+      {!activePanel && (
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {panelCards.map((panel) => (
+            <Link
+              key={panel.id}
+              href={panelBaseHref(panel.id)}
+              className="app-surface group relative flex flex-col justify-between overflow-hidden rounded-[2rem] p-6 transition-all hover:-translate-y-1 hover:shadow-xl"
+            >
+              <div className="relative z-10">
+                <p className="section-kicker opacity-60">{panel.stat}</p>
+                <h3 className="display-title mt-2 text-2xl group-hover:text-[var(--sky-600)] transition-colors">{panel.label}</h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--ink-700)]">{panel.description}</p>
+              </div>
+              <div className="mt-6 flex items-center gap-2 text-sm font-bold text-[var(--sky-600)] opacity-0 group-hover:opacity-100 transition-opacity">
+                Configurer <ArrowRight className="size-4" />
+              </div>
+              <div className="absolute -bottom-6 -right-6 size-32 rounded-full bg-[var(--sky-500)] opacity-[0.03] transition-transform group-hover:scale-150" />
+            </Link>
+          ))}
+        </section>
+      )}
 
       {activePanel ? (
         <section className="app-surface rounded-[2rem] p-5 sm:p-6">
@@ -438,6 +490,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               <form action="/api/members/absence" method="post" className="soft-panel compact-form-grid p-5">
                 <p className="section-kicker">Absences</p>
                 <h4 className="display-title mt-2 text-2xl">Déclarer une indisponibilité</h4>
+                <input name="householdId" type="hidden" value={context.household.id} />
                 <label className="field-label">
                   <span>Membre</span>
                   <select className="field" name="memberId" defaultValue={context.currentMember?.id ?? ""} required>
@@ -463,6 +516,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   <span>Note</span>
                   <input className="field" type="text" name="notes" placeholder="Facultative" />
                 </label>
+                <div className="rounded-[1.2rem] border border-[rgba(56,115,93,0.12)] bg-[rgba(56,115,93,0.08)] px-4 py-3 text-sm leading-6 text-[var(--ink-700)]">
+                  Le planning futur est recalculé automatiquement, y compris les attributions déjà générées.
+                </div>
                 <button className="btn-primary w-full px-5 py-3 font-semibold" type="submit">
                   Enregistrer l’absence
                 </button>
@@ -488,6 +544,52 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   Recalculer les tâches futures
                 </button>
               </form>
+
+              <article className="soft-panel space-y-4 p-5 xl:col-span-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="section-kicker">Absences planifiées</p>
+                    <h4 className="display-title mt-2 text-2xl">À venir</h4>
+                  </div>
+                  <span className="stat-pill px-3 py-1 text-sm">
+                    {upcomingAbsences.length} active{upcomingAbsences.length > 1 ? "s" : ""}
+                  </span>
+                </div>
+                {upcomingAbsences.length ? (
+                  <div className="space-y-3">
+                    {upcomingAbsences.map((absence) => (
+                      <div key={absence.id} className="rounded-[1.4rem] border border-[var(--line)] bg-white/70 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="size-3 rounded-full" style={{ backgroundColor: absence.member.color }} />
+                              <p className="font-semibold">{absence.member.displayName}</p>
+                            </div>
+                            <p className="mt-1 text-sm text-[var(--ink-700)]">
+                              Du{" "}
+                              {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(absence.startDate)}
+                              {" "}au{" "}
+                              {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(absence.endDate)}
+                            </p>
+                            {absence.notes ? (
+                              <p className="mt-1 text-sm text-[var(--ink-700)]">{absence.notes}</p>
+                            ) : null}
+                          </div>
+                          <form action={`/api/members/absence/${absence.id}/delete`} method="post">
+                            <button className="btn-quiet px-4 py-2 text-sm font-semibold" type="submit">
+                              Annuler l’absence
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-[1.4rem] border border-[var(--line)] bg-white/70 p-4 text-sm text-[var(--ink-700)]">
+                    Aucune absence future enregistrée.
+                  </div>
+                )}
+              </article>
             </div>
           ) : null}
 
@@ -518,8 +620,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                     <p>Provider: `mcp_openclaw`</p>
                     <p>Clé actuelle: {openClawSettings?.apiKeyPreview ?? "aucune"}</p>
                     <p>Discovery: {`${appBaseUrl}/api/integrations/mcp/openclaw/discovery?householdId=${context.household.id}`}</p>
-                    <p>Tâches: {`${appBaseUrl}/api/integrations/mcp/openclaw/tasks`}</p>
-                    <p>Upcoming: {`${appBaseUrl}/api/integrations/mcp/openclaw/upcoming`}</p>
+                    <p>Tâches: {`${appBaseUrl}/api/integrations/mcp/openclaw/tasks?householdId=${context.household.id}`}</p>
+                    <p>Upcoming: {`${appBaseUrl}/api/integrations/mcp/openclaw/upcoming?householdId=${context.household.id}`}</p>
+                    <p>Rebalance: {`${appBaseUrl}/api/integrations/mcp/openclaw/rebalance?householdId=${context.household.id}`}</p>
                   </div>
                 </article>
 
@@ -539,6 +642,17 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                       value={params.generatedKey}
                     />
                   ) : null}
+                </article>
+
+                <article className="soft-panel space-y-3 p-5">
+                  <p className="text-sm font-semibold text-[var(--ink-950)]">Serveur MCP local</p>
+                  <p className="text-sm text-[var(--ink-700)]">
+                    Pour une IA locale ou OpenClaw en mode avancé, utilisez le serveur `stdio` fourni dans ce dépôt.
+                  </p>
+                  <CopyValueButton
+                    label="Copier la commande MCP"
+                    value={`MAKEMENAGE_MCP_HOUSEHOLD_ID=${context.household.id} npm run mcp:server`}
+                  />
                 </article>
               </div>
             </div>

@@ -5,6 +5,8 @@ import {
   isSameMonth,
   startOfMonth,
   startOfWeek,
+  addDays,
+  startOfToday,
 } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -12,6 +14,7 @@ import { hexToRgba } from "@/lib/colors";
 
 type CalendarMonthProps = {
   month: Date;
+  mobileDayBase?: Date;
   occurrences: {
     id: string;
     scheduledDate: Date;
@@ -19,24 +22,42 @@ type CalendarMonthProps = {
     taskTemplate: { title: string; color: string };
     assignedMember: { displayName: string; color: string } | null;
   }[];
+  absences: {
+    id: string;
+    startDate: Date;
+    endDate: Date;
+    notes: string | null;
+    member: { displayName: string; color: string };
+  }[];
 };
 
-export function CalendarMonth({ month, occurrences }: CalendarMonthProps) {
+export function CalendarMonth({ month, occurrences, absences, mobileDayBase }: CalendarMonthProps) {
   const days = eachDayOfInterval({
     start: startOfWeek(startOfMonth(month), { weekStartsOn: 1 }),
     end: endOfWeek(new Date(month.getFullYear(), month.getMonth() + 1, 0), { weekStartsOn: 1 }),
   });
-  const daysWithOccurrences = days
-    .filter((day) => isSameMonth(day, month))
-    .map((day) => ({
-      day,
-      occurrences: occurrences.filter(
-        (occurrence) => format(occurrence.scheduledDate, "yyyy-MM-dd") === format(day, "yyyy-MM-dd"),
-      ),
-    }))
-    .filter((entry) => entry.occurrences.length > 0);
+
+  const mobileWindowStart = mobileDayBase ?? startOfToday();
+  const mobileWindowDays = eachDayOfInterval({
+    start: mobileWindowStart,
+    end: addDays(mobileWindowStart, 3), // 4-day window
+  });
+
+  const daysWithOccurrences = mobileWindowDays.map((day) => ({
+    day,
+    occurrences: occurrences.filter(
+      (occurrence) => format(occurrence.scheduledDate, "yyyy-MM-dd") === format(day, "yyyy-MM-dd"),
+    ),
+  }));
+
   const buildOccurrenceLabel = (occurrence: CalendarMonthProps["occurrences"][number]) =>
     `${occurrence.taskTemplate.title} · ${occurrence.assignedMember?.displayName ?? "À attribuer"}`;
+  const dayAbsences = (day: Date) =>
+    absences.filter(
+      (absence) =>
+        format(absence.startDate, "yyyy-MM-dd") <= format(day, "yyyy-MM-dd") &&
+        format(absence.endDate, "yyyy-MM-dd") >= format(day, "yyyy-MM-dd"),
+    );
 
   return (
     <>
@@ -52,7 +73,10 @@ export function CalendarMonth({ month, occurrences }: CalendarMonthProps) {
         </div>
         <div className="mt-4 space-y-3">
           {daysWithOccurrences.length ? (
-            daysWithOccurrences.map(({ day, occurrences: dayOccurrences }) => (
+            daysWithOccurrences.map(({ day, occurrences: dayOccurrences }) => {
+              const activeAbsences = dayAbsences(day);
+
+              return (
               <article key={day.toISOString()} className="soft-panel p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -68,29 +92,50 @@ export function CalendarMonth({ month, occurrences }: CalendarMonthProps) {
                   </span>
                 </div>
                 <div className="mt-3 space-y-2">
-                  {dayOccurrences.map((occurrence) => (
+                  {activeAbsences.map((absence) => (
                     <div
-                      aria-label={buildOccurrenceLabel(occurrence)}
-                      key={occurrence.id}
-                      className="rounded-[1.1rem] px-3 py-3 text-sm text-white"
-                      role="group"
-                      style={{ backgroundColor: occurrence.taskTemplate.color ?? "#D8643D" }}
+                      key={absence.id}
+                      className="rounded-[1.1rem] border px-3 py-2 text-xs"
+                      style={{
+                        borderColor: hexToRgba(absence.member.color, 0.22),
+                        backgroundColor: hexToRgba(absence.member.color, 0.1),
+                        color: "var(--ink-950)",
+                      }}
                     >
-                      <p className="font-semibold leading-5">{occurrence.taskTemplate.title}</p>
-                      <div className="mt-1 inline-flex items-center gap-2 text-xs opacity-90">
-                        {occurrence.assignedMember ? (
-                          <span
-                            className="size-2 rounded-full border border-white/70"
-                            style={{ backgroundColor: occurrence.assignedMember.color }}
-                          />
-                        ) : null}
-                        <span>{occurrence.assignedMember?.displayName ?? "À attribuer"}</span>
-                      </div>
+                      <p className="font-semibold">Absence · {absence.member.displayName}</p>
+                      {absence.notes ? <p className="mt-1 text-[11px] text-[var(--ink-700)]">{absence.notes}</p> : null}
                     </div>
                   ))}
+                  {dayOccurrences.length ? (
+                    dayOccurrences.map((occurrence) => (
+                      <div
+                        aria-label={buildOccurrenceLabel(occurrence)}
+                        key={occurrence.id}
+                        className="rounded-[1.1rem] px-3 py-3 text-sm text-white"
+                        role="group"
+                        style={{ backgroundColor: occurrence.taskTemplate.color ?? "#D8643D" }}
+                      >
+                        <p className="font-semibold leading-5">{occurrence.taskTemplate.title}</p>
+                        <div className="mt-1 inline-flex items-center gap-2 text-xs opacity-90">
+                          {occurrence.assignedMember ? (
+                            <span
+                              className="size-2 rounded-full border border-white/70"
+                              style={{ backgroundColor: occurrence.assignedMember.color }}
+                            />
+                          ) : null}
+                          <span>{occurrence.assignedMember?.displayName ?? "À attribuer"}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    !activeAbsences.length ? (
+                      <p className="py-2 text-center text-xs italic text-[var(--ink-500)]">Aucune tâche</p>
+                    ) : null
+                  )}
                 </div>
               </article>
-            ))
+            );
+            })
           ) : (
             <div className="soft-panel p-4 text-sm leading-6 text-[var(--ink-700)]">
               Aucune occurrence n&apos;est encore prévue pour ce mois.
@@ -115,6 +160,7 @@ export function CalendarMonth({ month, occurrences }: CalendarMonthProps) {
             const dayOccurrences = occurrences.filter(
               (occurrence) => format(occurrence.scheduledDate, "yyyy-MM-dd") === format(day, "yyyy-MM-dd"),
             );
+            const activeAbsences = dayAbsences(day);
 
             return (
               <div
@@ -126,6 +172,22 @@ export function CalendarMonth({ month, occurrences }: CalendarMonthProps) {
                     {format(day, "d", { locale: fr })}
                   </p>
                   <div className="space-y-1.5">
+                    {activeAbsences.map((absence) => (
+                      <div
+                        key={absence.id}
+                        className="rounded-xl px-2 py-1 text-xs leading-5"
+                        style={{
+                          backgroundColor: hexToRgba(absence.member.color, 0.08),
+                          color: "var(--ink-950)",
+                          border: `1px solid ${hexToRgba(absence.member.color, 0.18)}`,
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="size-2 rounded-full" style={{ backgroundColor: absence.member.color }} />
+                          <p className="truncate font-semibold">Absence · {absence.member.displayName}</p>
+                        </div>
+                      </div>
+                    ))}
                     {dayOccurrences.slice(0, 3).map((occurrence) => (
                       <div
                         aria-label={buildOccurrenceLabel(occurrence)}

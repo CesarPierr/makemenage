@@ -100,6 +100,31 @@ describe("assignment engine", () => {
     expect(pick).toBe("A");
   });
 
+  it("falls back to another eligible member when a fixed assignee is absent", () => {
+    const pick = pickAssignee({
+      sequenceIndex: 0,
+      rule: {
+        mode: "fixed",
+        eligibleMemberIds: ["A", "B"],
+        fixedMemberId: "B",
+        rebalanceOnMemberAbsence: true,
+      },
+      members,
+      scheduledDate: new Date("2026-01-10"),
+      absences: [
+        {
+          memberId: "B",
+          startDate: new Date("2026-01-09"),
+          endDate: new Date("2026-01-11"),
+        },
+      ],
+      estimatedMinutes: 20,
+      existingOccurrences: [],
+    });
+
+    expect(pick).toBe("A");
+  });
+
   it("chooses the least loaded member by count", () => {
     const pick = pickAssignee({
       sequenceIndex: 3,

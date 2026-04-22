@@ -259,7 +259,13 @@ describe("OpenClaw integration", () => {
     );
 
     expect(manifest?.provider).toBe("mcp_openclaw");
-    expect(manifest?.endpoints.addTask.url).toContain("/api/integrations/mcp/openclaw/tasks");
+    expect(manifest?.endpoints.discovery.url).toContain("householdId=clh9x8j0a0000f7a8h1b2c3d");
+    expect(manifest?.endpoints.addTask.url).toContain(
+      "/api/integrations/mcp/openclaw/tasks?householdId=clh9x8j0a0000f7a8h1b2c3d",
+    );
+    expect(manifest?.endpoints.listUpcoming.url).toContain(
+      "/api/integrations/mcp/openclaw/upcoming?householdId=clh9x8j0a0000f7a8h1b2c3d",
+    );
     expect(manifest?.mcpReady.tools.map((tool) => tool.name)).toContain("rebalance");
   });
 });

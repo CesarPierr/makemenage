@@ -1,6 +1,7 @@
 FROM node:24-bookworm-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
+RUN apt-get update -y && apt-get install -y openssl curl && rm -rf /var/lib/apt/lists/*
 RUN npm ci
 
 FROM node:24-bookworm-slim AS builder
@@ -12,6 +13,7 @@ RUN npm run build
 
 FROM node:24-bookworm-slim AS runner
 WORKDIR /app
+RUN apt-get update -y && apt-get install -y openssl curl && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 ENV PORT=3000
 COPY --from=builder /app/.next ./.next

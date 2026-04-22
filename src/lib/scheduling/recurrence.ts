@@ -14,6 +14,16 @@ import {
 
 import type { RecurrenceRuleInput } from "@/lib/scheduling/types";
 
+function isSingleRunConfig(config: unknown) {
+  return Boolean(
+    config &&
+      typeof config === "object" &&
+      !Array.isArray(config) &&
+      "singleRun" in config &&
+      (config as { singleRun?: unknown }).singleRun === true,
+  );
+}
+
 function normalize(date: Date) {
   return startOfDay(date);
 }
@@ -23,6 +33,10 @@ function sameDay(left: Date, right: Date) {
 }
 
 export function describeRecurrence(rule: RecurrenceRuleInput) {
+  if (isSingleRunConfig(rule.config)) {
+    return "Une seule fois";
+  }
+
   switch (rule.type) {
     case "daily":
       return "Tous les jours";

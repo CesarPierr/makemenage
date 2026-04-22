@@ -46,13 +46,16 @@ async function createTaskFromWizard(
     minutes: string;
     category?: string;
     room?: string;
+    kind?: "single" | "recurring";
     recurrenceLabel?: string;
     assignmentLabel?: string;
+    memberLabel?: string;
   },
 ) {
   const today = new Date().toISOString().slice(0, 10);
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=wizard");
+  await expect(page.getByRole("heading", { name: "Créer une nouvelle tâche" })).toBeVisible();
   await page.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
   await page.getByPlaceholder("Ex: Sortir les poubelles").fill(values.title);
   await page.locator('input[name="estimatedMinutesVisible"]').fill(values.minutes);
@@ -65,16 +68,24 @@ async function createTaskFromWizard(
     await page.getByPlaceholder("Ex: Cuisine").fill(values.room);
   }
 
-  await page.getByRole("button", { name: "Continuer" }).click();
-  await page.getByRole("textbox", { name: "Première date" }).fill(today);
+  if (values.kind === "single") {
+    await page.getByRole("button", { name: "Tâche simple" }).click();
+  }
 
-  if (values.recurrenceLabel) {
+  await page.getByRole("button", { name: "Continuer" }).click();
+  await page.getByRole("textbox", { name: values.kind === "single" ? "Date" : "Première date" }).fill(today);
+
+  if (values.kind !== "single" && values.recurrenceLabel) {
     await page.getByRole("button", { name: values.recurrenceLabel }).click();
   }
 
   await page.getByRole("button", { name: "Continuer" }).click();
 
-  if (values.assignmentLabel) {
+  if (values.memberLabel) {
+    await page.getByRole("button", { name: new RegExp(values.memberLabel, "i") }).click();
+  }
+
+  if (values.kind !== "single" && values.assignmentLabel) {
     await page.getByRole("button", { name: new RegExp(values.assignmentLabel, "i") }).click();
   }
 
@@ -83,8 +94,12 @@ async function createTaskFromWizard(
 }
 
 async function openTaskAdministration(page: import("@playwright/test").Page) {
-  await page.goto("/app/my-tasks#administration");
-  await expect(page.getByRole("heading", { name: "Gérer les tâches du foyer" })).toBeVisible();
+  await page.goto("/app/my-tasks?tab=templates");
+  await expect(page.getByRole("heading", { name: "Gérer le catalogue" })).toBeVisible();
+}
+
+function getManagedTaskCard(page: import("@playwright/test").Page, title: string) {
+  return page.locator("article.soft-panel", { hasText: title });
 }
 
 async function openSettingsPanel(
@@ -188,7 +203,8 @@ test("user can register, login, create a household, add a member, create a task,
   await page.getByRole("button", { name: "Ajouter le membre" }).click();
   await expect(page.getByText("Sam").first()).toBeVisible();
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=wizard");
+  await expect(page.getByRole("heading", { name: "Créer une nouvelle tâche" })).toBeVisible();
   await page.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
   
   // Étape 1
@@ -200,13 +216,13 @@ test("user can register, login, create a household, add a member, create a task,
 
   // Étape 2
   await page.getByRole("textbox", { name: "Première date" }).fill(today);
-  await page.getByRole("button", { name: "Chaque semaine" }).click();
+  await page.getByRole("button", { name: "Tous les jours" }).click();
   await page.getByRole("button", { name: "Continuer" }).click();
 
   // Étape 3
   await page.getByRole("button", { name: "Créer la tâche" }).click();
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=daily");
   await expect(page.getByRole("heading", { name: "Nettoyer le salon" }).first()).toBeVisible();
   await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
   await page.locator('input[name="actualMinutes"]').first().fill("32");
@@ -222,18 +238,54 @@ test("user can register, login, create a household, add a member, create a task,
   await expect(page.getByText("32 min").first()).toBeVisible();
 
   await page.goto("/app/calendar");
-  await expect(page.getByRole("heading", { name: "Google Calendar et iCal" })).toBeVisible();
-  const householdIcalCopyButton = page.getByRole("button", { name: "Copier l’URL iCal du foyer" });
+  await expect(page.getByRole("heading", { name: new RegExp(format(new Date(), "MMMM yyyy", { locale: fr }), "i") })).toBeVisible();
+  await page.getByRole("button", { name: "Synchroniser" }).click();
+  await expect(page.getByRole("heading", { name: "Abonnement iCal" })).toBeVisible();
+  const householdIcalCopyButton = page.getByRole("button", { name: "Copier l’URL" }).first();
   await expect(householdIcalCopyButton).toBeVisible();
   await expectCopyButtonToReact(householdIcalCopyButton);
   await expect(page.getByRole("link", { name: "Ouvrir Google Calendar" })).toBeVisible();
+  await page.getByRole("button", { name: "Exporter" }).click();
+  await expect(page.getByRole("heading", { name: "Télécharger" })).toBeVisible();
+  await page.getByTitle("Mois suivant").click();
   await expect(page.getByRole("heading", { name: new RegExp(nextMonthLabel, "i") })).toBeVisible();
   if (isMobileProject) {
     await expect(page.getByRole("heading", { name: "Prochaines tâches" }).first()).toBeVisible();
     await expect(page.getByText(/jours actifs/i).first()).toBeVisible();
   }
-  const calendarExport = await page.locator('a[href*="/api/calendar/feed.ics"]').first().getAttribute("href");
+  const calendarExport = await page.getByRole("link", { name: "Export complet foyer" }).getAttribute("href");
   expect(calendarExport).toContain("/api/calendar/feed.ics");
+});
+
+test("user can create a simple one-time task assigned to one member", async ({ page }, testInfo) => {
+  const email = buildUniqueEmail("single-task", testInfo.project.name);
+
+  await registerAndLogin(page, {
+    displayName: "Single Task User",
+    email,
+  });
+  await createHousehold(page, "Foyer Simple");
+
+  await openSettingsPanel(page, "team");
+  await page.getByPlaceholder("Nom affiché").fill("Alice");
+  await page.locator('input[name="color"]').fill("#1F6E8C");
+  await page.getByRole("button", { name: "Ajouter le membre" }).click();
+  await page.waitForLoadState("networkidle");
+
+  await createTaskFromWizard(page, {
+    title: "Passage unique",
+    minutes: "10",
+    category: "Nettoyage",
+    room: "Tout l'appartement",
+    kind: "single",
+    memberLabel: "Alice",
+  });
+
+  await page.goto("/app/calendar");
+  await expect(page.getByRole("group", { name: /Passage unique · Alice/i }).first()).toBeVisible();
+
+  await openTaskAdministration(page);
+  await expect(getManagedTaskCard(page, "Passage unique")).toContainText(/une seule fois/i);
 });
 
 test("two accounts can share a household, one account can keep multiple households, and can leave one later", async ({
@@ -325,7 +377,8 @@ test("a skipped task can be corrected and completed later with actual minutes", 
   await page.getByRole("button", { name: "Créer le foyer" }).click();
   await page.waitForLoadState("networkidle");
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=wizard");
+  await expect(page.getByRole("heading", { name: "Créer une nouvelle tâche" })).toBeVisible();
   await page.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
   await page.getByPlaceholder("Ex: Sortir les poubelles").fill("Passer l’aspirateur");
   await page.locator('input[name="estimatedMinutesVisible"]').fill("20");
@@ -334,12 +387,12 @@ test("a skipped task can be corrected and completed later with actual minutes", 
   await page.getByRole("button", { name: "Continuer" }).click();
 
   await page.getByRole("textbox", { name: "Première date" }).fill(today);
-  await page.getByRole("button", { name: "Chaque semaine" }).click();
+  await page.getByRole("button", { name: "Tous les jours" }).click();
   await page.getByRole("button", { name: "Continuer" }).click();
 
   await page.getByRole("button", { name: "Créer la tâche" }).click();
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=daily");
   await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
   await page.locator('input[name="notes"]').nth(1).fill("Pas le temps aujourd’hui");
   await page.getByRole("button", { name: "Sauter avec note" }).first().click();
@@ -379,7 +432,8 @@ test("adding a member can rebalance future strict alternation tasks", async ({ p
   await page.getByRole("button", { name: "Ajouter le membre" }).click();
   await expect(page.getByText("Sam").first()).toBeVisible();
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=wizard");
+  await expect(page.getByRole("heading", { name: "Créer une nouvelle tâche" })).toBeVisible();
   await page.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
   await page.getByPlaceholder("Ex: Sortir les poubelles").fill("Rotation quotidienne");
   await page.locator('input[name="estimatedMinutesVisible"]').fill("15");
@@ -388,7 +442,7 @@ test("adding a member can rebalance future strict alternation tasks", async ({ p
   await page.getByRole("button", { name: "Continuer" }).click();
 
   await page.getByRole("textbox", { name: "Première date" }).fill(today);
-  await page.getByRole("button", { name: "Chaque semaine" }).click();
+  await page.getByRole("button", { name: "Tous les jours" }).click();
   await page.getByRole("button", { name: "Continuer" }).click();
 
   await page.getByRole("button", { name: "Créer la tâche" }).click();
@@ -452,32 +506,32 @@ test("can edit a task template and overwrite or preserve manual modifications", 
     recurrenceLabel: "Chaque semaine",
   });
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=daily");
   await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
   await page.locator('form[action*="/reschedule"] input[name="date"]').first().fill(today);
   await page.getByRole("button", { name: "Changer la date" }).first().click();
   await expect(page.getByText("Reportée").first()).toBeVisible();
 
   await openTaskAdministration(page);
-  await page.locator('#administration article', { hasText: "Tâche à modifier" }).getByRole("button", { name: "Modifier" }).click();
+  await getManagedTaskCard(page, "Tâche à modifier").getByRole("button", { name: "Modifier" }).click();
   const editDialog = page.getByRole("dialog");
   await editDialog.locator('input[name="title"]').fill("Tâche modifiée (sans écraser)");
   await editDialog.getByRole("button", { name: "Enregistrer" }).click();
   await page.waitForLoadState("networkidle");
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=daily");
   await expect(page.getByRole("heading", { name: "Tâche modifiée (sans écraser)" }).first()).toBeVisible();
   await expect(page.getByText("Reportée").first()).toBeVisible();
 
   await openTaskAdministration(page);
-  await page.locator('#administration article', { hasText: "Tâche modifiée (sans écraser)" }).getByRole("button", { name: "Modifier" }).click();
+  await getManagedTaskCard(page, "Tâche modifiée (sans écraser)").getByRole("button", { name: "Modifier" }).click();
   const editDialog2 = page.getByRole("dialog");
   await editDialog2.locator('input[name="title"]').fill("Tâche modifiée (avec écrasement)");
   await editDialog2.locator('input[name="forceOverwriteManual"]').check();
   await editDialog2.getByRole("button", { name: "Enregistrer" }).click();
   await page.waitForLoadState("networkidle");
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=daily");
   await expect(page.getByRole("heading", { name: "Tâche modifiée (avec écrasement)" }).first()).toBeVisible();
   await expect(page.getByText("Reportée")).toHaveCount(0);
 });
@@ -506,13 +560,13 @@ test("manual override badge opens a dedicated page and keeps future occurrences 
   await expect(page.getByText("Reportée").first()).toBeVisible();
 
   await openTaskAdministration(page);
-  const managedTask = page.locator("#administration article", { hasText: "Linge à relancer" });
+  const managedTask = getManagedTaskCard(page, "Linge à relancer");
   await managedTask.getByRole("link", { name: /occurrence future modifiée/i }).click();
 
   await expect(page).toHaveURL(/\/app\/my-tasks\/overrides\/.+household=/);
   await expect(page.locator("h2", { hasText: "Linge à relancer" })).toBeVisible();
   await expect(page.getByText("Date déplacée").first()).toBeVisible();
-  await expect(page.getByText(/Dernier changement/i)).toBeVisible();
+  await expect(page.getByText(/Dernier changement/i).first()).toBeVisible();
 
   await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
   await page.locator('form[action*="/reschedule"] input[name="date"]').first().fill(inTwoDays);
@@ -542,7 +596,7 @@ test("deleting a task removes it from settings and calendar", async ({ page }, t
   await expect(page.getByRole("group", { name: /Tâche à supprimer/i }).first()).toBeVisible();
 
   await openTaskAdministration(page);
-  await page.locator('#administration article', { hasText: "Tâche à supprimer" }).getByRole("button", { name: "Supprimer" }).click();
+  await getManagedTaskCard(page, "Tâche à supprimer").getByRole("button", { name: "Supprimer" }).click();
   await expect(page.getByText(/Supprimer "Tâche à supprimer" \?/i)).toBeVisible();
   await page.getByRole("button", { name: "Confirmer la suppression" }).click();
   await page.waitForLoadState("networkidle");
@@ -607,7 +661,8 @@ test("desktop chromium covers multi-member task management, repartition, and man
     assignmentLabel: "Alternance",
   });
 
-  await guestPage.goto("/app/my-tasks");
+  await guestPage.goto("/app/my-tasks?tab=wizard");
+  await expect(guestPage.getByRole("heading", { name: "Créer une nouvelle tâche" })).toBeVisible();
   await guestPage.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
   await guestPage.getByPlaceholder("Ex: Sortir les poubelles").fill("Salle de bain");
   await guestPage.locator('input[name="estimatedMinutesVisible"]').fill("18");
@@ -629,7 +684,7 @@ test("desktop chromium covers multi-member task management, repartition, and man
   await expect(page.getByRole("group", { name: /Rotation cuisine · Lea/i }).first()).toBeVisible();
   await expect(page.getByRole("group", { name: /Salle de bain · Guest/i }).first()).toBeVisible();
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=daily");
   await expect(page.getByRole("heading", { name: "Rotation cuisine" }).first()).toBeVisible();
   await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
   await page.locator('form[action*="/reschedule"] input[name="date"]').first().fill(tomorrow);
@@ -638,7 +693,7 @@ test("desktop chromium covers multi-member task management, repartition, and man
 
   await openTaskAdministration(page);
   await page
-    .locator("#administration article", { hasText: "Rotation cuisine" })
+    .locator("article.soft-panel", { hasText: "Rotation cuisine" })
     .getByRole("button", { name: "Modifier" })
     .click();
   const editDialog = page.getByRole("dialog");
@@ -646,20 +701,20 @@ test("desktop chromium covers multi-member task management, repartition, and man
   await editDialog.getByRole("button", { name: "Enregistrer" }).click();
   await page.waitForLoadState("networkidle");
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=daily");
   await expect(page.getByRole("heading", { name: "Rotation cuisine foyer" }).first()).toBeVisible();
   await expect(page.getByText("Reportée").first()).toBeVisible();
 
   await openTaskAdministration(page);
-  const managedTask = page.locator("#administration article", { hasText: "Rotation cuisine foyer" });
+  const managedTask = getManagedTaskCard(page, "Rotation cuisine foyer");
   await expect(managedTask).toContainText(/occurrence future modifiée/i);
   await managedTask.getByRole("button", { name: "Supprimer" }).click();
   await expect(page.getByText(/Souhaitez-vous également les supprimer/i)).toBeVisible();
   await page.getByRole("button", { name: "Confirmer la suppression" }).click();
   await page.waitForLoadState("networkidle");
-  await expect(page.locator("#administration article", { hasText: "Rotation cuisine foyer" })).toHaveCount(0);
+  await expect(getManagedTaskCard(page, "Rotation cuisine foyer")).toHaveCount(0);
 
-  await page.goto("/app/my-tasks");
+  await page.goto("/app/my-tasks?tab=daily");
   await expect(page.getByRole("heading", { name: "Rotation cuisine foyer" }).first()).toBeVisible();
   await expect(page.getByText("Reportée").first()).toBeVisible();
 

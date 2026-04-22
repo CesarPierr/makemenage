@@ -140,4 +140,94 @@ describe("occurrence generation", () => {
     const jan15 = generated.find((occurrence) => occurrence.sourceGenerationKey === "task-dishes:2026-01-15");
     expect(jan15?.assignedMemberId).toBe("B");
   });
+
+  it("creates a single occurrence when the task ends on its start date", () => {
+    const generated = generateOccurrences({
+      template: {
+        id: "task-single",
+        householdId: "home-1",
+        title: "Passage unique",
+        estimatedMinutes: 15,
+        startsOn: new Date("2026-01-10"),
+        endsOn: new Date("2026-01-10"),
+        recurrence: {
+          type: "daily",
+          interval: 1,
+          anchorDate: new Date("2026-01-10"),
+          dueOffsetDays: 0,
+          config: { singleRun: true },
+        },
+        assignment: {
+          mode: "fixed",
+          eligibleMemberIds: ["A"],
+          fixedMemberId: "A",
+          rotationOrder: ["A"],
+        },
+      },
+      members: [{ id: "A", displayName: "Alice", isActive: true }],
+      absences: [],
+      existingOccurrences: [],
+      rangeStart: new Date("2026-01-01"),
+      rangeEnd: new Date("2026-01-31"),
+    });
+
+    expect(generated).toHaveLength(1);
+    expect(generated[0]?.sourceGenerationKey).toBe("task-single:2026-01-10");
+  });
+
+  it("rebalances future alternation after adding a new eligible member", () => {
+    const generated = generateOccurrences({
+      template: {
+        id: "task-rotation",
+        householdId: "home-1",
+        title: "Rotation",
+        estimatedMinutes: 15,
+        startsOn: new Date("2026-04-22"),
+        recurrence: {
+          type: "daily",
+          interval: 1,
+          anchorDate: new Date("2026-04-22"),
+          dueOffsetDays: 0,
+        },
+        assignment: {
+          mode: "strict_alternation",
+          eligibleMemberIds: ["A", "B", "C"],
+          rotationOrder: ["A", "B", "C"],
+        },
+      },
+      members: [
+        { id: "A", displayName: "Alice", isActive: true },
+        { id: "B", displayName: "Bob", isActive: true },
+        { id: "C", displayName: "Chloe", isActive: true },
+      ],
+      absences: [],
+      existingOccurrences: [
+        {
+          sourceGenerationKey: "task-rotation:2026-04-22",
+          scheduledDate: new Date("2026-04-22"),
+          dueDate: new Date("2026-04-22"),
+          assignedMemberId: "A",
+          status: "planned",
+        },
+        {
+          sourceGenerationKey: "task-rotation:2026-04-23",
+          scheduledDate: new Date("2026-04-23"),
+          dueDate: new Date("2026-04-23"),
+          assignedMemberId: "B",
+          status: "planned",
+        },
+        {
+          sourceGenerationKey: "task-rotation:2026-04-24",
+          scheduledDate: new Date("2026-04-24"),
+          dueDate: new Date("2026-04-24"),
+          assignedMemberId: "A",
+          status: "planned",
+        },
+      ],
+      rangeStart: new Date("2026-04-22"),
+      rangeEnd: new Date("2026-04-24"),
+    });
+
+    expect(generated.map((occurrence) => occurrence.assignedMemberId)).toEqual(["A", "B", "C"]);
+  });
 });

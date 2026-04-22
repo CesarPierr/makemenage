@@ -63,4 +63,15 @@ describe("recurrence engine", () => {
     expect(buildGenerationKey("task_1", new Date(2026, 1, 3))).toBe("task_1:2026-02-03");
     expect(format(computeDueDate(new Date(2026, 1, 3), 2), "yyyy-MM-dd")).toBe("2026-02-05");
   });
+
+  it("describes one-time tasks clearly", () => {
+    expect(
+      describeRecurrence({
+        type: "daily",
+        interval: 1,
+        anchorDate: new Date(2026, 0, 1),
+        config: { singleRun: true },
+      }),
+    ).toBe("Une seule fois");
+  });
 });

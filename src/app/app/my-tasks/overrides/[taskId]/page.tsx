@@ -4,10 +4,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { OccurrenceCard } from "@/components/occurrence-card";
-import { db } from "@/lib/db";
-import { getHistoryActionLabel } from "@/lib/history";
-import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 import { requireUser } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
+import { getHistoryActionLabel } from "@/lib/history";
 
 type OverridePageProps = {
   params: Promise<{ taskId: string }>;
@@ -111,7 +111,7 @@ export default async function TaskOverridesPage({ params, searchParams }: Overri
         <p className="section-kicker mt-4">Occurrences modifiées</p>
         <h2 className="display-title mt-2 text-4xl leading-tight">{task.title}</h2>
         <p className="mt-3 max-w-2xl text-sm text-[var(--ink-700)]">
-          Cette vue regroupe les prochaines occurrences ajustées manuellement. Vous pouvez voir ce qui a changé et les modifier à nouveau sans repasser par toute l’administration.
+          Cette vue regroupe les prochaines occurrences ajustées manuellement. Vous pouvez voir ce qui a changé et les modifier à nouveau sans repasser par toute l&apos;administration.
         </p>
       </div>
 
@@ -126,17 +126,14 @@ export default async function TaskOverridesPage({ params, searchParams }: Overri
                 <div className="soft-panel space-y-3 p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     {overrideKinds.map((label) => (
-                      <span
-                        key={label}
-                        className="stat-pill px-3 py-1 text-xs font-semibold"
-                      >
+                      <span key={label} className="stat-pill px-3 py-1 text-xs font-semibold">
                         {label}
                       </span>
                     ))}
                   </div>
                   <div className="grid gap-3 text-sm text-[var(--ink-700)] sm:grid-cols-2">
                     <p>
-                      Date d’origine:{" "}
+                      Date d&apos;origine:{" "}
                       <strong className="text-[var(--ink-950)]">
                         {format(occurrence.originalScheduledDate, "EEE d MMM yyyy", { locale: fr })}
                       </strong>

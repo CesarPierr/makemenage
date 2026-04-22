@@ -93,6 +93,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     : [];
   const metrics = buildLoadMetrics(context.household.members, context.weekOccurrences);
   const rollingCompletionMetrics = buildRollingCompletionMetrics(context.household.members, context.occurrences);
+  const todaysByRoom = Object.entries(
+    todaysOccurrences.reduce<Record<string, typeof todaysOccurrences>>((groups, occurrence) => {
+      const room = occurrence.taskTemplate.room || "Tout l'appartement";
+      groups[room] = [...(groups[room] ?? []), occurrence];
+      return groups;
+    }, {}),
+  );
+  const upcomingByRoom = Object.entries(
+    upcomingOccurrences.reduce<Record<string, typeof upcomingOccurrences>>((groups, occurrence) => {
+      const room = occurrence.taskTemplate.room || "Tout l'appartement";
+      groups[room] = [...(groups[room] ?? []), occurrence];
+      return groups;
+    }, {}),
+  );
 
   return (
     <div className="space-y-4">
@@ -132,7 +146,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               Réglages
             </Link>
           </div>
-          <div className="mt-6 mobile-section-grid sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {[
               {
                 label: "Aujourd’hui",
@@ -212,52 +226,88 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="display-title text-2xl">Aujourd’hui</h3>
+      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <div
+          className="app-surface rounded-[2rem] p-4 sm:p-5"
+          style={{ background: "linear-gradient(180deg, rgba(63,127,103,0.08), rgba(255,255,255,0.96))" }}
+        >
+          <div className="flex items-center justify-between gap-3 px-1">
+            <div>
+              <p className="section-kicker">Focus</p>
+              <h3 className="display-title mt-2 text-2xl">Aujourd’hui</h3>
+            </div>
             <Link className="text-sm font-semibold text-[var(--coral-600)]" href={`/app/my-tasks?household=${context.household.id}`}>
               Voir mes tâches
             </Link>
           </div>
-          {todaysOccurrences.length ? (
-            todaysOccurrences.map((occurrence) => (
-              <OccurrenceCard
-                key={occurrence.id}
-                occurrence={occurrence}
-                members={context.household.members}
-                currentMemberId={context.currentMember?.id}
-              />
-            ))
-          ) : (
-            <div className="app-surface rounded-[1.8rem] p-5 text-[var(--ink-700)]">
-              Aucune tâche prévue aujourd&apos;hui.
-            </div>
-          )}
+          <div className="mt-4 space-y-4">
+            {todaysByRoom.length ? (
+              todaysByRoom.map(([room, occurrences]) => (
+                <div key={room} className="space-y-3">
+                  <div className="flex items-center justify-between gap-3 px-1">
+                    <span className="stat-pill px-3 py-1 text-xs font-semibold">{room}</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">
+                      {occurrences.length} tâche{occurrences.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  {occurrences.map((occurrence) => (
+                    <OccurrenceCard
+                      key={occurrence.id}
+                      occurrence={occurrence}
+                      members={context.household.members}
+                      currentMemberId={context.currentMember?.id}
+                    />
+                  ))}
+                </div>
+              ))
+            ) : (
+              <div className="rounded-[1.8rem] border border-[var(--line)] bg-white/80 p-5 text-[var(--ink-700)]">
+                Aucune tâche prévue aujourd&apos;hui.
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="display-title text-2xl">À venir</h3>
+        <div
+          className="app-surface rounded-[2rem] p-4 sm:p-5"
+          style={{ background: "linear-gradient(180deg, rgba(47,109,136,0.08), rgba(255,255,255,0.96))" }}
+        >
+          <div className="flex items-center justify-between gap-3 px-1">
+            <div>
+              <p className="section-kicker">Planning</p>
+              <h3 className="display-title mt-2 text-2xl">À venir</h3>
+            </div>
             <Link className="text-sm font-semibold text-[var(--coral-600)]" href={`/app/calendar?household=${context.household.id}`}>
               Voir le calendrier
             </Link>
           </div>
-          {upcomingOccurrences.length ? (
-            upcomingOccurrences.slice(0, 6).map((occurrence) => (
-              <OccurrenceCard
-                key={occurrence.id}
-                occurrence={occurrence}
-                members={context.household.members}
-                currentMemberId={context.currentMember?.id}
-                compact
-              />
-            ))
-          ) : (
-            <div className="app-surface rounded-[1.8rem] p-5 text-[var(--ink-700)]">
-              Rien d&apos;urgent dans les 7 prochains jours.
-            </div>
-          )}
+          <div className="mt-4 space-y-4">
+            {upcomingByRoom.length ? (
+              upcomingByRoom.map(([room, occurrences]) => (
+                <div key={room} className="space-y-3">
+                  <div className="flex items-center justify-between gap-3 px-1">
+                    <span className="stat-pill px-3 py-1 text-xs font-semibold">{room}</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">
+                      {occurrences.length} tâche{occurrences.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  {occurrences.slice(0, 4).map((occurrence) => (
+                    <OccurrenceCard
+                      key={occurrence.id}
+                      occurrence={occurrence}
+                      members={context.household.members}
+                      currentMemberId={context.currentMember?.id}
+                      compact
+                    />
+                  ))}
+                </div>
+              ))
+            ) : (
+              <div className="rounded-[1.8rem] border border-[var(--line)] bg-white/80 p-5 text-[var(--ink-700)]">
+                Rien d&apos;urgent dans les 7 prochains jours.
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

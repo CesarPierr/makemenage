@@ -16,11 +16,18 @@ import { formatMinutes } from "@/lib/utils";
 type OccurrenceCardProps = {
   occurrence: {
     id: string;
-    scheduledDate: Date;
+    scheduledDate: Date | string;
     status: string;
     notes: string | null;
     actualMinutes: number | null;
-    taskTemplate: { title: string; category: string | null; estimatedMinutes: number; color: string };
+    isManuallyModified?: boolean;
+    taskTemplate: {
+      title: string;
+      category: string | null;
+      room?: string | null;
+      estimatedMinutes: number;
+      color: string;
+    };
     assignedMember: { id: string; displayName: string; color: string } | null;
   };
   members: { id: string; displayName: string }[];
@@ -42,60 +49,60 @@ function getStatusLabel(status: string) {
 function getStatusTone(status: string, taskColor: string) {
   if (status === "completed") {
     return {
-      accent: "var(--leaf-600)",
-      surface: "rgba(56, 115, 93, 0.1)",
-      pillBackground: "rgba(56, 115, 93, 0.12)",
-      pillColor: "var(--leaf-600)",
-      border: "rgba(56, 115, 93, 0.16)",
+      accent: "#064e3b", // Emerald-900 (Very dark green)
+      surface: "rgba(6, 78, 59, 0.08)",
+      pillBackground: "rgba(6, 78, 59, 0.14)",
+      pillColor: "#064e3b",
+      border: "rgba(6, 78, 59, 0.2)",
     };
   }
 
   if (status === "skipped") {
     return {
-      accent: "var(--ink-700)",
-      surface: "rgba(30, 31, 34, 0.05)",
-      pillBackground: "rgba(30, 31, 34, 0.06)",
-      pillColor: "var(--ink-700)",
-      border: "rgba(30, 31, 34, 0.08)",
+      accent: "#374151", // Gray-700
+      surface: "rgba(55, 65, 81, 0.06)",
+      pillBackground: "rgba(55, 65, 81, 0.1)",
+      pillColor: "#4b5563",
+      border: "rgba(55, 65, 81, 0.16)",
     };
   }
 
   if (status === "rescheduled") {
     return {
-      accent: "var(--sky-600)",
-      surface: "rgba(47, 109, 136, 0.1)",
-      pillBackground: "rgba(47, 109, 136, 0.12)",
-      pillColor: "var(--sky-600)",
-      border: "rgba(47, 109, 136, 0.16)",
+      accent: "#0c4a6e", // Sky-900
+      surface: "rgba(12, 74, 110, 0.08)",
+      pillBackground: "rgba(12, 74, 110, 0.14)",
+      pillColor: "#0c4a6e",
+      border: "rgba(12, 74, 110, 0.2)",
     };
   }
 
   if (status === "overdue") {
     return {
-      accent: "var(--coral-600)",
-      surface: "rgba(216, 100, 61, 0.1)",
-      pillBackground: "rgba(216, 100, 61, 0.12)",
-      pillColor: "var(--coral-600)",
-      border: "rgba(216, 100, 61, 0.16)",
+      accent: "#7f1d1d", // Red-900
+      surface: "rgba(127, 29, 29, 0.08)",
+      pillBackground: "rgba(127, 29, 29, 0.14)",
+      pillColor: "#7f1d1d",
+      border: "rgba(127, 29, 29, 0.22)",
     };
   }
 
   if (status === "due") {
     return {
-      accent: "var(--coral-600)",
-      surface: "rgba(200, 142, 61, 0.12)",
-      pillBackground: "rgba(200, 142, 61, 0.16)",
-      pillColor: "var(--coral-600)",
-      border: "rgba(200, 142, 61, 0.18)",
+      accent: "#78350f", // Amber-900
+      surface: "rgba(120, 53, 15, 0.08)",
+      pillBackground: "rgba(120, 53, 15, 0.14)",
+      pillColor: "#78350f",
+      border: "rgba(120, 53, 15, 0.2)",
     };
   }
 
   return {
     accent: taskColor,
     surface: hexToRgba(taskColor, 0.08),
-    pillBackground: hexToRgba(taskColor, 0.12),
+    pillBackground: hexToRgba(taskColor, 0.14),
     pillColor: "var(--ink-950)",
-    border: hexToRgba(taskColor, 0.18),
+    border: hexToRgba(taskColor, 0.22),
   };
 }
 
@@ -161,50 +168,89 @@ export function OccurrenceCard({
   const statusMeta = getStatusMeta(occurrence.status);
   const StatusIcon = statusMeta.icon;
 
+  const cardStyle = archived
+    ? occurrence.status === "completed"
+      ? {
+          borderColor: "rgba(6, 78, 59, 0.2)",
+          background: "linear-gradient(135deg, rgba(6, 78, 59, 0.09), rgba(255, 255, 255, 0.98))",
+          boxShadow: "0 14px 34px rgba(6, 78, 59, 0.08)",
+        }
+      : {
+          // Skipped / Cancelled (Grayish)
+          borderColor: "rgba(55, 65, 81, 0.16)",
+          background: "linear-gradient(135deg, rgba(55, 65, 81, 0.07), rgba(255, 255, 255, 0.98))",
+          boxShadow: "0 12px 30px rgba(0, 0, 0, 0.04)",
+        }
+    : occurrence.status === "overdue"
+    ? {
+        borderColor: "rgba(127, 29, 29, 0.22)",
+        background: "linear-gradient(135deg, rgba(127, 29, 29, 0.09), rgba(255, 255, 255, 0.98))",
+        boxShadow: "0 16px 40px rgba(127, 29, 29, 0.1)",
+      }
+    : {
+        // Active / Planned
+        borderColor: statusTone.border,
+        background: `linear-gradient(135deg, ${statusTone.surface}, rgba(255, 255, 255, 0.99))`,
+        boxShadow: `0 18px 50px ${hexToRgba(taskColor, 0.08)}`,
+      };
+
   return (
     <article
-      className="app-surface rounded-[1.7rem] p-4 sm:p-5"
-      style={{
-        borderColor: statusTone.border,
-        background: `linear-gradient(135deg, ${statusTone.surface}, rgba(255, 255, 255, 0.94))`,
-        boxShadow: `0 18px 50px ${hexToRgba(taskColor, 0.08)}`,
-      }}
+      className="app-surface relative overflow-hidden rounded-[1.7rem] p-4 sm:p-5 transition-all duration-300"
+      style={cardStyle}
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] border px-3 py-3" style={{
-        borderColor: statusTone.border,
-        backgroundColor: statusTone.pillBackground,
-      }}>
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-1.5"
+        style={{ backgroundColor: statusTone.accent }}
+      />
+
+      <div
+        className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] border px-3 py-3"
+        style={{
+          borderColor: statusTone.border,
+          backgroundColor: statusTone.pillBackground,
+        }}
+      >
         <div className="flex min-w-0 items-center gap-3">
           <span
-            className="flex size-10 shrink-0 items-center justify-center rounded-full"
-            style={{ backgroundColor: statusTone.surface, color: statusTone.accent }}
+            className="flex size-10 shrink-0 items-center justify-center rounded-full shadow-sm"
+            style={{ backgroundColor: "#fff", color: statusTone.accent, border: `1px solid ${statusTone.border}` }}
           >
-            <StatusIcon className="size-4.5" />
+            <StatusIcon className="size-5" />
           </span>
           <div className="min-w-0">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em]" style={{ color: statusTone.accent }}>
+            <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] opacity-60" style={{ color: statusTone.accent }}>
               Statut
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <p className="font-semibold" style={{ color: statusTone.pillColor }}>
+              <p className="font-bold" style={{ color: statusTone.pillColor }}>
                 {statusMeta.label}
               </p>
-              <span className="text-sm text-[var(--ink-700)]">{statusMeta.hint}</span>
+              <span className="text-[0.75rem] font-medium opacity-70" style={{ color: statusTone.pillColor }}>{statusMeta.hint}</span>
             </div>
           </div>
         </div>
-        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ink-700)]">
+        <span className="text-xs font-bold uppercase tracking-[0.18em] opacity-60">
           {format(occurrence.scheduledDate, "EEE d MMM", { locale: fr })}
         </span>
       </div>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="size-3 rounded-full" style={{ backgroundColor: taskColor }} />
-            <p className="text-sm uppercase tracking-[0.18em] text-[var(--ink-700)]">Couleur de tâche</p>
-          </div>
-          <h3 className="mt-1 text-lg font-semibold">{occurrence.taskTemplate.title}</h3>
+          <h3 className="text-lg font-bold">{occurrence.taskTemplate.title}</h3>
           <div className="mt-3 flex flex-wrap gap-2 text-sm text-[var(--ink-700)]">
+            {occurrence.taskTemplate.room ? (
+              <span
+                className="stat-pill px-3 py-1"
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.88)",
+                  borderColor: statusTone.border,
+                  color: "var(--ink-900)",
+                }}
+              >
+                {occurrence.taskTemplate.room}
+              </span>
+            ) : null}
             {occurrence.taskTemplate.category ? (
               <span
                 className="stat-pill px-3 py-1"
@@ -241,6 +287,20 @@ export function OccurrenceCard({
       </div>
 
       {occurrence.notes ? <p className="mt-3 text-sm leading-6 text-[var(--ink-700)]">{occurrence.notes}</p> : null}
+
+      {occurrence.isManuallyModified && (
+        <div className="mt-3 flex items-center gap-2 rounded-xl border border-[rgba(216,100,61,0.16)] bg-[rgba(216,100,61,0.1)] px-3 py-2 text-[0.7rem] font-bold uppercase tracking-wider text-[var(--coral-600)] shadow-sm">
+          <AlertCircle className="size-3.5" />
+          <div className="flex flex-wrap gap-x-2">
+            <span>Date déplacée</span>
+            <span className="opacity-40">—</span>
+            <span>Dernier changement manuel</span>
+            <span className="normal-case opacity-60">(</span>
+            <span className="normal-case opacity-60">Date actuelle:</span>
+            <span className="normal-case opacity-60">{format(occurrence.scheduledDate, "d/MM/yy", { locale: fr })})</span>
+          </div>
+        </div>
+      )}
 
       {!compact && canEditOccurrence ? (
         <div className="mt-4 grid gap-2 sm:grid-cols-3">

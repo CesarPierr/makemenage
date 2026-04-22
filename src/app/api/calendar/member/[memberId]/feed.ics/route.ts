@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import ical from "ical-generator";
+import { addDays } from "date-fns";
 
 import { requireUser } from "@/lib/auth";
 import { getCurrentHouseholdContext } from "@/lib/households";
@@ -38,6 +39,18 @@ export async function GET(request: Request, { params }: Params) {
         end: occurrence.dueDate,
         summary: occurrence.taskTemplate.title,
         description: `Assigné à ${targetMember.displayName} · ${occurrence.status}`,
+      });
+    });
+
+  targetMember.availabilities
+    .filter((availability) => availability.type === "date_range_absence")
+    .forEach((availability) => {
+      calendar.createEvent({
+        start: availability.startDate,
+        end: addDays(availability.endDate, 1),
+        allDay: true,
+        summary: `Absence · ${targetMember.displayName}`,
+        description: availability.notes ?? "Indisponibilité déclarée",
       });
     });
 

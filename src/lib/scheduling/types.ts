@@ -5,6 +5,7 @@ export type RecurrenceRuleInput = {
   dayOfMonth?: number | null;
   anchorDate: Date;
   dueOffsetDays?: number;
+  config?: unknown;
 };
 
 export type AssignmentModeInput =

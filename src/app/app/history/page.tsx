@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ArrowRight, CheckCircle2, RotateCcw, SkipForward } from "lucide-react";
 
+import { CollapsibleList } from "@/components/collapsible-list";
 import { requireUser } from "@/lib/auth";
 import { getHistoryActionDescription, getHistoryActionLabel } from "@/lib/history";
 import { requireHouseholdContext } from "@/lib/households";
@@ -15,8 +16,6 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const params = await searchParams;
   const context = await requireHouseholdContext(user.id, params.household);
   const visibleLogs = context.actionLogs.filter((log) => log.actionType !== "created");
-  const latestLogs = visibleLogs.slice(0, 5);
-  const olderLogs = visibleLogs.slice(5);
   const completedCount = visibleLogs.filter((log) => log.actionType === "completed").length;
   const skippedCount = visibleLogs.filter((log) => log.actionType === "skipped").length;
   const movedCount = visibleLogs.filter((log) => log.actionType === "rescheduled").length;
@@ -74,66 +73,49 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
         </div>
       </div>
 
-      <div className="space-y-3">
-        {visibleLogs.length ? (
-          latestLogs.map((log) => {
+      <div className="space-y-2">
+        <CollapsibleList
+          initialCount={5}
+          label="Voir l'historique complet"
+          items={visibleLogs.map((log) => {
             const actionLabel = getHistoryActionLabel(log.actionType);
             const actionDescription = getHistoryActionDescription(log);
             const tone = getActionTone(log.actionType);
             const Icon = tone.icon;
 
             return (
-              <article key={log.id} className="app-surface rounded-[1.7rem] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div
-                      className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em]"
-                      style={{ backgroundColor: tone.surface, color: tone.accent }}
-                    >
-                      <Icon className="size-3.5" />
-                      {actionLabel}
-                    </div>
-                    <p className="text-sm uppercase tracking-[0.18em] text-[var(--ink-700)]">
-                      {format(log.createdAt, "EEE d MMM, HH:mm", { locale: fr })}
-                    </p>
-                    <h3 className="mt-1 text-lg font-semibold">{log.occurrence.taskTemplate.title}</h3>
-                    <p className="mt-1 text-sm text-[var(--ink-700)]">{actionDescription}</p>
+              <article key={log.id} className="app-surface flex items-center gap-4 rounded-[1.3rem] p-3 transition-all hover:bg-white/50">
+                <div
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full shadow-sm"
+                  style={{ backgroundColor: tone.surface, color: tone.accent, border: `1px solid ${tone.accent}20` }}
+                >
+                  <Icon className="size-4.5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="truncate font-semibold text-[var(--ink-950)]">{log.occurrence.taskTemplate.title}</h3>
+                    <span className="shrink-0 text-[0.65rem] font-bold uppercase tracking-wider text-[var(--ink-500)]">
+                      {format(log.createdAt, "HH:mm", { locale: fr })}
+                    </span>
                   </div>
-                  <span className="stat-pill px-3 py-1 text-xs">{log.actorMember?.displayName ?? "Système"}</span>
+                  <p className="truncate text-xs text-[var(--ink-700)]">
+                    <span className="font-bold" style={{ color: tone.accent }}>{actionLabel}</span> · {actionDescription}
+                  </p>
+                </div>
+                <div className="hidden shrink-0 sm:block">
+                  <span className="rounded-full bg-[var(--line)] px-2.5 py-1 text-[0.65rem] font-bold text-[var(--ink-700)]">
+                    {log.actorMember?.displayName ?? "Système"}
+                  </span>
                 </div>
               </article>
             );
-          })
-        ) : (
+          })}
+        />
+        {!visibleLogs.length && (
           <div className="app-surface rounded-[1.8rem] p-5 text-sm leading-6 text-[var(--ink-700)]">
             Rien de marquant pour l’instant. Les changements manuels apparaîtront ici dès qu’une tâche sera validée, sautée, reportée ou réattribuée.
           </div>
         )}
-        {olderLogs.length ? (
-          <details className="app-surface rounded-[1.8rem] p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-[var(--sky-600)]">
-              Afficher plus ({olderLogs.length})
-            </summary>
-            <div className="mt-4 space-y-3">
-              {olderLogs.map((log) => {
-                const actionLabel = getHistoryActionLabel(log.actionType);
-                const actionDescription = getHistoryActionDescription(log);
-
-                return (
-                  <article key={log.id} className="soft-panel p-4">
-                    <p className="text-sm uppercase tracking-[0.18em] text-[var(--ink-700)]">
-                      {format(log.createdAt, "EEE d MMM, HH:mm", { locale: fr })}
-                    </p>
-                    <h3 className="mt-1 text-base font-semibold">
-                      {log.occurrence.taskTemplate.title} · {actionLabel}
-                    </h3>
-                    <p className="mt-1 text-sm text-[var(--ink-700)]">{actionDescription}</p>
-                  </article>
-                );
-              })}
-            </div>
-          </details>
-        ) : null}
       </div>
     </section>
   );
