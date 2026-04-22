@@ -1,6 +1,7 @@
 import { describeRecurrence } from "@/lib/scheduling/recurrence";
 import { CopyValueButton } from "@/components/copy-value-button";
 import { requireUser } from "@/lib/auth";
+import { hexToRgba } from "@/lib/colors";
 import { db } from "@/lib/db";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 
@@ -49,9 +50,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       <section className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
         <p className="section-kicker">Réglages</p>
         <h2 className="display-title mt-2 text-4xl leading-tight">Membres, absences et règles</h2>
-        <p className="mt-3 text-[var(--ink-700)]">
-          Toute la configuration de V1 est regroupée ici pour rester simple sur mobile.
-        </p>
         {feedbackMessage ? (
           <div
             className="mt-5 rounded-[1.4rem] border px-4 py-3 text-sm leading-6"
@@ -85,9 +83,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <article className="app-surface rounded-[2rem] p-5 sm:p-6">
           <p className="section-kicker">Mes foyers</p>
           <h3 className="display-title mt-2 text-3xl">Basculer ou en créer un autre</h3>
-          <p className="mt-2 text-sm text-[var(--ink-700)]">
-            Un même compte peut appartenir à plusieurs foyers. Depuis ici, vous pouvez passer de l’un à l’autre ou en créer un nouveau.
-          </p>
           <div className="mt-5 space-y-3">
             {householdMemberships.map((membership) => {
               const active = membership.householdId === context.household.id;
@@ -111,9 +106,15 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               );
             })}
           </div>
-          <form action="/api/households" method="post" className="mt-6 grid gap-3">
-            <input className="field" type="text" name="name" placeholder="Nom du nouveau foyer" required />
-            <input className="field" type="text" name="timezone" defaultValue={context.household.timezone} required />
+          <form action="/api/households" method="post" className="mt-6 compact-form-grid">
+            <label className="field-label">
+              <span>Nouveau foyer</span>
+              <input className="field" type="text" name="name" placeholder="Nom du nouveau foyer" required />
+            </label>
+            <label className="field-label">
+              <span>Fuseau horaire</span>
+              <input className="field" type="text" name="timezone" defaultValue={context.household.timezone} required />
+            </label>
             <button className="btn-primary px-5 py-3 font-semibold" type="submit">
               Créer un autre foyer
             </button>
@@ -123,11 +124,11 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <article className="app-surface rounded-[2rem] p-5 sm:p-6">
           <p className="section-kicker">Rejoindre</p>
           <h3 className="display-title mt-2 text-3xl">Ajouter un foyer à mon compte</h3>
-          <p className="mt-2 text-sm text-[var(--ink-700)]">
-            Si quelqu’un vous a partagé un code, vous pouvez relier ce foyer à votre compte sans perdre les autres.
-          </p>
-          <form action="/api/invitations/redeem" method="post" className="mt-5 space-y-3">
-            <input className="field" type="text" name="code" placeholder="Code d’invitation" required />
+          <form action="/api/invitations/redeem" method="post" className="mt-5 compact-form-grid">
+            <label className="field-label">
+              <span>Code</span>
+              <input className="field" type="text" name="code" placeholder="Code d’invitation" required />
+            </label>
             <button className="btn-secondary w-full px-5 py-3 font-semibold" type="submit">
               Rejoindre avec un code
             </button>
@@ -145,37 +146,75 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           <article className="app-surface rounded-[2rem] p-5 sm:p-6">
             <p className="section-kicker">Équipe</p>
             <h3 className="display-title mt-2 text-3xl">Ajouter un membre</h3>
-            <p className="mt-2 text-sm text-[var(--ink-700)]">
-              Nom, couleur et capacité hebdo suffisent pour commencer proprement.
-            </p>
-            <form action={`/api/households/${context.household.id}/members`} method="post" className="mt-5 space-y-3">
-              <input className="field" type="text" name="displayName" placeholder="Nom affiché" required />
-              <input className="field" type="color" name="color" defaultValue="#E86A33" />
-              <select className="field" name="role" defaultValue="member">
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-                <option value="owner">Owner</option>
-              </select>
-              <input className="field" type="number" name="weeklyCapacityMinutes" min="0" placeholder="Capacité hebdo (min)" />
+            <form action={`/api/households/${context.household.id}/members`} method="post" className="mt-5 compact-form-grid">
+              <label className="field-label">
+                <span>Nom</span>
+                <input className="field" type="text" name="displayName" placeholder="Nom affiché" required />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="field-label">
+                  <span>Couleur</span>
+                  <input className="field" type="color" name="color" defaultValue="#E86A33" />
+                </label>
+                <label className="field-label">
+                  <span>Rôle</span>
+                  <select className="field" name="role" defaultValue="member">
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                    <option value="owner">Owner</option>
+                  </select>
+                </label>
+                <label className="field-label">
+                  <span>Capacité</span>
+                  <input className="field" type="number" name="weeklyCapacityMinutes" min="0" placeholder="Min / semaine" />
+                </label>
+              </div>
+              <label className="field-label">
+                <span className="inline-flex items-center gap-3 rounded-[1rem] border border-[var(--line)] bg-white/70 px-4 py-3 font-medium text-[var(--ink-950)]">
+                  <input defaultChecked name="includeInExistingTasks" type="checkbox" value="on" />
+                  Inclure ce membre dans les tâches futures existantes
+                </span>
+              </label>
               <button className="btn-primary w-full px-5 py-3 font-semibold" type="submit">
                 Ajouter le membre
               </button>
             </form>
+            <div className="mt-5 space-y-2">
+              {context.household.members.map((member) => (
+                <div key={member.id} className="soft-panel flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="size-3 rounded-full" style={{ backgroundColor: member.color }} />
+                    <div>
+                      <p className="font-semibold">{member.displayName}</p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-500)]">{member.role}</p>
+                    </div>
+                  </div>
+                  {member.weeklyCapacityMinutes ? (
+                    <span className="stat-pill px-3 py-1 text-xs">{member.weeklyCapacityMinutes} min</span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
           </article>
 
           <article className="app-surface rounded-[2rem] p-5 sm:p-6">
             <p className="section-kicker">Invitations</p>
             <h3 className="display-title mt-2 text-3xl">Partager un accès compte</h3>
-            <p className="mt-2 text-sm text-[var(--ink-700)]">
-              Générez un lien ou un code à envoyer. La personne pourra rejoindre ce foyer avec son propre compte.
-            </p>
-            <form action={`/api/households/${context.household.id}/invites`} method="post" className="mt-5 grid gap-3">
-              <select className="field" name="role" defaultValue="member">
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-                <option value="owner">Owner</option>
-              </select>
-              <input className="field" type="number" min="1" max="30" name="expiresInDays" defaultValue="7" />
+            <form action={`/api/households/${context.household.id}/invites`} method="post" className="mt-5 compact-form-grid">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="field-label">
+                  <span>Rôle</span>
+                  <select className="field" name="role" defaultValue="member">
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                    <option value="owner">Owner</option>
+                  </select>
+                </label>
+                <label className="field-label">
+                  <span>Expiration</span>
+                  <input className="field" type="number" min="1" max="30" name="expiresInDays" defaultValue="7" />
+                </label>
+              </div>
               <button className="btn-primary w-full px-5 py-3 font-semibold" type="submit">
                 Créer une invitation
               </button>
@@ -218,21 +257,32 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           <article className="app-surface rounded-[2rem] p-5 sm:p-6">
             <p className="section-kicker">Planning</p>
             <h3 className="display-title mt-2 text-3xl">Déclarer une absence</h3>
-            <p className="mt-2 text-sm text-[var(--ink-700)]">
-              Cela permet d&apos;éviter des répartitions injustes pendant une absence temporaire.
-            </p>
-            <form action="/api/members/absence" method="post" className="mt-5 space-y-3">
-              <select className="field" name="memberId" defaultValue={context.currentMember?.id ?? ""} required>
-                <option value="">Choisir un membre</option>
-                {context.household.members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.displayName}
-                  </option>
-                ))}
-              </select>
-              <input className="field" type="date" name="startDate" required />
-              <input className="field" type="date" name="endDate" required />
-              <input className="field" type="text" name="notes" placeholder="Notes facultatives" />
+            <form action="/api/members/absence" method="post" className="mt-5 compact-form-grid">
+              <label className="field-label">
+                <span>Membre</span>
+                <select className="field" name="memberId" defaultValue={context.currentMember?.id ?? ""} required>
+                  <option value="">Choisir un membre</option>
+                  {context.household.members.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="field-label">
+                  <span>Début</span>
+                  <input className="field" type="date" name="startDate" required />
+                </label>
+                <label className="field-label">
+                  <span>Fin</span>
+                  <input className="field" type="date" name="endDate" required />
+                </label>
+              </div>
+              <label className="field-label">
+                <span>Note</span>
+                <input className="field" type="text" name="notes" placeholder="Facultative" />
+              </label>
               <button className="btn-primary w-full px-5 py-3 font-semibold" type="submit">
                 Enregistrer l’absence
               </button>
@@ -247,16 +297,23 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <p className="section-kicker">Règles actives</p>
             <h3 className="display-title mt-2 text-3xl">Tâches configurées</h3>
           </div>
-          <p className="text-sm text-[var(--ink-700)]">
-            Chaque carte résume la récurrence et le mode d&apos;attribution retenus.
-          </p>
         </div>
         <div className="mt-5 space-y-3">
           {context.tasks.map((task) => (
-            <article key={task.id} className="soft-panel p-4">
+            <article
+              key={task.id}
+              className="soft-panel p-4"
+              style={{
+                borderColor: hexToRgba(task.color ?? "#D8643D", 0.18),
+                background: `linear-gradient(135deg, ${hexToRgba(task.color ?? "#D8643D", 0.1)}, rgba(255, 255, 255, 0.72))`,
+              }}
+            >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h4 className="text-lg font-semibold">{task.title}</h4>
+                  <div className="flex items-center gap-2">
+                    <span className="size-3 rounded-full" style={{ backgroundColor: task.color ?? "#D8643D" }} />
+                    <h4 className="text-lg font-semibold">{task.title}</h4>
+                  </div>
                   <p className="text-sm text-[var(--ink-700)]">
                     {describeRecurrence({
                       type: task.recurrenceRule.type,

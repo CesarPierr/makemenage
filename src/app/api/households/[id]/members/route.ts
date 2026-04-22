@@ -2,7 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { canManageHousehold } from "@/lib/households";
 import { redirectTo } from "@/lib/request";
-import { syncHouseholdOccurrences } from "@/lib/scheduling/service";
+import { addMemberToExistingAssignments, syncHouseholdOccurrences } from "@/lib/scheduling/service";
 import { memberSchema } from "@/lib/validation";
 
 type Params = {
@@ -36,11 +36,20 @@ export async function POST(request: Request, { params }: Params) {
     return redirectTo(request, `/app/settings?household=${id}`);
   }
 
-  await db.householdMember.create({
+  const createdMember = await db.householdMember.create({
     data: parsed.data,
   });
 
-  await syncHouseholdOccurrences(id);
+  const includeInExistingTasks = String(formData.get("includeInExistingTasks") ?? "on") !== "off";
+
+  if (includeInExistingTasks) {
+    await addMemberToExistingAssignments({
+      householdId: id,
+      memberId: createdMember.id,
+    });
+  } else {
+    await syncHouseholdOccurrences(id);
+  }
 
   return redirectTo(request, `/app/settings?household=${id}`);
 }

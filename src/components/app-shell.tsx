@@ -26,23 +26,18 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
   const sectionMeta = {
     "/app": {
       title: "Vue d'ensemble",
-      description: "Les actions utiles tout de suite, sans quitter le pouce.",
     },
     "/app/my-tasks": {
       title: "Mes tâches",
-      description: "Ce qui m'attend et ce que je peux boucler en quelques gestes.",
     },
     "/app/calendar": {
       title: "Calendrier",
-      description: "Le mois complet, avec un agenda plus lisible sur téléphone.",
     },
     "/app/history": {
       title: "Historique",
-      description: "Les derniers mouvements du foyer, clairs et faciles à relire.",
     },
     "/app/settings": {
       title: "Réglages",
-      description: "Tout configurer sans fouiller dans plusieurs écrans.",
     },
   } as const;
   const activeSection =
@@ -63,9 +58,6 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
                 {householdName ?? "Votre foyer"}
               </span>
             </div>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-700)]">
-              {activeMeta.description}
-            </p>
           </div>
           <form action="/api/auth/logout" method="post" className="shrink-0">
             <button

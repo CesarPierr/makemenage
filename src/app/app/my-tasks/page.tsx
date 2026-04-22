@@ -20,9 +20,6 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
       <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
         <p className="section-kicker">Mes tâches</p>
         <h2 className="display-title mt-2 text-4xl leading-tight">Tout ce qui m’est attribué</h2>
-        <p className="mt-3 text-[var(--ink-700)]">
-          Cette vue met en avant les occurrences qui vous concernent, avec les actions rapides juste en dessous.
-        </p>
         <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-[rgba(56,115,93,0.1)] px-3 py-2 text-sm text-[var(--leaf-600)]">
           {myOccurrences.length} tâche{myOccurrences.length > 1 ? "s" : ""} pour moi
         </div>

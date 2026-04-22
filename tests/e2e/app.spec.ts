@@ -2,12 +2,17 @@ import { randomUUID } from "node:crypto";
 import { addMonths, format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
 function buildUniqueEmail(prefix: string, projectName: string) {
   const safeProjectName = projectName.replace(/[^a-z0-9-]/gi, "-").toLowerCase();
 
   return `${prefix}-${safeProjectName}-${Date.now()}-${randomUUID().slice(0, 8)}@makemenage.local`;
+}
+
+async function expectCopyButtonToReact(button: Locator) {
+  await button.click();
+  await expect(button).toContainText(/copiée|manuelle/i);
 }
 
 test("register API redirects to login without creating a session cookie", async ({ request }, testInfo) => {
@@ -126,7 +131,9 @@ test("user can register, login, create a household, add a member, create a task,
 
   await page.goto("/app/calendar");
   await expect(page.getByRole("heading", { name: "Google Calendar et iCal" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Copier l’URL iCal du foyer" })).toBeVisible();
+  const householdIcalCopyButton = page.getByRole("button", { name: "Copier l’URL iCal du foyer" });
+  await expect(householdIcalCopyButton).toBeVisible();
+  await expectCopyButtonToReact(householdIcalCopyButton);
   await expect(page.getByRole("link", { name: "Ouvrir Google Calendar" })).toBeVisible();
   await expect(page.getByRole("heading", { name: new RegExp(nextMonthLabel, "i") })).toBeVisible();
   if (isMobileProject) {
@@ -161,6 +168,10 @@ test("two accounts can share a household, one account can keep multiple househol
 
   await page.goto("/app/settings");
   await page.getByRole("button", { name: "Créer une invitation" }).click();
+  const inviteLinkCopyButton = page.getByRole("button", { name: "Copier le lien" }).first();
+  const inviteCodeCopyButton = page.getByRole("button", { name: "Copier le code" }).first();
+  await expectCopyButtonToReact(inviteLinkCopyButton);
+  await expectCopyButtonToReact(inviteCodeCopyButton);
   const inviteLink = await page.getByRole("link", { name: "Ouvrir le lien d’invitation" }).first().getAttribute("href");
   expect(inviteLink).toContain("/join/");
 
@@ -242,6 +253,52 @@ test("a skipped task can be corrected and completed later with actual minutes", 
 
   await expect(page.getByText("Terminée").first()).toBeVisible();
   await expect(page.getByText("Réel 27 min").first()).toBeVisible();
+});
+
+test("adding a member can rebalance future strict alternation tasks", async ({ page }, testInfo) => {
+  const email = buildUniqueEmail("rebalance-member", testInfo.project.name);
+  const today = new Date().toISOString().slice(0, 10);
+
+  await page.goto("/register");
+  await page.getByPlaceholder("Prénom ou pseudo").fill("Rebalance User");
+  await page.getByPlaceholder("Email").fill(email);
+  await page.getByPlaceholder("Mot de passe").fill("demo12345");
+  await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await page.waitForURL(/\/login\?/);
+  await page.getByPlaceholder("Mot de passe").fill("demo12345");
+  await page.getByRole("button", { name: "Se connecter" }).click();
+  await page.waitForURL(/\/app$/);
+
+  await page.getByPlaceholder("Nom du foyer").fill("Foyer rebalance");
+  await page.locator('input[name="timezone"]').fill("Europe/Paris");
+  await page.getByRole("button", { name: "Créer le foyer" }).click();
+  await page.waitForLoadState("networkidle");
+
+  await page.goto("/app/settings");
+  await page.getByPlaceholder("Nom affiché").fill("Sam");
+  await page.locator('input[name="color"]').fill("#1F6E8C");
+  await page.getByRole("button", { name: "Ajouter le membre" }).click();
+  await expect(page.locator('option[value]', { hasText: "Sam" })).toHaveCount(1);
+
+  await page.goto("/app");
+  await page.getByPlaceholder("Titre de la tâche").fill("Rotation quotidienne");
+  await page.locator('input[name="estimatedMinutes"]').fill("15");
+  await page.getByPlaceholder("Catégorie").fill("Routine");
+  await page.getByPlaceholder("Pièce").fill("Cuisine");
+  await page.locator('input[name="startsOn"]').fill(today);
+  await page.locator('input[name="interval"]').fill("1");
+  await page.locator('select[name="eligibleMemberIds"]').selectOption([{ index: 0 }, { index: 1 }]);
+  await page.getByRole("button", { name: "Créer la tâche" }).click();
+  await page.waitForLoadState("networkidle");
+
+  await page.goto("/app/settings");
+  await page.getByPlaceholder("Nom affiché").fill("Lea");
+  await page.locator('input[name="color"]').fill("#2E8B57");
+  await page.getByRole("button", { name: "Ajouter le membre" }).click();
+  await page.waitForLoadState("networkidle");
+
+  await page.goto("/app/calendar");
+  await expect(page.getByRole("group", { name: /Rotation quotidienne · Lea/i }).first()).toBeVisible();
 });
 
 test("invalid login keeps the user on login with a clear error message", async ({ page }, testInfo) => {

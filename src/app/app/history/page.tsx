@@ -20,9 +20,6 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
       <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
         <p className="section-kicker">Historique</p>
         <h2 className="display-title mt-2 text-4xl leading-tight">Ce qui a changé récemment</h2>
-        <p className="mt-3 text-[var(--ink-700)]">
-          Cette vue met surtout en avant les actions manuelles du foyer: complétion, saut, report ou réassignation.
-        </p>
       </div>
 
       <div className="space-y-3">

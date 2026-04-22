@@ -8,13 +8,15 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 
+import { hexToRgba } from "@/lib/colors";
+
 type CalendarMonthProps = {
   month: Date;
   occurrences: {
     id: string;
     scheduledDate: Date;
     status: string;
-    taskTemplate: { title: string };
+    taskTemplate: { title: string; color: string };
     assignedMember: { displayName: string; color: string } | null;
   }[];
 };
@@ -33,6 +35,8 @@ export function CalendarMonth({ month, occurrences }: CalendarMonthProps) {
       ),
     }))
     .filter((entry) => entry.occurrences.length > 0);
+  const buildOccurrenceLabel = (occurrence: CalendarMonthProps["occurrences"][number]) =>
+    `${occurrence.taskTemplate.title} · ${occurrence.assignedMember?.displayName ?? "À attribuer"}`;
 
   return (
     <>
@@ -66,14 +70,22 @@ export function CalendarMonth({ month, occurrences }: CalendarMonthProps) {
                 <div className="mt-3 space-y-2">
                   {dayOccurrences.map((occurrence) => (
                     <div
+                      aria-label={buildOccurrenceLabel(occurrence)}
                       key={occurrence.id}
                       className="rounded-[1.1rem] px-3 py-3 text-sm text-white"
-                      style={{ backgroundColor: occurrence.assignedMember?.color ?? "#6A4C93" }}
+                      role="group"
+                      style={{ backgroundColor: occurrence.taskTemplate.color ?? "#D8643D" }}
                     >
                       <p className="font-semibold leading-5">{occurrence.taskTemplate.title}</p>
-                      <p className="mt-1 text-xs opacity-90">
-                        {occurrence.assignedMember?.displayName ?? "À attribuer"}
-                      </p>
+                      <div className="mt-1 inline-flex items-center gap-2 text-xs opacity-90">
+                        {occurrence.assignedMember ? (
+                          <span
+                            className="size-2 rounded-full border border-white/70"
+                            style={{ backgroundColor: occurrence.assignedMember.color }}
+                          />
+                        ) : null}
+                        <span>{occurrence.assignedMember?.displayName ?? "À attribuer"}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -116,14 +128,34 @@ export function CalendarMonth({ month, occurrences }: CalendarMonthProps) {
                   <div className="space-y-1.5">
                     {dayOccurrences.slice(0, 3).map((occurrence) => (
                       <div
+                        aria-label={buildOccurrenceLabel(occurrence)}
                         key={occurrence.id}
-                        className="rounded-xl px-2 py-1 text-xs leading-5 text-white"
-                        style={{ backgroundColor: occurrence.assignedMember?.color ?? "#6A4C93" }}
+                        className="rounded-xl px-2 py-1 text-xs leading-5"
+                        role="group"
+                        style={{
+                          backgroundColor: hexToRgba(occurrence.taskTemplate.color ?? "#D8643D", 0.14),
+                          color: "var(--ink-950)",
+                          border: `1px solid ${hexToRgba(occurrence.taskTemplate.color ?? "#D8643D", 0.22)}`,
+                        }}
                       >
-                        <p className="truncate font-semibold">{occurrence.taskTemplate.title}</p>
-                        <p className="truncate opacity-90">
-                          {occurrence.assignedMember?.displayName ?? "À attribuer"}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="size-2 rounded-full"
+                            style={{ backgroundColor: occurrence.taskTemplate.color ?? "#D8643D" }}
+                          />
+                          <p className="truncate font-semibold">{occurrence.taskTemplate.title}</p>
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[var(--ink-700)]">
+                          {occurrence.assignedMember ? (
+                            <span
+                              className="size-1.5 rounded-full"
+                              style={{ backgroundColor: occurrence.assignedMember.color }}
+                            />
+                          ) : null}
+                          <p className="truncate">
+                            {occurrence.assignedMember?.displayName ?? "À attribuer"}
+                          </p>
+                        </div>
                       </div>
                     ))}
                     {dayOccurrences.length > 3 ? (

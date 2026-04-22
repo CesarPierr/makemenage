@@ -100,6 +100,20 @@ textarea {
   background: rgba(255, 255, 255, 0.96);
 }
 
+.field-label {
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink-950);
+}
+
+.field-help {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-500);
+}
+
 .btn-primary {
   border-radius: 999px;
   background: var(--coral-500);
@@ -178,6 +192,16 @@ a:focus-visible {
 }
 
 .mobile-section-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.compact-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.compact-form-grid {
   display: grid;
   gap: 0.85rem;
 }

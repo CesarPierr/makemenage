@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarClock, Clock3, ListChecks, Settings2, TimerReset } from "lucide-react";
 
 import { OccurrenceCard } from "@/components/occurrence-card";
+import { taskPalette } from "@/lib/constants";
 import { buildLoadMetrics, buildRollingCompletionMetrics } from "@/lib/analytics";
 import { requireUser } from "@/lib/auth";
 import { canManageHousehold, getCurrentHouseholdContext } from "@/lib/households";
@@ -31,52 +32,48 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     return (
       <section className="app-surface glow-card rounded-[2rem] p-6 sm:p-8">
         <p className="section-kicker">Bienvenue</p>
-        <h2 className="display-title mt-2 text-4xl leading-tight sm:text-5xl">
-          Créer votre premier foyer
-        </h2>
-        <p className="mt-3 max-w-2xl text-[var(--ink-700)]">
-          On démarre en une minute : le foyer, les membres, puis les tâches récurrentes. Tout est pensé pour se faire depuis le téléphone.
-        </p>
+        <h2 className="display-title mt-2 text-4xl leading-tight sm:text-5xl">Créer votre premier foyer</h2>
         {dashboardMessage ? (
           <div className="mt-5 rounded-[1.4rem] border px-4 py-3 text-sm leading-6 text-[var(--coral-600)]" style={{ backgroundColor: "rgba(216, 100, 61, 0.12)", borderColor: "rgba(30, 31, 34, 0.06)" }}>
             {dashboardMessage}
           </div>
         ) : null}
-        <div className="mt-6 mobile-section-grid sm:max-w-2xl sm:grid-cols-3">
-          {[
-            "Un seul foyer pour commencer, sans configuration lourde.",
-            "Ajout rapide des membres et de leurs couleurs.",
-            "Première tâche prête à tourner juste après.",
-          ].map((tip) => (
-            <div key={tip} className="soft-panel px-4 py-3 text-sm leading-6 text-[var(--ink-700)]">
-              {tip}
-            </div>
-          ))}
-        </div>
-        <form action="/api/households" method="post" className="mt-8 grid gap-3 sm:max-w-lg">
-          <input className="field" type="text" name="name" placeholder="Nom du foyer" required />
-          <input
-            className="field"
-            type="text"
-            name="timezone"
-            defaultValue={process.env.DEFAULT_TIMEZONE ?? "Europe/Paris"}
-            required
-          />
-          <button className="btn-primary px-5 py-3 font-semibold" type="submit">
-            Créer le foyer
-          </button>
-        </form>
-        <div className="mt-8 max-w-lg rounded-[1.8rem] border border-[rgba(30,31,34,0.08)] bg-white/70 p-4">
-          <p className="text-sm font-semibold text-[var(--ink-950)]">Ou rejoindre un foyer existant</p>
-          <p className="mt-1 text-sm leading-6 text-[var(--ink-700)]">
-            Collez simplement le code d’invitation qu’un proche vous a partagé.
-          </p>
-          <form action="/api/invitations/redeem" method="post" className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-            <input className="field" type="text" name="code" placeholder="Code d’invitation" required />
-            <button className="btn-secondary px-5 py-3 font-semibold" type="submit">
-              Rejoindre
-            </button>
-          </form>
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <div className="soft-panel p-4">
+            <h3 className="text-lg font-semibold">Nouveau foyer</h3>
+            <form action="/api/households" method="post" className="mt-4 compact-form-grid">
+              <label className="field-label">
+                <span>Nom</span>
+                <input className="field" type="text" name="name" placeholder="Nom du foyer" required />
+              </label>
+              <label className="field-label">
+                <span>Fuseau horaire</span>
+                <input
+                  className="field"
+                  type="text"
+                  name="timezone"
+                  defaultValue={process.env.DEFAULT_TIMEZONE ?? "Europe/Paris"}
+                  required
+                />
+              </label>
+              <button className="btn-primary px-5 py-3 font-semibold" type="submit">
+                Créer le foyer
+              </button>
+            </form>
+          </div>
+
+          <div className="soft-panel p-4">
+            <h3 className="text-lg font-semibold">Rejoindre</h3>
+            <form action="/api/invitations/redeem" method="post" className="mt-4 compact-form-grid">
+              <label className="field-label">
+                <span>Code</span>
+                <input className="field" type="text" name="code" placeholder="Code d’invitation" required />
+              </label>
+              <button className="btn-secondary px-5 py-3 font-semibold" type="submit">
+                Rejoindre
+              </button>
+            </form>
+          </div>
         </div>
       </section>
     );
@@ -114,9 +111,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <h2 className="display-title mt-2 text-3xl leading-tight sm:text-4xl">
             Vue rapide du foyer {context.household.name}
           </h2>
-          <p className="mt-3 max-w-2xl text-[var(--ink-700)]">
-            Les actions les plus fréquentes sont juste en dessous. L&apos;objectif est qu&apos;un passage de 20 secondes sur téléphone suffise à garder le planning net.
-          </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Link
               className="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold"
@@ -275,9 +269,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <h3 className="display-title mt-2 text-3xl">
               {windowMetrics.days === 7 ? "7 derniers jours" : "30 derniers jours"}
             </h3>
-            <p className="mt-2 text-sm text-[var(--ink-700)]">
-              Nombre de tâches réellement validées et temps passé déclaré par personne.
-            </p>
             <div className="mt-5 space-y-3">
               {windowMetrics.byMember.map((member) => (
                 <div key={`${windowMetrics.days}-${member.memberId}`} className="soft-panel px-4 py-4">
@@ -309,48 +300,84 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <p className="section-kicker">Ajout rapide</p>
               <h3 className="display-title mt-2 text-3xl">Créer une nouvelle tâche</h3>
             </div>
-            <p className="max-w-xl text-sm text-[var(--ink-700)]">
-              Utilisez le mode d&apos;attribution qui correspond à la vie réelle: fixe, alternance, round-robin ou équilibrage.
-            </p>
           </div>
 
-          <form action="/api/tasks" method="post" className="mt-6 grid gap-3 lg:grid-cols-2">
+          <form action="/api/tasks" method="post" className="mt-6 compact-form-grid">
             <input type="hidden" name="householdId" value={context.household.id} />
-            <input className="field" type="text" name="title" placeholder="Titre de la tâche" required />
-            <input className="field" type="number" min="5" name="estimatedMinutes" placeholder="Durée estimée (min)" required />
-            <input className="field" type="text" name="category" placeholder="Catégorie" />
-            <input className="field" type="text" name="room" placeholder="Pièce" />
-            <input className="field" type="date" name="startsOn" required />
-            <select className="field" name="recurrenceType" defaultValue="weekly">
-              <option value="daily">Tous les jours</option>
-              <option value="every_x_days">Tous les X jours</option>
-              <option value="weekly">Chaque semaine</option>
-              <option value="every_x_weeks">Toutes les X semaines</option>
-              <option value="monthly_simple">Chaque mois</option>
-            </select>
-            <input className="field" type="number" min="1" name="interval" defaultValue="1" required />
-            <select className="field" name="assignmentMode" defaultValue="strict_alternation">
-              <option value="fixed">Fixe</option>
-              <option value="manual">Manuelle</option>
-              <option value="strict_alternation">Alternance stricte</option>
-              <option value="round_robin">Round-robin</option>
-              <option value="least_assigned_count">Moins de tâches</option>
-              <option value="least_assigned_minutes">Moins de minutes</option>
-            </select>
-            <div className="soft-panel p-3 lg:col-span-2">
-              <p className="text-sm font-semibold text-[var(--ink-950)]">Membres concernés</p>
-              <p className="mt-1 text-sm text-[var(--ink-700)]">
-                Sélection multiple. Sur mobile, gardez appuyé pour choisir plusieurs personnes si besoin.
-              </p>
-              <select className="field mt-3" name="eligibleMemberIds" multiple required size={Math.min(context.household.members.length, 5)}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="field-label">
+                <span>Tâche</span>
+                <input className="field" type="text" name="title" placeholder="Titre de la tâche" required />
+              </label>
+              <label className="field-label">
+                <span>Durée estimée</span>
+                <input className="field" type="number" min="5" name="estimatedMinutes" placeholder="Durée estimée (min)" required />
+              </label>
+              <label className="field-label">
+                <span>Catégorie</span>
+                <input className="field" type="text" name="category" placeholder="Catégorie" />
+              </label>
+              <label className="field-label">
+                <span>Pièce</span>
+                <input className="field" type="text" name="room" placeholder="Pièce" />
+              </label>
+              <label className="field-label">
+                <span>Couleur</span>
+                <div className="flex items-center gap-3">
+                  <input className="field h-[3.2rem] px-2" type="color" name="color" defaultValue={taskPalette[0]} />
+                  <div className="flex flex-wrap gap-2">
+                    {taskPalette.slice(0, 4).map((color) => (
+                      <span
+                        key={color}
+                        className="size-5 rounded-full border border-black/10"
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </label>
+              <label className="field-label">
+                <span>Première date</span>
+                <input className="field" type="date" name="startsOn" required />
+              </label>
+              <label className="field-label">
+                <span>Répétition</span>
+                <select className="field" name="recurrenceType" defaultValue="weekly">
+                  <option value="daily">Tous les jours</option>
+                  <option value="every_x_days">Tous les X jours</option>
+                  <option value="weekly">Chaque semaine</option>
+                  <option value="every_x_weeks">Toutes les X semaines</option>
+                  <option value="monthly_simple">Chaque mois</option>
+                </select>
+              </label>
+              <label className="field-label">
+                <span>Intervalle</span>
+                <input className="field" type="number" min="1" name="interval" defaultValue="1" required />
+              </label>
+              <label className="field-label">
+                <span>Attribution</span>
+                <select className="field" name="assignmentMode" defaultValue="strict_alternation">
+                  <option value="fixed">Fixe</option>
+                  <option value="manual">Manuelle</option>
+                  <option value="strict_alternation">Alternance stricte</option>
+                  <option value="round_robin">Round-robin</option>
+                  <option value="least_assigned_count">Moins de tâches</option>
+                  <option value="least_assigned_minutes">Moins de minutes</option>
+                </select>
+              </label>
+            </div>
+            <label className="field-label">
+              <span>Membres concernés</span>
+              <span className="field-help">Appui long pour en choisir plusieurs sur mobile.</span>
+              <select className="field" name="eligibleMemberIds" multiple required size={Math.min(context.household.members.length, 5)}>
                 {context.household.members.map((member) => (
                   <option key={member.id} value={member.id}>
                     {member.displayName}
                   </option>
                 ))}
               </select>
-            </div>
-            <button className="btn-primary lg:col-span-2 px-5 py-3 font-semibold" type="submit">
+            </label>
+            <button className="btn-primary px-5 py-3 font-semibold" type="submit">
               Créer la tâche
             </button>
           </form>

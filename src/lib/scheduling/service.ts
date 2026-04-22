@@ -269,6 +269,51 @@ export async function syncHouseholdOccurrences(householdId: string) {
   }
 }
 
+export async function addMemberToExistingAssignments(params: {
+  householdId: string;
+  memberId: string;
+}) {
+  const tasks = await db.taskTemplate.findMany({
+    where: {
+      householdId: params.householdId,
+      isActive: true,
+    },
+    include: {
+      assignmentRule: true,
+    },
+  });
+
+  for (const task of tasks) {
+    if (task.assignmentRule.mode === "fixed" || task.assignmentRule.mode === "manual") {
+      continue;
+    }
+
+    const eligibleMemberIds = parseStringArray(task.assignmentRule.eligibleMemberIds);
+
+    if (eligibleMemberIds.includes(params.memberId)) {
+      continue;
+    }
+
+    const rotationOrder = parseStringArray(task.assignmentRule.rotationOrder);
+    const nextEligibleMemberIds = [...eligibleMemberIds, params.memberId];
+    const nextRotationOrder = rotationOrder.length
+      ? [...rotationOrder.filter((memberId) => memberId !== params.memberId), params.memberId]
+      : nextEligibleMemberIds;
+
+    await db.assignmentRule.update({
+      where: {
+        id: task.assignmentRuleId,
+      },
+      data: {
+        eligibleMemberIds: nextEligibleMemberIds,
+        rotationOrder: nextRotationOrder,
+      },
+    });
+  }
+
+  await syncHouseholdOccurrences(params.householdId);
+}
+
 export async function completeOccurrence(params: {
   occurrenceId: string;
   actorMemberId?: string | null;

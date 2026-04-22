@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
+import { hexToRgba } from "@/lib/colors";
 import { formatMinutes } from "@/lib/utils";
 
 type OccurrenceCardProps = {
@@ -10,7 +11,7 @@ type OccurrenceCardProps = {
     status: string;
     notes: string | null;
     actualMinutes: number | null;
-    taskTemplate: { title: string; category: string | null; estimatedMinutes: number };
+    taskTemplate: { title: string; category: string | null; estimatedMinutes: number; color: string };
     assignedMember: { id: string; displayName: string; color: string } | null;
   };
   members: { id: string; displayName: string }[];
@@ -26,6 +27,7 @@ export function OccurrenceCard({
 }: OccurrenceCardProps) {
   const isArchived = ["completed", "skipped", "cancelled"].includes(occurrence.status);
   const canEditOccurrence = occurrence.status !== "cancelled";
+  const taskColor = occurrence.taskTemplate.color ?? "#D8643D";
   const statusLabel =
     occurrence.status === "completed"
       ? "Terminée"
@@ -38,16 +40,36 @@ export function OccurrenceCard({
             : occurrence.status.replace("_", " ");
 
   return (
-    <article className="app-surface rounded-[1.7rem] p-4 sm:p-5">
+    <article
+      className="app-surface rounded-[1.7rem] p-4 sm:p-5"
+      style={{
+        borderColor: hexToRgba(taskColor, 0.28),
+        boxShadow: `0 20px 60px ${hexToRgba(taskColor, 0.1)}`,
+      }}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-sm uppercase tracking-[0.18em] text-[var(--leaf-600)]">
-            {format(occurrence.scheduledDate, "EEE d MMM", { locale: fr })}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="size-3 rounded-full"
+              style={{ backgroundColor: taskColor }}
+            />
+            <p className="text-sm uppercase tracking-[0.18em] text-[var(--leaf-600)]">
+              {format(occurrence.scheduledDate, "EEE d MMM", { locale: fr })}
+            </p>
+          </div>
           <h3 className="mt-1 text-lg font-semibold">{occurrence.taskTemplate.title}</h3>
           <div className="mt-3 flex flex-wrap gap-2 text-sm text-[var(--ink-700)]">
             {occurrence.taskTemplate.category ? (
-              <span className="stat-pill px-3 py-1">{occurrence.taskTemplate.category}</span>
+              <span
+                className="stat-pill px-3 py-1"
+                style={{
+                  backgroundColor: hexToRgba(taskColor, 0.12),
+                  borderColor: hexToRgba(taskColor, 0.2),
+                }}
+              >
+                {occurrence.taskTemplate.category}
+              </span>
             ) : null}
             <span className="stat-pill px-3 py-1">
               {formatMinutes(occurrence.taskTemplate.estimatedMinutes)}
@@ -86,19 +108,11 @@ export function OccurrenceCard({
 
       {!compact && canEditOccurrence ? (
         <div className="mt-4 space-y-3">
-          <div className="soft-panel px-3 py-3">
-            <p className="text-sm font-semibold text-[var(--ink-950)]">
-              {isArchived ? "Modifier cette occurrence" : "Actions rapides"}
-            </p>
-            <p className="mt-1 text-sm text-[var(--ink-700)]">
-              Vous pouvez corriger le statut, déclarer le temps réel et ajuster cette occurrence sans quitter l&apos;écran.
-            </p>
-          </div>
-
           <form
             action={`/api/occurrences/${occurrence.id}/complete`}
             method="post"
             className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_1fr_auto]"
+            style={{ borderColor: hexToRgba(taskColor, 0.18) }}
           >
               <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
               <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-3">
@@ -128,6 +142,7 @@ export function OccurrenceCard({
             action={`/api/occurrences/${occurrence.id}/skip`}
             method="post"
             className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_auto]"
+            style={{ borderColor: hexToRgba(taskColor, 0.18) }}
           >
               <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
               <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-2">
@@ -149,6 +164,7 @@ export function OccurrenceCard({
             action={`/api/occurrences/${occurrence.id}/reschedule`}
             method="post"
             className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_auto]"
+            style={{ borderColor: hexToRgba(taskColor, 0.18) }}
           >
             <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
             <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-2">
@@ -164,6 +180,7 @@ export function OccurrenceCard({
             action={`/api/occurrences/${occurrence.id}/reassign`}
             method="post"
             className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_auto]"
+            style={{ borderColor: hexToRgba(taskColor, 0.18) }}
           >
             <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
             <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-2">

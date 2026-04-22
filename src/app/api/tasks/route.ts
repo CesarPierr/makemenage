@@ -5,6 +5,7 @@ import { parseDateInput } from "@/lib/date-input";
 import { db } from "@/lib/db";
 import { canManageHousehold } from "@/lib/households";
 import { redirectTo } from "@/lib/request";
+import { taskTemplateSchema } from "@/lib/validation";
 
 export async function GET(request: Request) {
   const user = await requireUser();
@@ -44,6 +45,29 @@ export async function POST(request: Request) {
   const householdId = String(formData.get("householdId"));
   const eligibleMemberIds = formData.getAll("eligibleMemberIds").map(String).filter(Boolean);
   const assignmentMode = String(formData.get("assignmentMode"));
+  const parsedTask = taskTemplateSchema.safeParse({
+    householdId,
+    title: formData.get("title"),
+    category: formData.get("category") || undefined,
+    room: formData.get("room") || undefined,
+    color: formData.get("color") || undefined,
+    estimatedMinutes: formData.get("estimatedMinutes"),
+    startsOn: formData.get("startsOn"),
+    recurrence: {
+      type: formData.get("recurrenceType"),
+      interval: formData.get("interval"),
+      anchorDate: formData.get("startsOn"),
+      dueOffsetDays: 0,
+    },
+    assignment: {
+      mode: assignmentMode,
+      eligibleMemberIds,
+      rotationOrder: eligibleMemberIds,
+      fairnessWindowDays: 14,
+      rebalanceOnMemberAbsence: true,
+      lockAssigneeAfterGeneration: true,
+    },
+  });
 
   const membership = await db.householdMember.findFirst({
     where: {
@@ -53,6 +77,10 @@ export async function POST(request: Request) {
   });
 
   if (!membership || !canManageHousehold(membership.role) || !eligibleMemberIds.length) {
+    return redirectTo(request, `/app?household=${householdId}`);
+  }
+
+  if (!parsedTask.success) {
     return redirectTo(request, `/app?household=${householdId}`);
   }
 
@@ -95,9 +123,10 @@ export async function POST(request: Request) {
       description: (formData.get("description")?.toString() || null) ?? null,
       category: (formData.get("category")?.toString() || null) ?? null,
       room: (formData.get("room")?.toString() || null) ?? null,
-      estimatedMinutes: Number(formData.get("estimatedMinutes") ?? 30),
+      color: parsedTask.data.color,
+      estimatedMinutes: parsedTask.data.estimatedMinutes,
       priority: 2,
-      startsOn: parseDateInput(String(formData.get("startsOn"))),
+      startsOn: parsedTask.data.startsOn,
       recurrenceRuleId: recurrenceRule.id,
       assignmentRuleId: assignmentRule.id,
       createdByMemberId: membership.id,

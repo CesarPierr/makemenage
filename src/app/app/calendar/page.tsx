@@ -30,9 +30,6 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
       <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
         <p className="section-kicker">Calendrier</p>
         <h2 className="display-title mt-2 text-4xl leading-tight">Le foyer au fil du mois</h2>
-        <p className="mt-3 text-[var(--ink-700)]">
-          Sur téléphone, l&apos;agenda des prochaines tâches passe en premier. En dessous, vous pouvez parcourir ce mois-ci puis les deux mois suivants sans quitter l&apos;écran.
-        </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <a
             className="btn-secondary px-4 py-2 text-sm"
