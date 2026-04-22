@@ -71,7 +71,7 @@ test("user can register, login, create a household, add a member, create a task,
   const nextMonthLabel = format(addMonths(new Date(), 1), "MMMM yyyy", { locale: fr });
 
   await page.goto("/register");
-  await expect(page.getByText("Démarrage rapide sans écran inutile")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Créer un compte" })).toBeVisible();
   await page.getByPlaceholder("Prénom ou pseudo").fill("E2E User");
   await page.getByPlaceholder("Email").fill(email);
   await page.getByPlaceholder("Mot de passe").fill("demo12345");
@@ -94,32 +94,41 @@ test("user can register, login, create a household, add a member, create a task,
 
   await expect(page.getByRole("heading", { name: /Vue rapide du foyer/i })).toBeVisible();
   const mainNavigation = page.getByRole("navigation");
-  await expect(mainNavigation.getByRole("link", { name: "Mes tâches" })).toBeVisible();
+  await expect(mainNavigation.getByRole("link", { name: "Tâches" })).toBeVisible();
   await expect(mainNavigation.getByRole("link", { name: "Réglages" })).toBeVisible();
   await expect(mainNavigation.getByRole("link", { name: "Accueil" })).toBeVisible();
 
   await page.goto("/app/settings");
-  await expect(page.getByRole("heading", { name: "Ajouter un membre" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Membres" })).toBeVisible();
   await page.getByPlaceholder("Nom affiché").fill("Sam");
   await page.locator('input[name="color"]').fill("#1F6E8C");
   await page.getByRole("button", { name: "Ajouter le membre" }).click();
   await expect(page.locator('option[value]', { hasText: "Sam" })).toHaveCount(1);
 
-  await page.goto("/app");
-  await page.getByPlaceholder("Titre de la tâche").fill("Nettoyer le salon");
-  await page.locator('input[name="estimatedMinutes"]').fill("25");
-  await page.getByPlaceholder("Catégorie").fill("Nettoyage");
-  await page.getByPlaceholder("Pièce").fill("Salon");
-  await page.locator('input[name="startsOn"]').fill(today);
-  await page.locator('input[name="interval"]').fill("1");
-  await page.locator('select[name="eligibleMemberIds"]').selectOption([{ index: 0 }]);
+  await page.goto("/app/my-tasks");
+  await page.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
+  
+  // Étape 1
+  await page.getByPlaceholder("Ex: Sortir les poubelles").fill("Nettoyer le salon");
+  await page.locator('input[name="estimatedMinutesVisible"]').fill("25");
+  await page.getByPlaceholder("Ex: Nettoyage").fill("Nettoyage");
+  await page.getByPlaceholder("Ex: Cuisine").fill("Salon");
+  await page.getByRole("button", { name: "Continuer" }).click();
+
+  // Étape 2
+  await page.locator('input[type="date"]').fill(today);
+  await page.getByRole("button", { name: "Chaque semaine" }).click();
+  await page.getByRole("button", { name: "Continuer" }).click();
+
+  // Étape 3
   await page.getByRole("button", { name: "Créer la tâche" }).click();
 
   await page.goto("/app/my-tasks");
   await expect(page.getByRole("heading", { name: "Nettoyer le salon" }).first()).toBeVisible();
+  await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
   await page.locator('input[name="actualMinutes"]').first().fill("32");
   await page.locator('input[name="notes"]').first().fill("Salon plus poussiéreux que prévu");
-  await page.getByRole("button", { name: "Marquer faite" }).first().click();
+  await page.getByRole("button", { name: "Enregistrer" }).first().click();
 
   await page.goto("/app/history");
   await expect(page.getByText("Terminée").first()).toBeVisible();
@@ -233,23 +242,30 @@ test("a skipped task can be corrected and completed later with actual minutes", 
   await page.getByRole("button", { name: "Créer le foyer" }).click();
   await page.waitForLoadState("networkidle");
 
-  await page.getByPlaceholder("Titre de la tâche").fill("Passer l’aspirateur");
-  await page.locator('input[name="estimatedMinutes"]').fill("20");
-  await page.getByPlaceholder("Catégorie").fill("Nettoyage");
-  await page.getByPlaceholder("Pièce").fill("Salon");
-  await page.locator('input[name="startsOn"]').fill(today);
-  await page.locator('input[name="interval"]').fill("1");
-  await page.locator('select[name="eligibleMemberIds"]').selectOption([{ index: 0 }]);
+  await page.goto("/app/my-tasks");
+  await page.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
+  await page.getByPlaceholder("Ex: Sortir les poubelles").fill("Passer l’aspirateur");
+  await page.locator('input[name="estimatedMinutesVisible"]').fill("20");
+  await page.getByPlaceholder("Ex: Nettoyage").fill("Nettoyage");
+  await page.getByPlaceholder("Ex: Cuisine").fill("Salon");
+  await page.getByRole("button", { name: "Continuer" }).click();
+
+  await page.locator('input[type="date"]').fill(today);
+  await page.getByRole("button", { name: "Chaque semaine" }).click();
+  await page.getByRole("button", { name: "Continuer" }).click();
+
   await page.getByRole("button", { name: "Créer la tâche" }).click();
 
   await page.goto("/app/my-tasks");
+  await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
   await page.locator('input[name="notes"]').nth(1).fill("Pas le temps aujourd’hui");
-  await page.getByRole("button", { name: "Sauter" }).first().click();
+  await page.getByRole("button", { name: "Sauter avec note" }).first().click();
   await expect(page.getByText("Sautée").first()).toBeVisible();
 
+  await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
   await page.locator('input[name="actualMinutes"]').first().fill("27");
   await page.locator('input[name="notes"]').first().fill("Finalement faite en fin de journée");
-  await page.getByRole("button", { name: "Marquer faite" }).first().click();
+  await page.getByRole("button", { name: "Enregistrer" }).first().click();
 
   await expect(page.getByText("Terminée").first()).toBeVisible();
   await expect(page.getByText("Réel 27 min").first()).toBeVisible();
@@ -280,14 +296,18 @@ test("adding a member can rebalance future strict alternation tasks", async ({ p
   await page.getByRole("button", { name: "Ajouter le membre" }).click();
   await expect(page.locator('option[value]', { hasText: "Sam" })).toHaveCount(1);
 
-  await page.goto("/app");
-  await page.getByPlaceholder("Titre de la tâche").fill("Rotation quotidienne");
-  await page.locator('input[name="estimatedMinutes"]').fill("15");
-  await page.getByPlaceholder("Catégorie").fill("Routine");
-  await page.getByPlaceholder("Pièce").fill("Cuisine");
-  await page.locator('input[name="startsOn"]').fill(today);
-  await page.locator('input[name="interval"]').fill("1");
-  await page.locator('select[name="eligibleMemberIds"]').selectOption([{ index: 0 }, { index: 1 }]);
+  await page.goto("/app/my-tasks");
+  await page.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
+  await page.getByPlaceholder("Ex: Sortir les poubelles").fill("Rotation quotidienne");
+  await page.locator('input[name="estimatedMinutesVisible"]').fill("15");
+  await page.getByPlaceholder("Ex: Nettoyage").fill("Routine");
+  await page.getByPlaceholder("Ex: Cuisine").fill("Cuisine");
+  await page.getByRole("button", { name: "Continuer" }).click();
+
+  await page.locator('input[type="date"]').fill(today);
+  await page.getByRole("button", { name: "Chaque semaine" }).click();
+  await page.getByRole("button", { name: "Continuer" }).click();
+
   await page.getByRole("button", { name: "Créer la tâche" }).click();
   await page.waitForLoadState("networkidle");
 
@@ -323,12 +343,134 @@ test("invalid login keeps the user on login with a clear error message", async (
 
 test("demo user can reach login and auth redirect works", async ({ page, request }) => {
   await page.goto("/login");
-  await expect(page.getByRole("heading", { name: "Retrouver le planning du foyer" })).toBeVisible();
-  await expect(page.getByText("Actions en un geste sur téléphone")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Se connecter" })).toBeVisible();
+  await expect(page.getByText("Tâches, calendrier et historique du foyer.")).toBeVisible();
 
   const health = await request.get("/api/health");
   expect(health.ok()).toBeTruthy();
 
   await page.goto("/app");
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test("can edit a task template and overwrite or preserve manual modifications", async ({ page }, testInfo) => {
+  const email = buildUniqueEmail("edit-task", testInfo.project.name);
+  const today = new Date().toISOString().slice(0, 10);
+
+  // 1. Setup account and household
+  await page.goto("/register");
+  await page.getByPlaceholder("Prénom ou pseudo").fill("Edit Task User");
+  await page.getByPlaceholder("Email").fill(email);
+  await page.getByPlaceholder("Mot de passe").fill("demo12345");
+  await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await page.waitForURL(/\/login\?/);
+  await page.getByPlaceholder("Mot de passe").fill("demo12345");
+  await page.getByRole("button", { name: "Se connecter" }).click();
+  await page.waitForURL(/\/app$/);
+  await page.getByPlaceholder("Nom du foyer").fill("Foyer Edition");
+  await page.locator('input[name="timezone"]').fill("Europe/Paris");
+  await page.getByRole("button", { name: "Créer le foyer" }).click();
+  await page.waitForLoadState("networkidle");
+
+  // 2. Create task
+  // 2. Create task
+  await page.goto("/app/my-tasks");
+  await page.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
+  await page.getByPlaceholder("Ex: Sortir les poubelles").fill("Tâche à modifier");
+  await page.locator('input[name="estimatedMinutesVisible"]').fill("20");
+  await page.getByRole("button", { name: "Continuer" }).click();
+
+  await page.locator('input[type="date"]').fill(today);
+  await page.getByRole("button", { name: "Chaque semaine" }).click();
+  await page.getByRole("button", { name: "Continuer" }).click();
+
+  await page.getByRole("button", { name: "Créer la tâche" }).click();
+  await page.waitForLoadState("networkidle");
+
+  // 3. Manually modify the first occurrence (reschedule)
+  await page.goto("/app/my-tasks");
+  await page.getByText("Ajuster minutes, note, date ou attribution").first().click();
+  await page.locator('form[action*="/reschedule"] input[name="date"]').first().fill(today); // Reschedule to today
+  await page.getByRole("button", { name: "Changer la date" }).first().click();
+  await expect(page.getByText("Reportée").first()).toBeVisible();
+
+  // 4. Edit the task template (without overwriting manual)
+  await page.goto("/app/settings");
+  await page.locator('article', { hasText: "Tâche à modifier" }).getByRole("button", { name: "Modifier" }).click();
+  const editDialog = page.getByRole("dialog");
+  await editDialog.locator('input[name="title"]').fill("Tâche modifiée (sans écraser)");
+  await editDialog.getByRole("button", { name: "Enregistrer" }).click();
+  await page.waitForLoadState("networkidle");
+
+  // 5. Check that the manual modification was preserved (still Reportée)
+  await page.goto("/app/my-tasks");
+  await expect(page.getByRole("heading", { name: "Tâche modifiée (sans écraser)" }).first()).toBeVisible();
+  await expect(page.getByText("Reportée").first()).toBeVisible();
+
+  // 6. Edit the task template WITH overwriting manual
+  await page.goto("/app/settings");
+  await page.locator('article', { hasText: "Tâche modifiée (sans écraser)" }).getByRole("button", { name: "Modifier" }).click();
+  const editDialog2 = page.getByRole("dialog");
+  await editDialog2.locator('input[name="title"]').fill("Tâche modifiée (avec écrasement)");
+  await editDialog2.locator('input[name="forceOverwriteManual"]').check();
+  await editDialog2.getByRole("button", { name: "Enregistrer" }).click();
+  await page.waitForLoadState("networkidle");
+
+  // 7. Check that the manual modification was overwritten (should no longer be Reportée)
+  await page.goto("/app/my-tasks");
+  await expect(page.getByRole("heading", { name: "Tâche modifiée (avec écrasement)" }).first()).toBeVisible();
+  await expect(page.getByText("Reportée")).toHaveCount(0);
+});
+
+test("deleting a task removes it from settings and calendar", async ({ page }, testInfo) => {
+  const email = buildUniqueEmail("delete-task", testInfo.project.name);
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Setup account and household
+  await page.goto("/register");
+  await page.getByPlaceholder("Prénom ou pseudo").fill("Delete Task User");
+  await page.getByPlaceholder("Email").fill(email);
+  await page.getByPlaceholder("Mot de passe").fill("demo12345");
+  await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await page.waitForURL(/\/login\?/);
+  await page.getByPlaceholder("Mot de passe").fill("demo12345");
+  await page.getByRole("button", { name: "Se connecter" }).click();
+  await page.waitForURL(/\/app$/);
+  await page.getByPlaceholder("Nom du foyer").fill("Foyer Suppression");
+  await page.locator('input[name="timezone"]').fill("Europe/Paris");
+  await page.getByRole("button", { name: "Créer le foyer" }).click();
+  await page.waitForLoadState("networkidle");
+
+  // Create task
+  // Create task
+  await page.goto("/app/my-tasks");
+  await page.getByRole("button", { name: /Créer une nouvelle tâche/i }).click();
+  await page.getByPlaceholder("Ex: Sortir les poubelles").fill("Tâche à supprimer");
+  await page.locator('input[name="estimatedMinutesVisible"]').fill("15");
+  await page.getByRole("button", { name: "Continuer" }).click();
+
+  await page.locator('input[type="date"]').fill(today);
+  await page.getByRole("button", { name: "Chaque semaine" }).click();
+  await page.getByRole("button", { name: "Continuer" }).click();
+
+  await page.getByRole("button", { name: "Créer la tâche" }).click();
+  await page.waitForLoadState("networkidle");
+
+  // Verify task appears in calendar
+  await page.goto("/app/calendar");
+  await expect(page.getByRole("group", { name: /Tâche à supprimer/i }).first()).toBeVisible();
+
+  // Delete the task
+  await page.goto("/app/settings");
+  await page.locator('article', { hasText: "Tâche à supprimer" }).getByRole("button", { name: "Supprimer" }).click();
+  await expect(page.getByText(/Supprimer "Tâche à supprimer" \?/i)).toBeVisible();
+  await page.getByRole("button", { name: "Confirmer la suppression" }).click();
+  await page.waitForLoadState("networkidle");
+
+  // Verify task is removed from settings
+  await expect(page.getByText("Tâche à supprimer")).toHaveCount(0);
+
+  // Verify task is removed from calendar
+  await page.goto("/app/calendar");
+  await expect(page.getByText("Tâche à supprimer")).toHaveCount(0);
 });

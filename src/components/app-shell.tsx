@@ -29,10 +29,10 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
   } as const;
   const sectionMeta = {
     "/app": {
-      title: "Vue d'ensemble",
+      title: "Accueil",
     },
     "/app/my-tasks": {
-      title: "Mes tâches",
+      title: "Tâches",
     },
     "/app/calendar": {
       title: "Calendrier",

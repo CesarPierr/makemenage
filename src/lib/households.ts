@@ -66,6 +66,7 @@ export async function getCurrentHouseholdContext(
     db.taskTemplate.findMany({
       where: {
         householdId: membership.householdId,
+        isActive: true,
       },
       include: {
         recurrenceRule: true,
@@ -80,6 +81,7 @@ export async function getCurrentHouseholdContext(
           gte: subDays(today, 30),
           lte: monthEnd,
         },
+        status: { not: "cancelled" },
       },
       include: {
         taskTemplate: true,

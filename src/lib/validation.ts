@@ -75,7 +75,7 @@ export const taskTemplateSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/)
     .default("#D8643D"),
-  estimatedMinutes: z.coerce.number().int().min(5).max(480).default(30),
+  estimatedMinutes: z.coerce.number().int().min(1).max(480).default(30),
   priority: z.coerce.number().int().min(1).max(3).default(2),
   startsOn: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
   endsOn: z.preprocess((value) => (value ? parseDateInput(String(value)) : undefined), z.date()).optional(),

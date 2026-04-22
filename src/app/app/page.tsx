@@ -4,10 +4,9 @@ import Link from "next/link";
 import { ArrowRight, CalendarClock, Clock3, ListChecks, Settings2, TimerReset } from "lucide-react";
 
 import { OccurrenceCard } from "@/components/occurrence-card";
-import { taskPalette } from "@/lib/constants";
 import { buildLoadMetrics, buildRollingCompletionMetrics } from "@/lib/analytics";
 import { requireUser } from "@/lib/auth";
-import { canManageHousehold, getCurrentHouseholdContext } from "@/lib/households";
+import { getCurrentHouseholdContext } from "@/lib/households";
 import { formatMinutes, percent } from "@/lib/utils";
 
 type DashboardPageProps = {
@@ -116,7 +115,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               className="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold"
               href={`/app/my-tasks?household=${context.household.id}`}
             >
-              Mes tâches
+              Ouvrir les tâches
               <ArrowRight className="size-4" />
             </Link>
             <Link
@@ -293,109 +292,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ))}
       </section>
 
-      {canManageHousehold(context.membership.role) ? (
-        <details className="app-surface rounded-[2rem] p-5 sm:p-6 group">
-          <summary className="cursor-pointer select-none list-none outline-none focus:outline-none">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="section-kicker">Ajout rapide</p>
-                <h3 className="display-title mt-2 text-3xl flex items-center gap-2 text-[var(--coral-600)] hover:underline">
-                  <span className="group-open:hidden">▶</span>
-                  <span className="hidden group-open:inline">▼</span>
-                  Créer une nouvelle tâche
-                </h3>
-              </div>
-            </div>
-          </summary>
-
-          <form action="/api/tasks" method="post" className="mt-6 compact-form-grid">
-            <input type="hidden" name="householdId" value={context.household.id} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="field-label">
-                <span>Tâche</span>
-                <input className="field" type="text" name="title" placeholder="Titre de la tâche" required />
-              </label>
-              <label className="field-label">
-                <span>Durée estimée</span>
-                <input className="field" type="number" min="5" name="estimatedMinutes" placeholder="Durée estimée (min)" required />
-              </label>
-              <label className="field-label">
-                <span>Catégorie</span>
-                <input className="field" type="text" name="category" placeholder="Catégorie" />
-              </label>
-              <label className="field-label">
-                <span>Pièce</span>
-                <input className="field" type="text" name="room" placeholder="Pièce" />
-              </label>
-              <label className="field-label">
-                <span>Couleur</span>
-                <div className="flex items-center gap-3">
-                  <input className="field h-[3.2rem] px-2" type="color" name="color" defaultValue={taskPalette[0]} />
-                  <div className="flex flex-wrap gap-2">
-                    {taskPalette.slice(0, 4).map((color) => (
-                      <span
-                        key={color}
-                        className="size-5 rounded-full border border-black/10"
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </label>
-              <label className="field-label">
-                <span>Première date</span>
-                <input className="field" type="date" name="startsOn" required />
-              </label>
-              <label className="field-label">
-                <span>Répétition</span>
-                <select className="field" name="recurrenceType" defaultValue="weekly">
-                  <option value="daily">Tous les jours</option>
-                  <option value="every_x_days">Tous les X jours</option>
-                  <option value="weekly">Chaque semaine</option>
-                  <option value="every_x_weeks">Toutes les X semaines</option>
-                  <option value="monthly_simple">Chaque mois</option>
-                </select>
-              </label>
-              <label className="field-label">
-                <span>Intervalle (Valeur de X)</span>
-                <input className="field" type="number" min="1" name="interval" defaultValue="1" required />
-              </label>
-              <label className="field-label">
-                <span>Attribution</span>
-                <select className="field" name="assignmentMode" defaultValue="strict_alternation">
-                  <option value="fixed">Fixe (toujours la même personne)</option>
-                  <option value="manual">Manuelle (choix à chaque fois)</option>
-                  <option value="strict_alternation">Alternance (chacun son tour)</option>
-                  <option value="round_robin">Round-robin (distribution équitable)</option>
-                  <option value="least_assigned_count">Équité : moins de tâches</option>
-                  <option value="least_assigned_minutes">Équité : moins de temps</option>
-                </select>
-                <span className="field-help">
-                  Alternance/round-robin = tour de rôle. Équité = répartition selon charge cumulée.
-                </span>
-              </label>
-            </div>
-            <label className="field-label">
-              <span>Membres concernés</span>
-              <span className="field-help">Tout le monde est sélectionné par défaut. Décochez les exceptions.</span>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {context.household.members.map((member) => (
-                  <label
-                    key={member.id}
-                    className="inline-flex items-center gap-3 rounded-[0.9rem] border border-[var(--line)] bg-white/70 px-3 py-2"
-                  >
-                    <input type="checkbox" name="eligibleMemberIds" value={member.id} defaultChecked />
-                    <span>{member.displayName}</span>
-                  </label>
-                ))}
-              </div>
-            </label>
-            <button className="btn-primary px-5 py-3 font-semibold" type="submit">
-              Créer la tâche
-            </button>
-          </form>
-        </details>
-      ) : null}
     </div>
   );
 }

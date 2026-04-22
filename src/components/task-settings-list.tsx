@@ -4,8 +4,8 @@ import { useState } from "react";
 import { describeRecurrence } from "@/lib/scheduling/recurrence";
 import { hexToRgba } from "@/lib/colors";
 import { taskPalette } from "@/lib/constants";
+import { Dialog } from "@/components/ui/dialog";
 
-type Member = { id: string; displayName: string };
 type Task = {
   id: string;
   title: string;
@@ -33,10 +33,6 @@ type Task = {
     eligibleMemberIds: unknown;
   };
 };
-
-function toStringArray(value: unknown) {
-  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
-}
 
 const assignmentLabels: Record<string, { label: string; description: string }> = {
   fixed: {
@@ -67,50 +63,64 @@ const assignmentLabels: Record<string, { label: string; description: string }> =
 
 export function TaskSettingsList({
   tasks,
-  members,
   householdId,
   manualOverridesByTaskId,
 }: {
   tasks: Task[];
-  members: Member[];
   householdId: string;
   manualOverridesByTaskId: Record<string, number>;
 }) {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
 
-  if (editingTask) {
-    const selectedMemberIds = toStringArray(editingTask.assignmentRule.eligibleMemberIds);
+  const manualOverrideCountForDelete = deletingTask ? (manualOverridesByTaskId[deletingTask.id] ?? 0) : 0;
 
-    return (
-      <div className="soft-panel p-4">
-        <h4 className="text-xl font-semibold mb-4">Modifier la tâche</h4>
-        <form action={`/api/tasks/${editingTask.id}`} method="post" className="compact-form-grid" onSubmit={() => setTimeout(() => setEditingTask(null), 100)}>
-          <input type="hidden" name="_method" value="PUT" />
-          <input type="hidden" name="householdId" value={householdId} />
-          
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="field-label">
-              <span>Titre</span>
-              <input className="field" type="text" name="title" defaultValue={editingTask.title} required />
-            </label>
-            <label className="field-label">
-              <span>Durée estimée (min)</span>
-              <input className="field" type="number" min="5" name="estimatedMinutes" defaultValue={editingTask.estimatedMinutes} required />
-            </label>
-            <label className="field-label">
-              <span>Catégorie</span>
-              <input className="field" type="text" name="category" defaultValue={editingTask.category || ""} />
-            </label>
-            <label className="field-label">
-              <span>Pièce</span>
-              <input className="field" type="text" name="room" defaultValue={editingTask.room || ""} />
-            </label>
-            <label className="field-label">
-              <span>Couleur</span>
-              <div className="flex items-center gap-3">
-                <input className="field h-[3.2rem] px-2" type="color" name="color" defaultValue={editingTask.color || taskPalette[0]} />
-                <div className="flex flex-wrap gap-2">
+  return (
+    <div className="mt-5 space-y-3">
+      {tasks.length === 0 && (
+        <p className="text-[var(--ink-700)]">Aucune tâche configurée.</p>
+      )}
+
+      {/* Edit Task Dialog */}
+      <Dialog
+        isOpen={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        title="Modifier la tâche"
+      >
+        {editingTask && (
+          <form 
+            action={`/api/tasks/${editingTask.id}`} 
+            method="post" 
+            className="compact-form-grid" 
+            onSubmit={() => setTimeout(() => setEditingTask(null), 100)}
+          >
+            <input type="hidden" name="_method" value="PUT" />
+            <input type="hidden" name="householdId" value={householdId} />
+            
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="field-label">
+                <span>Titre</span>
+                <input className="field" type="text" name="title" defaultValue={editingTask.title} required />
+              </label>
+              <label className="field-label">
+                <span>Durée (min)</span>
+                <input className="field" type="number" min="1" name="estimatedMinutes" defaultValue={editingTask.estimatedMinutes} required onFocus={(event) => event.currentTarget.select()} />
+              </label>
+              <label className="field-label">
+                <span>Catégorie</span>
+                <input className="field" type="text" name="category" defaultValue={editingTask.category || ""} />
+              </label>
+              <label className="field-label">
+                <span>Pièce</span>
+                <input className="field" type="text" name="room" defaultValue={editingTask.room || ""} />
+              </label>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <span className="text-sm font-semibold text-[var(--ink-950)]">Couleur</span>
+              <div className="flex items-center gap-2">
+                <input className="size-8 cursor-pointer rounded-lg border-0 bg-transparent p-0" type="color" name="color" defaultValue={editingTask.color || taskPalette[0]} />
+                <div className="flex flex-wrap gap-1.5">
                   {taskPalette.slice(0, 4).map((color) => (
                     <span
                       key={color}
@@ -120,129 +130,64 @@ export function TaskSettingsList({
                   ))}
                 </div>
               </div>
-            </label>
-            <label className="field-label">
-              <span>Date de référence</span>
-              <input className="field" type="date" name="startsOn" defaultValue={new Date(editingTask.startsOn).toISOString().split("T")[0]} required />
-            </label>
-            <label className="field-label">
-              <span>Répétition</span>
-              <select className="field" name="recurrenceType" defaultValue={editingTask.recurrenceRule.type}>
-                <option value="daily">Tous les jours</option>
-                <option value="every_x_days">Tous les X jours</option>
-                <option value="weekly">Chaque semaine</option>
-                <option value="every_x_weeks">Toutes les X semaines</option>
-                <option value="monthly_simple">Chaque mois</option>
-              </select>
-            </label>
-            <label className="field-label">
-              <span>Intervalle (Valeur de X)</span>
-              <input className="field" type="number" min="1" name="interval" defaultValue={editingTask.recurrenceRule.interval} required />
-            </label>
-            <label className="field-label">
-              <span>Attribution</span>
-              <select className="field" name="assignmentMode" defaultValue={editingTask.assignmentRule.mode}>
-                <option value="fixed">Fixe (toujours la même personne)</option>
-                <option value="manual">Manuelle (choix à chaque fois)</option>
-                <option value="strict_alternation">Alternance (chacun son tour)</option>
-                <option value="round_robin">Round-robin (distribution équitable)</option>
-                <option value="least_assigned_count">Équité : moins de tâches</option>
-                <option value="least_assigned_minutes">Équité : moins de temps</option>
-              </select>
-            </label>
-          </div>
-          
-          <label className="field-label mt-3">
-            <span>Membres éligibles</span>
-            <span className="field-help">Tout est coché par défaut, décochez simplement les personnes à exclure.</span>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {members.map((member) => (
-                <label
-                  key={member.id}
-                  className="inline-flex items-center gap-3 rounded-[0.9rem] border border-[var(--line)] bg-white/70 px-3 py-2"
-                >
-                  <input
-                    type="checkbox"
-                    name="eligibleMemberIds"
-                    value={member.id}
-                    defaultChecked={selectedMemberIds.includes(member.id)}
-                  />
-                  <span>{member.displayName}</span>
-                </label>
-              ))}
             </div>
-          </label>
 
-          <label className="field-label mt-3">
-            <span className="inline-flex items-start gap-3 rounded-[1rem] border border-[var(--line)] bg-white/70 px-4 py-3 font-medium text-[var(--ink-950)]">
-              <input name="forceOverwriteManual" type="checkbox" className="mt-1" />
-              <span>
-                Écraser les modifications manuelles (Si coché, les tâches futures modifiées manuellement seront réinitialisées avec ces nouvelles règles)
-              </span>
-            </span>
-          </label>
-
-          <div className="mt-4 flex gap-3">
-            <button className="btn-primary px-5 py-2 font-semibold" type="submit">
-              Enregistrer
-            </button>
-            <button className="btn-secondary px-5 py-2 font-semibold" type="button" onClick={() => setEditingTask(null)}>
-              Annuler
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
-
-  if (deletingTask) {
-    const manualOverrideCount = manualOverridesByTaskId[deletingTask.id] ?? 0;
-
-    return (
-      <div className="soft-panel p-5 border-2 border-red-500/20">
-        <h4 className="text-xl font-semibold mb-2">Supprimer &quot;{deletingTask.title}&quot; ?</h4>
-        {manualOverrideCount > 0 ? (
-          <p className="text-sm text-[var(--ink-700)] mb-4">
-            {manualOverrideCount} occurrence{manualOverrideCount > 1 ? "s" : ""} future{manualOverrideCount > 1 ? "s" : ""} modifiée{manualOverrideCount > 1 ? "s" : ""} manuellement existe{manualOverrideCount > 1 ? "nt" : ""}. Vous pouvez choisir de les conserver ou de les annuler avec la meta-tâche.
-          </p>
-        ) : (
-          <p className="text-sm text-[var(--ink-700)] mb-4">
-            La tâche ne sera plus générée à l&apos;avenir.
-          </p>
-        )}
-        <form action={`/api/tasks/${deletingTask.id}`} method="post" onSubmit={() => setTimeout(() => setDeletingTask(null), 100)}>
-          <input type="hidden" name="_method" value="DELETE" />
-          <input type="hidden" name="householdId" value={householdId} />
-          
-          {manualOverrideCount > 0 ? (
-            <label className="field-label mb-4">
-              <span className="inline-flex items-start gap-3 rounded-[1rem] border border-red-200 bg-red-50 px-4 py-3 font-medium text-red-900">
-                <input name="deleteManual" type="checkbox" className="mt-1" />
-                <span>
-                  Annuler aussi les occurrences futures modifiées manuellement.
+            <div className="mt-6 p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-4">
+              <p className="text-sm font-bold text-[var(--ink-950)] uppercase tracking-wider">Planification</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="field-label">
+                  <span>Date de référence</span>
+                  <input className="field" type="date" name="startsOn" defaultValue={new Date(editingTask.startsOn).toISOString().split("T")[0]} required />
+                </label>
+                <label className="field-label">
+                  <span>Répétition</span>
+                  <select className="field" name="recurrenceType" defaultValue={editingTask.recurrenceRule.type}>
+                    <option value="daily">Tous les jours</option>
+                    <option value="every_x_days">Tous les X jours</option>
+                    <option value="weekly">Chaque semaine</option>
+                    <option value="every_x_weeks">Toutes les X semaines</option>
+                    <option value="monthly_simple">Chaque mois</option>
+                  </select>
+                </label>
+                <label className="field-label">
+                  <span>Intervalle (X)</span>
+                  <input className="field" type="number" min="1" name="interval" defaultValue={editingTask.recurrenceRule.interval} required onFocus={(event) => event.currentTarget.select()} />
+                </label>
+                <label className="field-label">
+                  <span>Attribution</span>
+                  <select className="field" name="assignmentMode" defaultValue={editingTask.assignmentRule.mode}>
+                    <option value="fixed">Fixe</option>
+                    <option value="manual">Manuelle</option>
+                    <option value="strict_alternation">Alternance</option>
+                    <option value="round_robin">Round-robin</option>
+                    <option value="least_assigned_count">Équité (nombre)</option>
+                    <option value="least_assigned_minutes">Équité (minutes)</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            
+            <div className="mt-6 space-y-4">
+              <p className="text-sm font-bold text-[var(--ink-950)] uppercase tracking-wider">Options critiques</p>
+              <label className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 cursor-pointer hover:bg-blue-100 transition-colors">
+                <input name="forceOverwriteManual" type="checkbox" className="mt-1" />
+                <span className="text-blue-900 text-sm leading-tight">
+                  <strong>Réinitialiser les occurrences :</strong> Écraser les modifications manuelles existantes avec ces nouveaux réglages.
                 </span>
-              </span>
-            </label>
-          ) : null}
+              </label>
+            </div>
 
-          <div className="flex gap-3">
-            <button className="btn-primary bg-red-600 hover:bg-red-700 text-white px-5 py-2 font-semibold border-none" type="submit">
-              Confirmer la suppression
-            </button>
-            <button className="btn-secondary px-5 py-2 font-semibold" type="button" onClick={() => setDeletingTask(null)}>
-              Annuler
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-5 space-y-3">
-      {tasks.length === 0 && (
-        <p className="text-[var(--ink-700)]">Aucune tâche configurée.</p>
-      )}
+            <div className="mt-8 flex justify-end gap-3">
+              <button className="btn-secondary px-5 py-2.5 font-semibold" type="button" onClick={() => setEditingTask(null)}>
+                Annuler
+              </button>
+              <button className="btn-primary px-5 py-2.5 font-semibold" type="submit">
+                Enregistrer
+              </button>
+            </div>
+          </form>
+        )}
+      </Dialog>
       {tasks.map((task) => {
         const method = assignmentLabels[task.assignmentRule.mode] ?? {
           label: task.assignmentRule.mode.replace(/_/g, " "),
@@ -305,6 +250,47 @@ export function TaskSettingsList({
         </article>
         );
       })}
+
+      <Dialog
+        isOpen={!!deletingTask}
+        onClose={() => setDeletingTask(null)}
+        title={`Supprimer "${deletingTask?.title}" ?`}
+        type="danger"
+      >
+        {deletingTask && (
+          <form id="delete-form" action={`/api/tasks/${deletingTask.id}`} method="post" onSubmit={() => setTimeout(() => setDeletingTask(null), 100)}>
+            <input type="hidden" name="_method" value="DELETE" />
+            <input type="hidden" name="householdId" value={householdId} />
+            
+            {manualOverrideCountForDelete > 0 ? (
+              <>
+                <p className="text-[var(--ink-700)] mb-4 leading-relaxed">
+                  <strong>Attention :</strong> {manualOverrideCountForDelete} occurrence{manualOverrideCountForDelete > 1 ? "s" : ""} future{manualOverrideCountForDelete > 1 ? "s" : ""} a{manualOverrideCountForDelete > 1 ? "ve" : ""}nt été modifiée{manualOverrideCountForDelete > 1 ? "s" : ""} manuellement. Souhaitez-vous également les supprimer ?
+                </p>
+                <label className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 cursor-pointer hover:bg-red-100 transition-colors">
+                  <input name="deleteManual" type="checkbox" className="mt-1" />
+                  <span className="text-red-900 font-medium">
+                    Oui, annuler toutes les occurrences futures associées.
+                  </span>
+                </label>
+              </>
+            ) : (
+              <p className="text-[var(--ink-700)] leading-relaxed">
+                Cette tâche ne sera plus générée à l&apos;avenir. Ses occurrences passées seront conservées dans l&apos;historique.
+              </p>
+            )}
+
+            <div className="mt-8 flex justify-end gap-3">
+              <button className="btn-secondary px-5 py-2.5 font-semibold" type="button" onClick={() => setDeletingTask(null)}>
+                Annuler
+              </button>
+              <button className="btn-primary bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 font-semibold border-none" type="submit">
+                Confirmer la suppression
+              </button>
+            </div>
+          </form>
+        )}
+      </Dialog>
     </div>
   );
 }
