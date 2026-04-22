@@ -29,6 +29,22 @@ function run(command, args, options = {}) {
   });
 }
 
+async function waitForCommand(command, args, timeoutMs = 30_000, options = {}) {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    try {
+      await run(command, args, options);
+
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+
+  throw new Error(`Timed out waiting for ${command} ${args.join(" ")}`);
+}
+
 async function waitForHttp(url, timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
 
@@ -55,7 +71,11 @@ async function main() {
   try {
     await run("bash", ["-lc", `fuser -k ${appPort}/tcp >/dev/null 2>&1 || true`]);
     await run("sg", ["docker", "-c", "docker compose up -d db"]);
-    await run("sg", ["docker", "-c", "docker compose exec -T db pg_isready -U makemenage -d makemenage"]);
+    await waitForCommand("sg", [
+      "docker",
+      "-c",
+      "docker compose exec -T db pg_isready -U makemenage -d makemenage",
+    ]);
     await run("npx", ["prisma", "db", "push", "--force-reset"], { env: baseEnv });
     await run("npm", ["run", "db:seed"], { env: baseEnv });
     await run("npm", ["run", "build"], { env: baseEnv });

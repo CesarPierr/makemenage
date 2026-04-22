@@ -2,8 +2,37 @@ import Link from "next/link";
 
 import { requireGuest } from "@/lib/auth";
 
-export default async function LoginPage() {
+type LoginPageProps = {
+  searchParams: Promise<{
+    registered?: string;
+    existing?: string;
+    error?: string;
+    email?: string;
+  }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
   await requireGuest();
+  const params = await searchParams;
+  const email = params.email ?? "";
+
+  const feedbackMessage =
+    params.registered === "1"
+      ? {
+          tone: "success" as const,
+          text: "Compte créé. Connectez-vous pour accéder à votre foyer.",
+        }
+      : params.existing === "1"
+        ? {
+            tone: "neutral" as const,
+            text: "Un compte existe déjà avec cet email. Connectez-vous directement.",
+          }
+        : params.error === "invalid_credentials"
+          ? {
+              tone: "error" as const,
+              text: "Email ou mot de passe incorrect. Vérifiez vos identifiants puis réessayez.",
+            }
+          : null;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-6">
@@ -20,6 +49,24 @@ export default async function LoginPage() {
         <p className="mt-3 text-[var(--ink-700)]">
           Connectez-vous pour voir vos tâches du jour, la semaine et l&apos;historique.
         </p>
+        {feedbackMessage ? (
+          <div
+            className="mt-5 rounded-[1.4rem] px-4 py-3 text-sm leading-6"
+            style={{
+              backgroundColor:
+                feedbackMessage.tone === "success"
+                  ? "rgba(56, 115, 93, 0.12)"
+                  : feedbackMessage.tone === "error"
+                    ? "rgba(216, 100, 61, 0.12)"
+                    : "rgba(239, 226, 205, 0.82)",
+              border: "1px solid rgba(30, 31, 34, 0.06)",
+              color:
+                feedbackMessage.tone === "error" ? "var(--coral-600)" : "var(--ink-950)",
+            }}
+          >
+            {feedbackMessage.text}
+          </div>
+        ) : null}
         <div className="mt-5 mobile-section-grid">
           {[
             "Vue rapide des tâches du jour",
@@ -32,8 +79,25 @@ export default async function LoginPage() {
           ))}
         </div>
         <form action="/api/auth/login" method="post" className="mt-8 space-y-4">
-          <input className="field" type="email" name="email" placeholder="Email" required />
-          <input className="field" type="password" name="password" placeholder="Mot de passe" required />
+          <input
+            autoCapitalize="none"
+            autoComplete="email"
+            className="field"
+            defaultValue={email}
+            inputMode="email"
+            type="email"
+            name="email"
+            placeholder="Email"
+            required
+          />
+          <input
+            autoComplete="current-password"
+            className="field"
+            type="password"
+            name="password"
+            placeholder="Mot de passe"
+            required
+          />
           <button className="btn-primary w-full px-5 py-3 font-semibold" type="submit">
             Se connecter
           </button>

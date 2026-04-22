@@ -2,8 +2,15 @@ import Link from "next/link";
 
 import { requireGuest } from "@/lib/auth";
 
-export default async function RegisterPage() {
+type RegisterPageProps = {
+  searchParams: Promise<{
+    error?: string;
+  }>;
+};
+
+export default async function RegisterPage({ searchParams }: RegisterPageProps) {
   await requireGuest();
+  const params = await searchParams;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-6">
@@ -20,6 +27,17 @@ export default async function RegisterPage() {
         <p className="mt-3 text-[var(--ink-700)]">
           Créez votre compte, puis votre foyer. La configuration peut se faire entièrement depuis le téléphone.
         </p>
+        {params.error === "invalid_registration" ? (
+          <div
+            className="mt-5 rounded-[1.4rem] border px-4 py-3 text-sm leading-6 text-[var(--coral-600)]"
+            style={{
+              backgroundColor: "rgba(216, 100, 61, 0.12)",
+              borderColor: "rgba(30, 31, 34, 0.06)",
+            }}
+          >
+            Vérifiez les informations saisies. Le mot de passe doit faire au moins 8 caractères.
+          </div>
+        ) : null}
         <div className="mt-5 mobile-section-grid">
           {[
             "Démarrage rapide sans écran inutile",
@@ -32,9 +50,32 @@ export default async function RegisterPage() {
           ))}
         </div>
         <form action="/api/auth/register" method="post" className="mt-8 space-y-4">
-          <input className="field" type="text" name="displayName" placeholder="Prénom ou pseudo" required />
-          <input className="field" type="email" name="email" placeholder="Email" required />
-          <input className="field" type="password" name="password" placeholder="Mot de passe" required />
+          <input
+            autoComplete="nickname"
+            className="field"
+            type="text"
+            name="displayName"
+            placeholder="Prénom ou pseudo"
+            required
+          />
+          <input
+            autoCapitalize="none"
+            autoComplete="email"
+            className="field"
+            inputMode="email"
+            type="email"
+            name="email"
+            placeholder="Email"
+            required
+          />
+          <input
+            autoComplete="new-password"
+            className="field"
+            type="password"
+            name="password"
+            placeholder="Mot de passe"
+            required
+          />
           <button className="btn-primary w-full px-5 py-3 font-semibold" type="submit">
             Créer mon compte
           </button>

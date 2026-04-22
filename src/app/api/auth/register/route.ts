@@ -1,6 +1,6 @@
-import { createSession, hashPassword } from "@/lib/auth";
+import { hashPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { redirectTo, shouldUseSecureCookies } from "@/lib/request";
+import { redirectTo } from "@/lib/request";
 import { registerSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return redirectTo(request, "/register");
+    return redirectTo(request, "/register?error=invalid_registration");
   }
 
   const existing = await db.user.findUnique({
@@ -22,10 +22,15 @@ export async function POST(request: Request) {
   });
 
   if (existing) {
-    return redirectTo(request, "/login");
+    const params = new URLSearchParams({
+      existing: "1",
+      email: parsed.data.email,
+    });
+
+    return redirectTo(request, `/login?${params.toString()}`);
   }
 
-  const user = await db.user.create({
+  await db.user.create({
     data: {
       email: parsed.data.email,
       displayName: parsed.data.displayName,
@@ -33,7 +38,10 @@ export async function POST(request: Request) {
     },
   });
 
-  await createSession(user.id, { secure: shouldUseSecureCookies(request) });
+  const params = new URLSearchParams({
+    registered: "1",
+    email: parsed.data.email,
+  });
 
-  return redirectTo(request, "/app");
+  return redirectTo(request, `/login?${params.toString()}`);
 }

@@ -5,13 +5,22 @@ import { loginSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
+  const submittedEmail = String(formData.get("email") ?? "").trim();
   const parsed = loginSchema.safeParse({
-    email: formData.get("email"),
+    email: submittedEmail,
     password: formData.get("password"),
   });
 
   if (!parsed.success) {
-    return redirectTo(request, "/login");
+    const params = new URLSearchParams({
+      error: "invalid_credentials",
+    });
+
+    if (submittedEmail) {
+      params.set("email", submittedEmail);
+    }
+
+    return redirectTo(request, `/login?${params.toString()}`);
   }
 
   const user = await db.user.findUnique({
@@ -21,13 +30,23 @@ export async function POST(request: Request) {
   });
 
   if (!user) {
-    return redirectTo(request, "/login");
+    const params = new URLSearchParams({
+      error: "invalid_credentials",
+      email: parsed.data.email,
+    });
+
+    return redirectTo(request, `/login?${params.toString()}`);
   }
 
   const valid = await verifyPassword(parsed.data.password, user.passwordHash);
 
   if (!valid) {
-    return redirectTo(request, "/login");
+    const params = new URLSearchParams({
+      error: "invalid_credentials",
+      email: parsed.data.email,
+    });
+
+    return redirectTo(request, `/login?${params.toString()}`);
   }
 
   await db.user.update({

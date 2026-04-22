@@ -52,7 +52,7 @@ describe("auth routes", () => {
     process.env.APP_BASE_URL = "http://192.168.1.132";
   });
 
-  it("register redirects to the public base URL and creates an HTTP-safe cookie on local prod", async () => {
+  it("register redirects to login on the public base URL and does not create a session yet", async () => {
     dbMocks.userFindUnique.mockResolvedValue(null);
     authMocks.hashPassword.mockResolvedValue("hashed-password");
     dbMocks.userCreate.mockResolvedValue({ id: "user-1" });
@@ -66,8 +66,10 @@ describe("auth routes", () => {
     );
 
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe("http://192.168.1.132/app");
-    expect(authMocks.createSession).toHaveBeenCalledWith("user-1", { secure: false });
+    expect(response.headers.get("location")).toBe(
+      "http://192.168.1.132/login?registered=1&email=pierre%40example.com",
+    );
+    expect(authMocks.createSession).not.toHaveBeenCalled();
   });
 
   it("login prefers forwarded HTTPS headers for redirects and secure cookies", async () => {
@@ -106,7 +108,24 @@ describe("auth routes", () => {
     );
 
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe("http://192.168.1.132/login");
+    expect(response.headers.get("location")).toBe(
+      "http://192.168.1.132/login?error=invalid_credentials&email=pierre%40example.com",
+    );
+    expect(authMocks.createSession).not.toHaveBeenCalled();
+  });
+
+  it("login redirects back to login with the submitted email when validation fails", async () => {
+    const response = await loginPost(
+      buildFormRequest("http://localhost:3000/api/auth/login", {
+        email: "pierre@example.com",
+        password: "short",
+      }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "http://192.168.1.132/login?error=invalid_credentials&email=pierre%40example.com",
+    );
     expect(authMocks.createSession).not.toHaveBeenCalled();
   });
 });
