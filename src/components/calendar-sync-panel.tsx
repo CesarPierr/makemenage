@@ -56,7 +56,7 @@ export function CalendarSyncPanel({
       </div>
 
       <p className="mt-3 text-sm leading-6 text-[var(--ink-700)]">
-        Le plus simple est d’abonner Google Calendar a l’URL iCal du foyer. Google demande de le faire
+        Le plus simple est d’abonner Google Calendar à l’URL iCal du foyer. Google demande de le faire
         depuis un navigateur web sur ordinateur, puis le calendrier apparaît aussi sur mobile.
       </p>
 

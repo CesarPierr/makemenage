@@ -59,6 +59,13 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
       <div className="space-y-4">
         {months.map((month, index) => (
           <section key={month.toISOString()} className="space-y-3">
+            {(() => {
+              const monthCount = context.monthOccurrences.filter(
+                (occurrence) =>
+                  format(occurrence.scheduledDate, "yyyy-MM") === format(month, "yyyy-MM"),
+              ).length;
+
+              return (
             <div className="flex items-end justify-between gap-3 px-1">
               <div>
                 <p className="section-kicker">
@@ -69,13 +76,11 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                 </h3>
               </div>
               <span className="stat-pill px-3 py-1 text-xs font-semibold text-[var(--ink-700)]">
-                {context.monthOccurrences.filter(
-                  (occurrence) =>
-                    format(occurrence.scheduledDate, "yyyy-MM") === format(month, "yyyy-MM"),
-                ).length}{" "}
-                occurrence(s)
+                {monthCount} occurrence{monthCount > 1 ? "s" : ""}
               </span>
             </div>
+              );
+            })()}
             <CalendarMonth month={month} occurrences={context.monthOccurrences} />
           </section>
         ))}
