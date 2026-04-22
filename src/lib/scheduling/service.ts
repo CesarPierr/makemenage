@@ -275,16 +275,26 @@ export async function completeOccurrence(params: {
   actualMinutes?: number;
   notes?: string;
 }) {
+  const existing = await db.taskOccurrence.findUnique({
+    where: {
+      id: params.occurrenceId,
+    },
+  });
+
+  if (!existing) {
+    return;
+  }
+
   const occurrence = await db.taskOccurrence.update({
     where: {
       id: params.occurrenceId,
     },
     data: {
       status: "completed",
-      completedAt: new Date(),
-      completedByMemberId: params.actorMemberId ?? undefined,
-      actualMinutes: params.actualMinutes,
-      notes: params.notes,
+      completedAt: existing.completedAt ?? new Date(),
+      completedByMemberId: params.actorMemberId ?? existing.completedByMemberId ?? undefined,
+      actualMinutes: params.actualMinutes ?? existing.actualMinutes,
+      notes: params.notes ?? existing.notes,
       isManuallyModified: true,
     },
   });
@@ -294,9 +304,14 @@ export async function completeOccurrence(params: {
       occurrenceId: occurrence.id,
       actionType: "completed",
       actorMemberId: params.actorMemberId ?? undefined,
+      previousValues: {
+        status: existing.status,
+        actualMinutes: existing.actualMinutes,
+        notes: existing.notes,
+      },
       newValues: {
-        actualMinutes: params.actualMinutes,
-        notes: params.notes,
+        actualMinutes: params.actualMinutes ?? existing.actualMinutes,
+        notes: params.notes ?? existing.notes,
       },
     },
   });
@@ -307,13 +322,26 @@ export async function skipOccurrence(params: {
   actorMemberId?: string | null;
   notes?: string;
 }) {
+  const existing = await db.taskOccurrence.findUnique({
+    where: {
+      id: params.occurrenceId,
+    },
+  });
+
+  if (!existing) {
+    return;
+  }
+
   const occurrence = await db.taskOccurrence.update({
     where: {
       id: params.occurrenceId,
     },
     data: {
       status: "skipped",
-      notes: params.notes,
+      completedAt: null,
+      completedByMemberId: null,
+      actualMinutes: null,
+      notes: params.notes ?? existing.notes,
       isManuallyModified: true,
     },
   });
@@ -323,8 +351,13 @@ export async function skipOccurrence(params: {
       occurrenceId: occurrence.id,
       actionType: "skipped",
       actorMemberId: params.actorMemberId ?? undefined,
+      previousValues: {
+        status: existing.status,
+        actualMinutes: existing.actualMinutes,
+        notes: existing.notes,
+      },
       newValues: {
-        notes: params.notes,
+        notes: params.notes ?? existing.notes,
       },
     },
   });
@@ -336,6 +369,16 @@ export async function rescheduleOccurrence(params: {
   scheduledDate: Date;
   notes?: string;
 }) {
+  const existing = await db.taskOccurrence.findUnique({
+    where: {
+      id: params.occurrenceId,
+    },
+  });
+
+  if (!existing) {
+    return;
+  }
+
   const dueDate = endOfDay(params.scheduledDate);
   const occurrence = await db.taskOccurrence.update({
     where: {
@@ -345,7 +388,7 @@ export async function rescheduleOccurrence(params: {
       scheduledDate: params.scheduledDate,
       dueDate,
       status: "rescheduled",
-      notes: params.notes,
+      notes: params.notes ?? existing.notes,
       isManuallyModified: true,
     },
   });
@@ -355,9 +398,13 @@ export async function rescheduleOccurrence(params: {
       occurrenceId: occurrence.id,
       actionType: "rescheduled",
       actorMemberId: params.actorMemberId ?? undefined,
+      previousValues: {
+        scheduledDate: existing.scheduledDate.toISOString(),
+        notes: existing.notes,
+      },
       newValues: {
         scheduledDate: params.scheduledDate.toISOString(),
-        notes: params.notes,
+        notes: params.notes ?? existing.notes,
       },
     },
   });
@@ -369,13 +416,23 @@ export async function reassignOccurrence(params: {
   assignedMemberId: string;
   notes?: string;
 }) {
+  const existing = await db.taskOccurrence.findUnique({
+    where: {
+      id: params.occurrenceId,
+    },
+  });
+
+  if (!existing) {
+    return;
+  }
+
   const occurrence = await db.taskOccurrence.update({
     where: {
       id: params.occurrenceId,
     },
     data: {
       assignedMemberId: params.assignedMemberId,
-      notes: params.notes,
+      notes: params.notes ?? existing.notes,
       isManuallyModified: true,
     },
   });
@@ -385,9 +442,13 @@ export async function reassignOccurrence(params: {
       occurrenceId: occurrence.id,
       actionType: "reassigned",
       actorMemberId: params.actorMemberId ?? undefined,
+      previousValues: {
+        assignedMemberId: existing.assignedMemberId,
+        notes: existing.notes,
+      },
       newValues: {
         assignedMemberId: params.assignedMemberId,
-        notes: params.notes,
+        notes: params.notes ?? existing.notes,
       },
     },
   });

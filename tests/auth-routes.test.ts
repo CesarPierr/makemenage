@@ -72,6 +72,26 @@ describe("auth routes", () => {
     expect(authMocks.createSession).not.toHaveBeenCalled();
   });
 
+  it("register preserves the next path so an invited user can continue", async () => {
+    dbMocks.userFindUnique.mockResolvedValue(null);
+    authMocks.hashPassword.mockResolvedValue("hashed-password");
+    dbMocks.userCreate.mockResolvedValue({ id: "user-1" });
+
+    const response = await registerPost(
+      buildFormRequest("http://localhost:3000/api/auth/register", {
+        displayName: "Pierre",
+        email: "pierre@example.com",
+        password: "motdepasse123",
+        next: "/join/token-123",
+      }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "http://192.168.1.132/login?registered=1&email=pierre%40example.com&next=%2Fjoin%2Ftoken-123",
+    );
+  });
+
   it("login prefers forwarded HTTPS headers for redirects and secure cookies", async () => {
     dbMocks.userFindUnique.mockResolvedValue({ id: "user-2", passwordHash: "stored-hash" });
     authMocks.verifyPassword.mockResolvedValue(true);
@@ -94,6 +114,23 @@ describe("auth routes", () => {
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("https://menage.example.com/app");
     expect(authMocks.createSession).toHaveBeenCalledWith("user-2", { secure: true });
+  });
+
+  it("login redirects to the requested next path after success", async () => {
+    dbMocks.userFindUnique.mockResolvedValue({ id: "user-2", passwordHash: "stored-hash" });
+    authMocks.verifyPassword.mockResolvedValue(true);
+    dbMocks.userUpdate.mockResolvedValue({ id: "user-2" });
+
+    const response = await loginPost(
+      buildFormRequest("http://localhost:3000/api/auth/login", {
+        email: "pierre@example.com",
+        password: "motdepasse123",
+        next: "/join/token-123",
+      }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("http://192.168.1.132/join/token-123");
   });
 
   it("login stays on the public login page when credentials are invalid", async () => {

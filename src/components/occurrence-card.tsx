@@ -9,6 +9,7 @@ type OccurrenceCardProps = {
     scheduledDate: Date;
     status: string;
     notes: string | null;
+    actualMinutes: number | null;
     taskTemplate: { title: string; category: string | null; estimatedMinutes: number };
     assignedMember: { id: string; displayName: string; color: string } | null;
   };
@@ -23,9 +24,18 @@ export function OccurrenceCard({
   currentMemberId,
   compact = false,
 }: OccurrenceCardProps) {
-  const isDone = occurrence.status === "completed";
   const isArchived = ["completed", "skipped", "cancelled"].includes(occurrence.status);
-  const statusLabel = occurrence.status.replace("_", " ");
+  const canEditOccurrence = occurrence.status !== "cancelled";
+  const statusLabel =
+    occurrence.status === "completed"
+      ? "Terminée"
+      : occurrence.status === "skipped"
+        ? "Sautée"
+        : occurrence.status === "rescheduled"
+          ? "Reportée"
+          : occurrence.status === "overdue"
+            ? "En retard"
+            : occurrence.status.replace("_", " ");
 
   return (
     <article className="app-surface rounded-[1.7rem] p-4 sm:p-5">
@@ -42,6 +52,11 @@ export function OccurrenceCard({
             <span className="stat-pill px-3 py-1">
               {formatMinutes(occurrence.taskTemplate.estimatedMinutes)}
             </span>
+            {occurrence.actualMinutes !== null ? (
+              <span className="stat-pill px-3 py-1">
+                Réel {formatMinutes(occurrence.actualMinutes)}
+              </span>
+            ) : null}
             <span className="stat-pill inline-flex items-center gap-2 px-3 py-1">
               {occurrence.assignedMember ? (
                 <span
@@ -69,29 +84,66 @@ export function OccurrenceCard({
         <p className="mt-3 text-sm leading-6 text-[var(--ink-700)]">{occurrence.notes}</p>
       ) : null}
 
-      {!compact && !isArchived ? (
+      {!compact && canEditOccurrence ? (
         <div className="mt-4 space-y-3">
           <div className="soft-panel px-3 py-3">
-            <p className="text-sm font-semibold text-[var(--ink-950)]">Actions rapides</p>
+            <p className="text-sm font-semibold text-[var(--ink-950)]">
+              {isArchived ? "Modifier cette occurrence" : "Actions rapides"}
+            </p>
             <p className="mt-1 text-sm text-[var(--ink-700)]">
-              Faites, sautez ou ajustez cette occurrence sans quitter l&apos;écran.
+              Vous pouvez corriger le statut, déclarer le temps réel et ajuster cette occurrence sans quitter l&apos;écran.
             </p>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
-            <form action={`/api/occurrences/${occurrence.id}/complete`} method="post">
+          <form
+            action={`/api/occurrences/${occurrence.id}/complete`}
+            method="post"
+            className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_1fr_auto]"
+          >
               <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
-              <button className="btn-primary w-full px-4 py-3 text-sm font-semibold" type="submit">
-                {isDone ? "Déjà faite" : "Marquer faite"}
+              <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-3">
+                Valider la tâche
+              </label>
+              <input
+                className="field"
+                type="number"
+                min="0"
+                name="actualMinutes"
+                defaultValue={occurrence.actualMinutes ?? ""}
+                placeholder="Minutes réelles"
+              />
+              <input
+                className="field"
+                type="text"
+                name="notes"
+                defaultValue={occurrence.notes ?? ""}
+                placeholder="Note facultative"
+              />
+              <button className="btn-primary px-4 py-3 text-sm font-semibold" type="submit">
+                {occurrence.status === "completed" ? "Mettre à jour" : "Marquer faite"}
               </button>
-            </form>
-            <form action={`/api/occurrences/${occurrence.id}/skip`} method="post">
+          </form>
+
+          <form
+            action={`/api/occurrences/${occurrence.id}/skip`}
+            method="post"
+            className="soft-panel grid gap-2 p-3 sm:grid-cols-[1fr_auto]"
+          >
               <input type="hidden" name="memberId" value={currentMemberId ?? ""} />
-              <button className="btn-secondary w-full px-4 py-3 text-sm font-semibold" type="submit">
-                Sauter
+              <label className="text-sm font-semibold text-[var(--ink-950)] sm:col-span-2">
+                Marquer comme sautée
+              </label>
+              <input
+                className="field"
+                type="text"
+                name="notes"
+                defaultValue={occurrence.status === "skipped" ? occurrence.notes ?? "" : ""}
+                placeholder="Pourquoi cette tâche est sautée ?"
+              />
+              <button className="btn-secondary px-4 py-3 text-sm font-semibold" type="submit">
+                {occurrence.status === "skipped" ? "Mettre à jour" : "Sauter"}
               </button>
-            </form>
-          </div>
+          </form>
 
           <form
             action={`/api/occurrences/${occurrence.id}/reschedule`}

@@ -5,12 +5,14 @@ import { requireGuest } from "@/lib/auth";
 type RegisterPageProps = {
   searchParams: Promise<{
     error?: string;
+    next?: string;
   }>;
 };
 
 export default async function RegisterPage({ searchParams }: RegisterPageProps) {
   await requireGuest();
   const params = await searchParams;
+  const next = params.next ?? "";
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-6">
@@ -50,6 +52,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
           ))}
         </div>
         <form action="/api/auth/register" method="post" className="mt-8 space-y-4">
+          <input type="hidden" name="next" value={next} />
           <input
             autoComplete="nickname"
             className="field"
@@ -82,7 +85,10 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
         </form>
         <p className="mt-5 text-sm leading-6 text-[var(--ink-700)]">
           Déjà inscrit ?{" "}
-          <Link className="font-semibold text-[var(--coral-600)]" href="/login">
+          <Link
+            className="font-semibold text-[var(--coral-600)]"
+            href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+          >
             Se connecter
           </Link>
         </p>

@@ -34,6 +34,9 @@ export const absenceSchema = z.object({
   startDate: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
   endDate: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
   notes: z.string().max(240).optional(),
+}).refine((value) => value.endDate >= value.startDate, {
+  message: "endDate must be on or after startDate",
+  path: ["endDate"],
 });
 
 export const recurrenceSchema = z.object({
@@ -82,4 +85,19 @@ export const occurrenceActionSchema = z.object({
   notes: z.string().max(280).optional(),
   date: z.preprocess((value) => (value ? parseDateInput(String(value)) : undefined), z.date()).optional(),
   actualMinutes: z.coerce.number().int().min(0).max(480).optional(),
+});
+
+export const householdInviteSchema = z.object({
+  householdId: z.string().cuid(),
+  role: z.enum(["owner", "admin", "member"]).default("member"),
+  expiresInDays: z.coerce.number().int().min(1).max(30).default(7),
+});
+
+export const redeemInviteSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(6)
+    .max(24)
+    .transform((value) => value.toUpperCase()),
 });

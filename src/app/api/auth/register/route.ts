@@ -1,10 +1,11 @@
 import { hashPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { redirectTo } from "@/lib/request";
+import { normalizeNextPath, redirectTo } from "@/lib/request";
 import { registerSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
+  const next = normalizeNextPath(formData.get("next")?.toString());
   const parsed = registerSchema.safeParse({
     displayName: formData.get("displayName"),
     email: formData.get("email"),
@@ -12,7 +13,15 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return redirectTo(request, "/register?error=invalid_registration");
+    const params = new URLSearchParams({
+      error: "invalid_registration",
+    });
+
+    if (next) {
+      params.set("next", next);
+    }
+
+    return redirectTo(request, `/register?${params.toString()}`);
   }
 
   const existing = await db.user.findUnique({
@@ -26,6 +35,10 @@ export async function POST(request: Request) {
       existing: "1",
       email: parsed.data.email,
     });
+
+    if (next) {
+      params.set("next", next);
+    }
 
     return redirectTo(request, `/login?${params.toString()}`);
   }
@@ -42,6 +55,10 @@ export async function POST(request: Request) {
     registered: "1",
     email: parsed.data.email,
   });
+
+  if (next) {
+    params.set("next", next);
+  }
 
   return redirectTo(request, `/login?${params.toString()}`);
 }

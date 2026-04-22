@@ -4,19 +4,28 @@ import Link from "next/link";
 import { ArrowRight, CalendarClock, Clock3, ListChecks, Settings2, TimerReset } from "lucide-react";
 
 import { OccurrenceCard } from "@/components/occurrence-card";
-import { buildLoadMetrics } from "@/lib/analytics";
+import { buildLoadMetrics, buildRollingCompletionMetrics } from "@/lib/analytics";
 import { requireUser } from "@/lib/auth";
 import { canManageHousehold, getCurrentHouseholdContext } from "@/lib/households";
 import { formatMinutes, percent } from "@/lib/utils";
 
 type DashboardPageProps = {
-  searchParams: Promise<{ household?: string; onboarding?: string }>;
+  searchParams: Promise<{ household?: string; onboarding?: string; joined?: string; join?: string }>;
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const user = await requireUser();
   const params = await searchParams;
   const context = await getCurrentHouseholdContext(user.id, params.household);
+
+  const dashboardMessage =
+    params.joined === "1"
+      ? "Nouveau foyer relié au compte. Vous pouvez maintenant basculer entre vos foyers."
+      : params.join === "invalid_code"
+        ? "Code d’invitation introuvable ou expiré."
+        : params.join === "invalid"
+          ? "Lien d’invitation invalide ou expiré."
+          : null;
 
   if (!context) {
     return (
@@ -28,6 +37,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <p className="mt-3 max-w-2xl text-[var(--ink-700)]">
           On démarre en une minute : le foyer, les membres, puis les tâches récurrentes. Tout est pensé pour se faire depuis le téléphone.
         </p>
+        {dashboardMessage ? (
+          <div className="mt-5 rounded-[1.4rem] border px-4 py-3 text-sm leading-6 text-[var(--coral-600)]" style={{ backgroundColor: "rgba(216, 100, 61, 0.12)", borderColor: "rgba(30, 31, 34, 0.06)" }}>
+            {dashboardMessage}
+          </div>
+        ) : null}
         <div className="mt-6 mobile-section-grid sm:max-w-2xl sm:grid-cols-3">
           {[
             "Un seul foyer pour commencer, sans configuration lourde.",
@@ -52,6 +66,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             Créer le foyer
           </button>
         </form>
+        <div className="mt-8 max-w-lg rounded-[1.8rem] border border-[rgba(30,31,34,0.08)] bg-white/70 p-4">
+          <p className="text-sm font-semibold text-[var(--ink-950)]">Ou rejoindre un foyer existant</p>
+          <p className="mt-1 text-sm leading-6 text-[var(--ink-700)]">
+            Collez simplement le code d’invitation qu’un proche vous a partagé.
+          </p>
+          <form action="/api/invitations/redeem" method="post" className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <input className="field" type="text" name="code" placeholder="Code d’invitation" required />
+            <button className="btn-secondary px-5 py-3 font-semibold" type="submit">
+              Rejoindre
+            </button>
+          </form>
+        </div>
       </section>
     );
   }
@@ -70,9 +96,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     ? context.occurrences.filter((occurrence) => occurrence.assignedMemberId === context.currentMember?.id)
     : [];
   const metrics = buildLoadMetrics(context.household.members, context.weekOccurrences);
+  const rollingCompletionMetrics = buildRollingCompletionMetrics(context.household.members, context.occurrences);
 
   return (
     <div className="space-y-4">
+      {dashboardMessage ? (
+        <div className="app-surface rounded-[1.7rem] border border-[rgba(56,115,93,0.12)] px-4 py-3 text-sm leading-6 text-[var(--leaf-600)]">
+          {dashboardMessage}
+        </div>
+      ) : null}
+
       <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
           <p className="section-kicker">
@@ -233,6 +266,40 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
           )}
         </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        {rollingCompletionMetrics.map((windowMetrics) => (
+          <article key={windowMetrics.days} className="app-surface rounded-[2rem] p-5 sm:p-6">
+            <p className="section-kicker">Statistiques glissantes</p>
+            <h3 className="display-title mt-2 text-3xl">
+              {windowMetrics.days === 7 ? "7 derniers jours" : "30 derniers jours"}
+            </h3>
+            <p className="mt-2 text-sm text-[var(--ink-700)]">
+              Nombre de tâches réellement validées et temps passé déclaré par personne.
+            </p>
+            <div className="mt-5 space-y-3">
+              {windowMetrics.byMember.map((member) => (
+                <div key={`${windowMetrics.days}-${member.memberId}`} className="soft-panel px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="size-3 rounded-full" style={{ backgroundColor: member.color }} />
+                      <div>
+                        <p className="font-semibold">{member.displayName}</p>
+                        <p className="text-sm text-[var(--ink-700)]">
+                          {member.completedCount} tâche{member.completedCount > 1 ? "s" : ""} validée{member.completedCount > 1 ? "s" : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold text-[var(--leaf-600)]">
+                      {formatMinutes(member.minutesSpent)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+        ))}
       </section>
 
       {canManageHousehold(context.membership.role) ? (

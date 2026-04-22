@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirectTo } from "@/lib/request";
 import { skipOccurrence } from "@/lib/scheduling/service";
+import { occurrenceActionSchema } from "@/lib/validation";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -30,10 +31,16 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const formData = await request.formData();
+  const parsed = occurrenceActionSchema.safeParse({
+    occurrenceId: id,
+    memberId: String(formData.get("memberId") || membership.id),
+    notes: formData.get("notes") || undefined,
+  });
 
   await skipOccurrence({
     occurrenceId: id,
-    actorMemberId: String(formData.get("memberId") || membership.id),
+    actorMemberId: parsed.success ? parsed.data.memberId : membership.id,
+    notes: parsed.success ? parsed.data.notes : undefined,
   });
 
   return redirectTo(request, `/app?household=${occurrence.householdId}`);

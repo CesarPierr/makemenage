@@ -75,3 +75,19 @@ export function shouldUseSecureCookies(request: Request) {
 
   return new URL(request.url).protocol === "https:";
 }
+
+export function normalizeNextPath(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  if (!value.startsWith("/")) {
+    return null;
+  }
+
+  if (value.startsWith("//")) {
+    return null;
+  }
+
+  return value;
+}

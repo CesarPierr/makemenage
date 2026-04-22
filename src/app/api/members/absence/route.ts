@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirectTo } from "@/lib/request";
+import { syncHouseholdOccurrences } from "@/lib/scheduling/service";
 import { absenceSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -45,6 +46,8 @@ export async function POST(request: Request) {
       notes: parsed.data.notes,
     },
   });
+
+  await syncHouseholdOccurrences(target.householdId);
 
   return redirectTo(request, `/app/settings?household=${target.householdId}`);
 }

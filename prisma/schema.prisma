@@ -57,16 +57,17 @@ enum OccurrenceActionType {
 }
 
 model User {
-  id           String            @id @default(cuid())
-  email        String            @unique
-  passwordHash String
-  displayName  String
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  lastLoginAt  DateTime?
-  sessions     Session[]
-  memberships  HouseholdMember[]
-  households   Household[]       @relation("HouseholdOwner")
+  id                 String             @id @default(cuid())
+  email              String             @unique
+  passwordHash       String
+  displayName        String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  lastLoginAt        DateTime?
+  sessions           Session[]
+  memberships        HouseholdMember[]
+  households         Household[]        @relation("HouseholdOwner")
+  acceptedInvitations HouseholdInvite[] @relation("AcceptedHouseholdInvites")
 }
 
 model Session {
@@ -91,6 +92,7 @@ model Household {
   updatedAt       DateTime          @updatedAt
   createdBy       User              @relation("HouseholdOwner", fields: [createdByUserId], references: [id])
   members         HouseholdMember[]
+  invites         HouseholdInvite[]
   tasks           TaskTemplate[]
   occurrences     TaskOccurrence[]
 
@@ -113,12 +115,35 @@ model HouseholdMember {
   user                  User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
   availabilities        MemberAvailability[]
   createdTasks          TaskTemplate[]     @relation("TaskTemplateCreator")
+  createdInvitations    HouseholdInvite[]  @relation("CreatedHouseholdInvites")
   assignedOccurrences   TaskOccurrence[]   @relation("OccurrenceAssignee")
   completedOccurrences  TaskOccurrence[]   @relation("OccurrenceCompleter")
   actionLogs            OccurrenceActionLog[]
 
   @@index([householdId])
   @@index([userId])
+  @@unique([householdId, userId])
+}
+
+model HouseholdInvite {
+  id                String           @id @default(cuid())
+  householdId       String
+  createdByMemberId String?
+  acceptedByUserId  String?
+  token             String           @unique
+  code              String           @unique
+  role              HouseholdRole    @default(member)
+  expiresAt         DateTime
+  acceptedAt        DateTime?
+  revokedAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  household         Household        @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdByMember   HouseholdMember? @relation("CreatedHouseholdInvites", fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  acceptedByUser    User?            @relation("AcceptedHouseholdInvites", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([householdId, createdAt])
+  @@index([expiresAt])
 }
 
 model MemberAvailability {

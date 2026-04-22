@@ -1,11 +1,12 @@
 import { createSession, verifyPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { redirectTo, shouldUseSecureCookies } from "@/lib/request";
+import { normalizeNextPath, redirectTo, shouldUseSecureCookies } from "@/lib/request";
 import { loginSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
   const submittedEmail = String(formData.get("email") ?? "").trim();
+  const next = normalizeNextPath(formData.get("next")?.toString());
   const parsed = loginSchema.safeParse({
     email: submittedEmail,
     password: formData.get("password"),
@@ -18,6 +19,10 @@ export async function POST(request: Request) {
 
     if (submittedEmail) {
       params.set("email", submittedEmail);
+    }
+
+    if (next) {
+      params.set("next", next);
     }
 
     return redirectTo(request, `/login?${params.toString()}`);
@@ -35,6 +40,10 @@ export async function POST(request: Request) {
       email: parsed.data.email,
     });
 
+    if (next) {
+      params.set("next", next);
+    }
+
     return redirectTo(request, `/login?${params.toString()}`);
   }
 
@@ -46,6 +55,10 @@ export async function POST(request: Request) {
       email: parsed.data.email,
     });
 
+    if (next) {
+      params.set("next", next);
+    }
+
     return redirectTo(request, `/login?${params.toString()}`);
   }
 
@@ -56,5 +69,5 @@ export async function POST(request: Request) {
 
   await createSession(user.id, { secure: shouldUseSecureCookies(request) });
 
-  return redirectTo(request, "/app");
+  return redirectTo(request, next ?? "/app");
 }

@@ -8,6 +8,7 @@ type LoginPageProps = {
     existing?: string;
     error?: string;
     email?: string;
+    next?: string;
   }>;
 };
 
@@ -15,6 +16,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   await requireGuest();
   const params = await searchParams;
   const email = params.email ?? "";
+  const next = params.next ?? "";
 
   const feedbackMessage =
     params.registered === "1"
@@ -79,6 +81,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           ))}
         </div>
         <form action="/api/auth/login" method="post" className="mt-8 space-y-4">
+          <input type="hidden" name="next" value={next} />
           <input
             autoCapitalize="none"
             autoComplete="email"
@@ -104,7 +107,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </form>
         <p className="mt-5 text-sm leading-6 text-[var(--ink-700)]">
           Pas encore de compte ?{" "}
-          <Link className="font-semibold text-[var(--coral-600)]" href="/register">
+          <Link
+            className="font-semibold text-[var(--coral-600)]"
+            href={next ? `/register?next=${encodeURIComponent(next)}` : "/register"}
+          >
             Créer un compte
           </Link>
         </p>

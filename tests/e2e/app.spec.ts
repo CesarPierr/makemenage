@@ -112,11 +112,17 @@ test("user can register, login, create a household, add a member, create a task,
 
   await page.goto("/app/my-tasks");
   await expect(page.getByRole("heading", { name: "Nettoyer le salon" }).first()).toBeVisible();
+  await page.locator('input[name="actualMinutes"]').first().fill("32");
+  await page.locator('input[name="notes"]').first().fill("Salon plus poussiéreux que prévu");
   await page.getByRole("button", { name: "Marquer faite" }).first().click();
 
   await page.goto("/app/history");
   await expect(page.getByText("Terminée").first()).toBeVisible();
   await expect(page.getByText(/Validée par/i).first()).toBeVisible();
+
+  await page.goto("/app");
+  await expect(page.getByRole("heading", { name: "7 derniers jours" })).toBeVisible();
+  await expect(page.getByText("32 min").first()).toBeVisible();
 
   await page.goto("/app/calendar");
   await expect(page.getByRole("heading", { name: "Google Calendar et iCal" })).toBeVisible();
@@ -129,6 +135,113 @@ test("user can register, login, create a household, add a member, create a task,
   }
   const calendarExport = await page.locator('a[href*="/api/calendar/feed.ics"]').first().getAttribute("href");
   expect(calendarExport).toContain("/api/calendar/feed.ics");
+});
+
+test("two accounts can share a household, one account can keep multiple households, and can leave one later", async ({
+  browser,
+  page,
+}, testInfo) => {
+  const ownerEmail = buildUniqueEmail("owner", testInfo.project.name);
+  const guestEmail = buildUniqueEmail("guest", testInfo.project.name);
+
+  await page.goto("/register");
+  await page.getByPlaceholder("Prénom ou pseudo").fill("Owner");
+  await page.getByPlaceholder("Email").fill(ownerEmail);
+  await page.getByPlaceholder("Mot de passe").fill("demo12345");
+  await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await page.waitForURL(/\/login\?/);
+  await page.getByPlaceholder("Mot de passe").fill("demo12345");
+  await page.getByRole("button", { name: "Se connecter" }).click();
+  await page.waitForURL(/\/app$/);
+
+  await page.getByPlaceholder("Nom du foyer").fill("Foyer partagé");
+  await page.locator('input[name="timezone"]').fill("Europe/Paris");
+  await page.getByRole("button", { name: "Créer le foyer" }).click();
+  await page.waitForLoadState("networkidle");
+
+  await page.goto("/app/settings");
+  await page.getByRole("button", { name: "Créer une invitation" }).click();
+  const inviteLink = await page.getByRole("link", { name: "Ouvrir le lien d’invitation" }).first().getAttribute("href");
+  expect(inviteLink).toContain("/join/");
+
+  const guestContext = await browser.newContext();
+  const guestPage = await guestContext.newPage();
+
+  await guestPage.goto(inviteLink!);
+  await expect(guestPage.getByRole("heading", { name: /Rejoindre le foyer/i })).toBeVisible();
+  await guestPage.getByRole("link", { name: "Créer un compte" }).click();
+  await guestPage.getByPlaceholder("Prénom ou pseudo").fill("Guest");
+  await guestPage.getByPlaceholder("Email").fill(guestEmail);
+  await guestPage.getByPlaceholder("Mot de passe").fill("demo12345");
+  await guestPage.getByRole("button", { name: "Créer mon compte" }).click();
+  await guestPage.waitForURL(/\/login\?/);
+  await guestPage.getByPlaceholder("Mot de passe").fill("demo12345");
+  await guestPage.getByRole("button", { name: "Se connecter" }).click();
+  await guestPage.waitForURL(/\/join\//);
+  await guestPage.getByRole("button", { name: "Rejoindre ce foyer" }).click();
+  await guestPage.waitForURL(/\/app\?household=.*joined=1/);
+  await expect(guestPage.getByText("Nouveau foyer relié au compte")).toBeVisible();
+
+  await guestPage.goto("/app/settings");
+  await expect(guestPage.getByText("Foyer partagé")).toBeVisible();
+  await guestPage.getByPlaceholder("Nom du nouveau foyer").fill("Deuxième foyer");
+  await guestPage.locator('form[action="/api/households"] input[name="timezone"]').fill("Europe/Paris");
+  await guestPage.getByRole("button", { name: "Créer un autre foyer" }).click();
+  await guestPage.waitForLoadState("networkidle");
+  await guestPage.goto("/app/settings");
+  await expect(guestPage.getByText("Foyer partagé")).toBeVisible();
+  await expect(guestPage.getByText("Deuxième foyer")).toBeVisible();
+
+  await guestPage.getByRole("link", { name: "Ouvrir" }).first().click();
+  await guestPage.waitForLoadState("networkidle");
+  await guestPage.goto("/app/settings");
+  await guestPage.getByRole("button", { name: "Quitter ce foyer" }).click();
+  await guestPage.waitForLoadState("networkidle");
+  await guestPage.goto("/app/settings");
+  await expect(guestPage.getByText("Deuxième foyer")).toBeVisible();
+  await expect(guestPage.getByText("Foyer partagé")).toHaveCount(0);
+
+  await guestContext.close();
+});
+
+test("a skipped task can be corrected and completed later with actual minutes", async ({ page }, testInfo) => {
+  const email = buildUniqueEmail("correct-skip", testInfo.project.name);
+  const today = new Date().toISOString().slice(0, 10);
+
+  await page.goto("/register");
+  await page.getByPlaceholder("Prénom ou pseudo").fill("Correct Skip");
+  await page.getByPlaceholder("Email").fill(email);
+  await page.getByPlaceholder("Mot de passe").fill("demo12345");
+  await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await page.waitForURL(/\/login\?/);
+  await page.getByPlaceholder("Mot de passe").fill("demo12345");
+  await page.getByRole("button", { name: "Se connecter" }).click();
+  await page.waitForURL(/\/app$/);
+  await page.getByPlaceholder("Nom du foyer").fill("Foyer correction");
+  await page.locator('input[name="timezone"]').fill("Europe/Paris");
+  await page.getByRole("button", { name: "Créer le foyer" }).click();
+  await page.waitForLoadState("networkidle");
+
+  await page.getByPlaceholder("Titre de la tâche").fill("Passer l’aspirateur");
+  await page.locator('input[name="estimatedMinutes"]').fill("20");
+  await page.getByPlaceholder("Catégorie").fill("Nettoyage");
+  await page.getByPlaceholder("Pièce").fill("Salon");
+  await page.locator('input[name="startsOn"]').fill(today);
+  await page.locator('input[name="interval"]').fill("1");
+  await page.locator('select[name="eligibleMemberIds"]').selectOption([{ index: 0 }]);
+  await page.getByRole("button", { name: "Créer la tâche" }).click();
+
+  await page.goto("/app/my-tasks");
+  await page.locator('input[name="notes"]').nth(1).fill("Pas le temps aujourd’hui");
+  await page.getByRole("button", { name: "Sauter" }).first().click();
+  await expect(page.getByText("Sautée").first()).toBeVisible();
+
+  await page.locator('input[name="actualMinutes"]').first().fill("27");
+  await page.locator('input[name="notes"]').first().fill("Finalement faite en fin de journée");
+  await page.getByRole("button", { name: "Marquer faite" }).first().click();
+
+  await expect(page.getByText("Terminée").first()).toBeVisible();
+  await expect(page.getByText("Réel 27 min").first()).toBeVisible();
 });
 
 test("invalid login keeps the user on login with a clear error message", async ({ page }, testInfo) => {
