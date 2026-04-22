@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { addMonths, format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 import { expect, test } from "@playwright/test";
 
@@ -61,6 +63,7 @@ test("user can register, login, create a household, add a member, create a task,
   const email = buildUniqueEmail("e2e", testInfo.project.name);
   const isMobileProject = testInfo.project.name.includes("mobile");
   const today = new Date().toISOString().slice(0, 10);
+  const nextMonthLabel = format(addMonths(new Date(), 1), "MMMM yyyy", { locale: fr });
 
   await page.goto("/register");
   await expect(page.getByText("Démarrage rapide sans écran inutile")).toBeVisible();
@@ -112,12 +115,17 @@ test("user can register, login, create a household, add a member, create a task,
   await page.getByRole("button", { name: "Marquer faite" }).first().click();
 
   await page.goto("/app/history");
-  await expect(page.getByText(/completed/i).first()).toBeVisible();
+  await expect(page.getByText("Terminée").first()).toBeVisible();
+  await expect(page.getByText(/Validée par/i).first()).toBeVisible();
 
   await page.goto("/app/calendar");
+  await expect(page.getByRole("heading", { name: "Google Calendar et iCal" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copier l’URL iCal du foyer" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ouvrir Google Calendar" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: new RegExp(nextMonthLabel, "i") })).toBeVisible();
   if (isMobileProject) {
-    await expect(page.getByRole("heading", { name: "Prochaines tâches" })).toBeVisible();
-    await expect(page.getByText(/jours actifs/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Prochaines tâches" }).first()).toBeVisible();
+    await expect(page.getByText(/jours actifs/i).first()).toBeVisible();
   }
   const calendarExport = await page.locator('a[href*="/api/calendar/feed.ics"]').first().getAttribute("href");
   expect(calendarExport).toContain("/api/calendar/feed.ics");

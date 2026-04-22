@@ -1,12 +1,29 @@
 import "server-only";
 
-import { endOfMonth, endOfWeek, startOfMonth, startOfToday, startOfWeek, subDays } from "date-fns";
+import {
+  addMonths,
+  endOfMonth,
+  endOfWeek,
+  startOfMonth,
+  startOfToday,
+  startOfWeek,
+  subDays,
+} from "date-fns";
 import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
 import { syncHouseholdOccurrences } from "@/lib/scheduling/service";
 
-export async function getCurrentHouseholdContext(userId: string, householdId?: string | null) {
+type HouseholdContextOptions = {
+  monthDate?: Date;
+  monthSpan?: number;
+};
+
+export async function getCurrentHouseholdContext(
+  userId: string,
+  householdId?: string | null,
+  options?: HouseholdContextOptions,
+) {
   const membership = await db.householdMember.findFirst({
     where: {
       userId,
@@ -40,8 +57,10 @@ export async function getCurrentHouseholdContext(userId: string, householdId?: s
   const today = startOfToday();
   const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
   const currentWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
-  const monthStart = startOfMonth(today);
-  const monthEnd = endOfMonth(today);
+  const monthBaseDate = options?.monthDate ?? today;
+  const monthSpan = options?.monthSpan ?? 1;
+  const monthStart = startOfMonth(monthBaseDate);
+  const monthEnd = endOfMonth(addMonths(monthBaseDate, monthSpan - 1));
 
   const [tasks, occurrences, actionLogs] = await Promise.all([
     db.taskTemplate.findMany({
@@ -110,8 +129,12 @@ export async function getCurrentHouseholdContext(userId: string, householdId?: s
   };
 }
 
-export async function requireHouseholdContext(userId: string, householdId?: string | null) {
-  const context = await getCurrentHouseholdContext(userId, householdId);
+export async function requireHouseholdContext(
+  userId: string,
+  householdId?: string | null,
+  options?: HouseholdContextOptions,
+) {
+  const context = await getCurrentHouseholdContext(userId, householdId, options);
 
   if (!context) {
     redirect("/app?onboarding=1");
