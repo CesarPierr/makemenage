@@ -1,4 +1,4 @@
-import { addDays, addMonths, format, startOfToday } from "date-fns";
+import { addDays, format, startOfToday } from "date-fns";
 import { fr } from "date-fns/locale";
 
 import { CalendarMonth } from "@/components/calendar-month";
@@ -17,19 +17,32 @@ type CalendarPageProps = {
   }>;
 };
 
+function parseOffset(value: string | undefined, options: { min: number; max: number }) {
+  const parsed = Number.parseInt(value ?? "0", 10);
+
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return Math.min(options.max, Math.max(options.min, parsed));
+}
+
 export default async function CalendarPage({ searchParams }: CalendarPageProps) {
   const user = await requireUser();
   const params = await searchParams;
-  const monthOffset = parseInt(params.monthOffset ?? "0", 10);
-  const dayOffset = parseInt(params.dayOffset ?? "0", 10);
+  const monthOffset = parseOffset(params.monthOffset, { min: -24, max: 24 });
+  const dayOffset = parseOffset(params.dayOffset, { min: -30, max: 30 });
   const today = startOfToday();
-  const currentMonth = addMonths(today, monthOffset);
+  const currentMonth = addDays(today, monthOffset * 30);
   const currentDayBase = addDays(today, dayOffset);
   
   const context = await requireHouseholdContext(user.id, params.household, {
     monthDate: currentMonth,
     monthSpan: 1,
   });
+
+  const startDate = currentMonth < today ? today : currentMonth;
+  const endDate = addDays(startDate, 30);
   
   const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
   const householdFeedUrl = `${baseUrl}/api/calendar/feed.ics?household=${context.household.id}`;
@@ -65,12 +78,12 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="section-kicker">Calendrier</p>
+              <p className="section-kicker">Planifier</p>
               <h2 className="display-title mt-2 truncate text-3xl leading-tight sm:text-4xl">
-                {format(currentMonth, "MMMM yyyy", { locale: fr })}
+                {format(startDate, "d MMM", { locale: fr })} — {format(endDate, "d MMM yyyy", { locale: fr })}
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-700)]">
-                Vue mensuelle pour regrouper les tâches, repérer les jours chargés et visualiser les absences sans perdre l’essentiel.
+                Regardez les prochains jours, repérez les périodes chargées et ajustez le planning sans encombrer le quotidien.
               </p>
             </div>
             
@@ -138,7 +151,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
               },
               {
                 label: "Vue mobile",
-                value: 4,
+                value: 7,
                 detail: "jours visibles à la fois",
               },
             ].map((item) => (

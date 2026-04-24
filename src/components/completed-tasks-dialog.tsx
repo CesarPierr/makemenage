@@ -42,7 +42,6 @@ export function CompletedTasksDialog({ tasks, members, currentMemberId }: Comple
               occurrence={occurrence}
               members={members}
               currentMemberId={currentMemberId}
-              compact
             />
           ))}
         />

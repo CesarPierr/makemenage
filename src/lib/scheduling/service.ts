@@ -337,10 +337,19 @@ export async function completeOccurrence(params: {
   actorMemberId?: string | null;
   actualMinutes?: number;
   notes?: string;
+  shiftFutureOccurrences?: boolean;
+  wasCompletedAlone?: boolean;
 }) {
   const existing = await db.taskOccurrence.findUnique({
     where: {
       id: params.occurrenceId,
+    },
+    include: {
+      taskTemplate: {
+        include: {
+          recurrenceRule: true,
+        },
+      },
     },
   });
 
@@ -358,6 +367,7 @@ export async function completeOccurrence(params: {
       completedByMemberId: params.actorMemberId ?? existing.completedByMemberId ?? undefined,
       actualMinutes: params.actualMinutes ?? existing.actualMinutes,
       notes: params.notes ?? existing.notes,
+      wasCompletedAlone: params.wasCompletedAlone ?? existing.wasCompletedAlone,
       isManuallyModified: true,
     },
   });
@@ -375,9 +385,25 @@ export async function completeOccurrence(params: {
       newValues: {
         actualMinutes: params.actualMinutes ?? existing.actualMinutes,
         notes: params.notes ?? existing.notes,
+        wasCompletedAlone: params.wasCompletedAlone ?? existing.wasCompletedAlone,
       },
     },
   });
+
+  if (params.shiftFutureOccurrences && existing.taskTemplate) {
+    await db.recurrenceRule.update({
+      where: { id: existing.taskTemplate.recurrenceRuleId },
+      data: {
+        anchorDate: startOfDay(new Date()),
+      },
+    });
+    
+    // Request a sync to recalculate occurrences with the new anchorDate
+    await syncHouseholdOccurrences(existing.householdId, {
+      taskId: existing.taskTemplate.id,
+      forceOverwriteManual: false,
+    });
+  }
 }
 
 export async function skipOccurrence(params: {

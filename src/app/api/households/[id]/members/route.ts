@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!membership || !canManageHousehold(membership.role)) {
-    return redirectTo(request, `/app/settings?household=${id}&panel=team`);
+    return redirectTo(request, `/app/settings/team?household=${id}`);
   }
 
   const formData = await request.formData();
@@ -33,7 +33,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!parsed.success) {
-    return redirectTo(request, `/app/settings?household=${id}&panel=team`);
+    return redirectTo(request, `/app/settings/team?household=${id}`);
   }
 
   const createdMember = await db.householdMember.create({
@@ -51,5 +51,5 @@ export async function POST(request: Request, { params }: Params) {
     await syncHouseholdOccurrences(id);
   }
 
-  return redirectTo(request, `/app/settings?household=${id}&panel=team`);
+  return redirectTo(request, `/app/settings/team?household=${id}`);
 }

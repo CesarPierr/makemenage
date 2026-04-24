@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/.codex-node
 /.pnp
 .pnp.*
 .yarn/*
@@ -27,17 +28,22 @@
 .DS_Store
 *.pem
 .deploy-state/
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
+/scratch/
+/.vscode/
+/.idea/
+/.next/
+/.codex/
+/.claude/
+/AGENTS.md
 .env*
 !.env.example
 !.env.production.example
+/npm-debug.log*
+
+# docker
+.docker-compose.prod.yml.tmp
+makemenage-db-data/
+makemenage-postgres-prod-data/
 
 # vercel
 .vercel

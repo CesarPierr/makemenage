@@ -62,7 +62,7 @@ export function buildRollingCompletionMetrics(members: MemberLike[], occurrences
   const activeMembers = members.filter((member) => member.isActive);
   const now = new Date();
 
-  return [7, 30].map((days) => {
+  return [7, 14, 30].map((days) => {
     const threshold = subDays(now, days);
     const completed = occurrences.filter(
       (occurrence) =>
@@ -92,4 +92,38 @@ export function buildRollingCompletionMetrics(members: MemberLike[], occurrences
       }),
     };
   });
+}
+
+export function calculateStreak(occurrences: OccurrenceLike[]): number {
+  const completedDates = occurrences
+    .filter((o) => o.status === "completed" && o.completedAt)
+    .map((o) => {
+      // Use local timezone offset safely to get YYYY-MM-DD
+      const date = new Date(o.completedAt as Date);
+      return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+    });
+
+  const uniqueDates = [...new Set(completedDates)].sort().reverse(); // newest first
+  if (uniqueDates.length === 0) return 0;
+
+  const now = new Date();
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+  const yesterday = new Date(now.getTime() - 86400000 - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+
+  if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) return 0;
+
+  let streak = 0;
+  let expectedDate = uniqueDates[0];
+
+  for (const date of uniqueDates) {
+    if (date === expectedDate) {
+      streak++;
+      const prev = new Date(new Date(date).getTime() - 86400000);
+      expectedDate = new Date(prev.getTime() - prev.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+    } else {
+      break;
+    }
+  }
+
+  return streak;
 }

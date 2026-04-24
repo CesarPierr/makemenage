@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!membership || !canManageHousehold(membership.role)) {
-    return redirectTo(request, `/app/settings?household=${id}&panel=access`);
+    return redirectTo(request, `/app/settings/access?household=${id}`);
   }
 
   const formData = await request.formData();
@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!parsed.success) {
-    return redirectTo(request, `/app/settings?household=${id}&panel=access&invite=invalid`);
+    return redirectTo(request, `/app/settings/access?household=${id}&invite=invalid`);
   }
 
   await createHouseholdInvite({
@@ -41,5 +41,5 @@ export async function POST(request: Request, { params }: Params) {
     expiresInDays: parsed.data.expiresInDays,
   });
 
-  return redirectTo(request, `/app/settings?household=${id}&panel=access&invite=created`);
+  return redirectTo(request, `/app/settings/access?household=${id}&invite=created`);
 }

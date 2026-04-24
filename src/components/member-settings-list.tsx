@@ -90,7 +90,18 @@ export function MemberSettingsList({
             action={`/api/households/${householdId}/members/${editingMember.id}`}
             className="compact-form-grid"
             method="post"
-            onSubmit={() => setTimeout(() => setEditingMemberId(null), 100)}
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const formData = new FormData(event.currentTarget);
+              const headers: Record<string, string> = {};
+              const csrfMatch = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
+              if (csrfMatch?.[1]) headers["x-csrf-token"] = csrfMatch[1];
+              const res = await fetch(`/api/households/${householdId}/members/${editingMember.id}`, { method: "POST", body: formData, headers });
+              if (res.ok || res.redirected) {
+                setEditingMemberId(null);
+                window.location.reload();
+              }
+            }}
           >
             <input name="_method" type="hidden" value="PUT" />
             <input name="color" type="hidden" value={editingColor || editingMember.color} />

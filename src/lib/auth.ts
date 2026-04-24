@@ -10,15 +10,7 @@ const SESSION_COOKIE = "makemenage_session";
 const SESSION_DURATION_DAYS = 21;
 
 function shouldUseSecureSessionCookie() {
-  if (process.env.APP_BASE_URL) {
-    try {
-      return new URL(process.env.APP_BASE_URL).protocol === "https:";
-    } catch {
-      // ignore invalid APP_BASE_URL and fall back below
-    }
-  }
-
-  return process.env.NODE_ENV === "production";
+  return process.env.NODE_ENV === "production" && (process.env.APP_BASE_URL?.startsWith("https") ?? false);
 }
 
 function hashToken(token: string) {

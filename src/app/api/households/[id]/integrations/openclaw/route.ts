@@ -19,7 +19,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!membership || !canManageHousehold(membership.role)) {
-    return redirectTo(request, `/app/settings?household=${id}&panel=integrations&integration=forbidden`);
+    return redirectTo(request, `/app/settings/integrations?household=${id}&integration=forbidden`);
   }
 
   const formData = await request.formData();
@@ -35,7 +35,6 @@ export async function POST(request: Request, { params }: Params) {
 
     const searchParams = new URLSearchParams({
       household: id,
-      panel: "integrations",
       integration: result.apiKey ? "key_created" : result.integration.isEnabled ? "saved" : "disabled",
     });
 
@@ -43,8 +42,8 @@ export async function POST(request: Request, { params }: Params) {
       searchParams.set("generatedKey", result.apiKey);
     }
 
-    return redirectTo(request, `/app/settings?${searchParams.toString()}`);
+    return redirectTo(request, `/app/settings/integrations?${searchParams.toString()}`);
   } catch {
-    return redirectTo(request, `/app/settings?household=${id}&panel=integrations&integration=invalid`);
+    return redirectTo(request, `/app/settings/integrations?household=${id}&integration=invalid`);
   }
 }

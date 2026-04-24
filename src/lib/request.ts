@@ -60,6 +60,13 @@ export function redirectTo(request: Request, path: string, status = 303) {
   return NextResponse.redirect(resolveAppUrl(request, path), status);
 }
 
+export function isDataRequest(request: Request) {
+  const requestedWith = request.headers.get("x-requested-with");
+  const accept = request.headers.get("accept") ?? "";
+
+  return requestedWith === "fetch" || accept.includes("application/json");
+}
+
 export function shouldUseSecureCookies(request: Request) {
   const forwardedProto = readFirstHeader(request.headers, "x-forwarded-proto");
 

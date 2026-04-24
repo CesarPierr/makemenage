@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: Params) {
   const formData = await request.formData();
 
   if (formData.get("_method") !== "PUT") {
-    return redirectTo(request, `/app/settings?household=${id}&panel=team`);
+    return redirectTo(request, `/app/settings/team?household=${id}`);
   }
 
   const actorMembership = await db.householdMember.findFirst({
@@ -32,14 +32,14 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!actorMembership || !targetMember) {
-    return redirectTo(request, `/app/settings?household=${id}&panel=team`);
+    return redirectTo(request, `/app/settings/team?household=${id}`);
   }
 
   const canManageTarget = canManageHousehold(actorMembership.role);
   const isSelf = targetMember.userId === user.id;
 
   if (!canManageTarget && !isSelf) {
-    return redirectTo(request, `/app/settings?household=${id}&panel=team`);
+    return redirectTo(request, `/app/settings/team?household=${id}`);
   }
 
   const parsed = memberSchema.safeParse({
@@ -53,7 +53,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!parsed.success) {
-    return redirectTo(request, `/app/settings?household=${id}&panel=team&member=invalid`);
+    return redirectTo(request, `/app/settings/team?household=${id}&member=invalid`);
   }
 
   await db.householdMember.update({
@@ -68,5 +68,5 @@ export async function POST(request: Request, { params }: Params) {
     },
   });
 
-  return redirectTo(request, `/app/settings?household=${id}&panel=team&member=updated`);
+  return redirectTo(request, `/app/settings/team?household=${id}&member=updated`);
 }

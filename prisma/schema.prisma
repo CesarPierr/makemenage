@@ -125,6 +125,8 @@ model HouseholdMember {
   assignedOccurrences   TaskOccurrence[]   @relation("OccurrenceAssignee")
   completedOccurrences  TaskOccurrence[]   @relation("OccurrenceCompleter")
   actionLogs            OccurrenceActionLog[]
+  occurrenceComments    OccurrenceComment[]
+  pushSubscriptions     PushSubscription[]
 
   @@index([householdId])
   @@index([userId])
@@ -229,6 +231,7 @@ model TaskTemplate {
   difficulty       Int?
   priority         Int             @default(2)
   isActive         Boolean         @default(true)
+  isCollective     Boolean         @default(false)
   startsOn         DateTime
   endsOn           DateTime?
   recurrenceRuleId String          @unique
@@ -260,6 +263,7 @@ model TaskOccurrence {
   completedByMemberId String?
   actualMinutes       Int?
   notes               String?
+  wasCompletedAlone   Boolean?
   isManuallyModified  Boolean              @default(false)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -268,8 +272,11 @@ model TaskOccurrence {
   assignedMember      HouseholdMember?     @relation("OccurrenceAssignee", fields: [assignedMemberId], references: [id], onDelete: SetNull)
   completedByMember   HouseholdMember?     @relation("OccurrenceCompleter", fields: [completedByMemberId], references: [id], onDelete: SetNull)
   logs                OccurrenceActionLog[]
+  comments            OccurrenceComment[]
 
   @@index([householdId, scheduledDate])
+  @@index([householdId, status, scheduledDate])
+  @@index([householdId, assignedMemberId, scheduledDate])
   @@index([assignedMemberId, scheduledDate])
   @@index([taskTemplateId])
 }
@@ -286,4 +293,30 @@ model OccurrenceActionLog {
   actorMember    HouseholdMember?     @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
 
   @@index([occurrenceId])
+}
+
+model OccurrenceComment {
+  id           String           @id @default(cuid())
+  occurrenceId String
+  authorId     String?
+  body         String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  occurrence   TaskOccurrence   @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+  author       HouseholdMember? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([occurrenceId, createdAt])
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  memberId   String
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  member     HouseholdMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
 }

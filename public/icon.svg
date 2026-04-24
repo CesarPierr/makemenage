@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MakeMenage">
+  <rect width="512" height="512" rx="116" fill="#F7F2E9"/>
+  <circle cx="118" cy="120" r="118" fill="#D8643D" opacity=".18"/>
+  <circle cx="402" cy="388" r="142" fill="#38735D" opacity=".16"/>
+  <path fill="#D8643D" d="M256 92 98 211v209c0 14 11 25 25 25h266c14 0 25-11 25-25V211L256 92Zm0 64 104 78v161H152V234l104-78Z"/>
+  <path fill="#38735D" d="M198 272c0-14 11-25 25-25h66c14 0 25 11 25 25v123H198V272Z"/>
+  <path fill="#2F6D88" d="M173 230c-8 0-15-7-15-15s7-15 15-15h166c8 0 15 7 15 15s-7 15-15 15H173Z"/>
+</svg>

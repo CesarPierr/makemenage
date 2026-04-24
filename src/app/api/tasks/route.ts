@@ -149,6 +149,7 @@ export async function POST(request: Request) {
       color: parsedTask.data.color,
       estimatedMinutes: parsedTask.data.estimatedMinutes,
       priority: 2,
+      isCollective: formData.get("isCollective") === "on",
       startsOn: parsedTask.data.startsOn,
       endsOn: singleRun ? parsedTask.data.startsOn : parsedTask.data.endsOn ?? null,
       recurrenceRuleId: recurrenceRule.id,

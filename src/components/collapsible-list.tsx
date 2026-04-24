@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+
 type CollapsibleListProps = {
   items: React.ReactNode[];
   initialCount: number;
@@ -16,16 +18,16 @@ export function CollapsibleList({ items, initialCount, label = "Afficher plus" }
   const hiddenItems = useMemo(() => items.slice(initialCount), [items, initialCount]);
 
   if (hiddenItems.length === 0) {
-    return <div className="space-y-4">{visibleItems}</div>;
+    return <div className="space-y-3">{visibleItems}</div>;
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {visibleItems}
       
       {!isExpanded ? (
         <button
-          className="btn-quiet group mt-2 flex w-full flex-col items-center justify-center gap-1 py-4 transition-all"
+          className="btn-quiet group mt-1 flex w-full flex-col items-center justify-center gap-1 py-3 transition-all"
           onClick={() => setIsExpanded(true)}
           type="button"
         >
@@ -35,14 +37,14 @@ export function CollapsibleList({ items, initialCount, label = "Afficher plus" }
           <ChevronDown className="size-5 text-[var(--sky-400)] transition-transform group-hover:translate-y-1" />
         </button>
       ) : (
-        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="space-y-3">
           {hiddenItems}
           <button
-            className="btn-quiet group mt-2 flex w-full flex-col items-center justify-center gap-1 py-2 opacity-60 hover:opacity-100"
+            className="btn-quiet group mt-1 flex w-full flex-col items-center justify-center gap-1 py-2 opacity-60 hover:opacity-100 transition-opacity"
             onClick={() => setIsExpanded(false)}
             type="button"
           >
-            <ChevronDown className="size-4 rotate-180 text-[var(--sky-400)]" />
+            <ChevronDown className={cn("size-4 text-[var(--sky-400)] transition-transform", isExpanded && "rotate-180")} />
             <span className="text-xs font-bold text-[var(--sky-600)]">Masquer</span>
           </button>
         </div>

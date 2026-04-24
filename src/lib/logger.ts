@@ -1,0 +1,27 @@
+import "server-only";
+
+function serialize(data?: object): string {
+  if (!data) return "";
+  try {
+    return " " + JSON.stringify(data);
+  } catch {
+    return "";
+  }
+}
+
+export function logInfo(event: string, data?: object): void {
+  console.log(JSON.stringify({ ts: new Date().toISOString(), level: "info", event, ...data }));
+}
+
+export function logWarn(event: string, data?: object): void {
+  console.warn(JSON.stringify({ ts: new Date().toISOString(), level: "warn", event, ...data }));
+}
+
+export function logError(event: string, error: unknown, data?: object): void {
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack : undefined;
+  console.error(
+    JSON.stringify({ ts: new Date().toISOString(), level: "error", event, message, stack, ...data }) +
+      serialize(data),
+  );
+}

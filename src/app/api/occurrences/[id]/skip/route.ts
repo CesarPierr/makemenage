@@ -1,6 +1,8 @@
+import { NextResponse } from "next/server";
+
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { normalizeNextPath, redirectTo } from "@/lib/request";
+import { isDataRequest, normalizeNextPath, redirectTo } from "@/lib/request";
 import { skipOccurrence } from "@/lib/scheduling/service";
 import { occurrenceActionSchema } from "@/lib/validation";
 
@@ -9,6 +11,7 @@ type Params = {
 };
 
 export async function POST(request: Request, { params }: Params) {
+  const dataRequest = isDataRequest(request);
   const user = await requireUser();
   const { id } = await params;
   const occurrence = await db.taskOccurrence.findUnique({
@@ -16,6 +19,9 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!occurrence) {
+    if (dataRequest) {
+      return NextResponse.json({ error: "Occurrence introuvable." }, { status: 404 });
+    }
     return redirectTo(request, "/app");
   }
 
@@ -27,6 +33,9 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!membership) {
+    if (dataRequest) {
+      return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
+    }
     return redirectTo(request, "/app");
   }
 
@@ -44,5 +53,11 @@ export async function POST(request: Request, { params }: Params) {
     notes: parsed.success ? parsed.data.notes : undefined,
   });
 
-  return redirectTo(request, nextPath ?? `/app?household=${occurrence.householdId}`);
+  const destination = nextPath ?? `/app?household=${occurrence.householdId}`;
+
+  if (dataRequest) {
+    return NextResponse.json({ ok: true, redirectTo: destination });
+  }
+
+  return redirectTo(request, destination);
 }

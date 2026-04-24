@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!membership || !canManageHousehold(membership.role)) {
-    return redirectTo(request, `/app/settings?household=${id}&panel=planning`);
+    return redirectTo(request, `/app/settings/planning?household=${id}`);
   }
 
   const formData = await request.formData();
@@ -39,5 +39,5 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   const result = forceOverwriteManual ? "done_overwrite" : "done";
-  return redirectTo(request, `/app/settings?household=${id}&panel=planning&rebalance=${result}`);
+  return redirectTo(request, `/app/settings/planning?household=${id}&rebalance=${result}`);
 }

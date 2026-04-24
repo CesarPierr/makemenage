@@ -25,6 +25,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@prisma/client": "^6.19.0",
+    "@types/web-push": "^3.6.4",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -39,6 +40,7 @@
     "react-hook-form": "^7.73.1",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.5.0",
+    "web-push": "^3.6.7",
     "zod": "^4.3.6"
   },
   "devDependencies": {

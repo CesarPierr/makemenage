@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
 const authMocks = vi.hoisted(() => ({
   requireUser: vi.fn(),
 }));
@@ -84,7 +86,7 @@ describe("absence routes", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "http://192.168.1.132/app/settings?household=house-1&panel=planning&absence=saved",
+      "http://192.168.1.132/app/settings/planning?household=house-1&absence=saved",
     );
     expect(dbMocks.memberAvailabilityCreate).toHaveBeenCalled();
     expect(schedulingMocks.syncHouseholdOccurrences).toHaveBeenCalledWith("house-1", {
@@ -104,7 +106,7 @@ describe("absence routes", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "http://192.168.1.132/app/settings?household=house-1&panel=planning&absence=invalid",
+      "http://192.168.1.132/app/settings/planning?household=house-1&absence=invalid",
     );
     expect(dbMocks.memberAvailabilityCreate).not.toHaveBeenCalled();
   });
@@ -132,7 +134,7 @@ describe("absence routes", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "http://192.168.1.132/app/settings?household=house-1&panel=planning&absence=removed",
+      "http://192.168.1.132/app/settings/planning?household=house-1&absence=removed",
     );
     expect(dbMocks.memberAvailabilityDelete).toHaveBeenCalledWith({
       where: { id: "absence-1" },

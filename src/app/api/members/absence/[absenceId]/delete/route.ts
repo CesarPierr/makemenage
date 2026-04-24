@@ -22,7 +22,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!absence || absence.type !== "date_range_absence") {
-    return redirectTo(request, "/app/settings?panel=planning&absence=invalid");
+    return redirectTo(request, "/app/settings/planning?absence=invalid");
   }
 
   const membership = await db.householdMember.findFirst({
@@ -33,7 +33,7 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   if (!membership || !canManageHousehold(membership.role)) {
-    return redirectTo(request, `/app/settings?household=${absence.member.householdId}&panel=planning&absence=forbidden`);
+    return redirectTo(request, `/app/settings/planning?household=${absence.member.householdId}&absence=forbidden`);
   }
 
   await db.memberAvailability.delete({
@@ -46,5 +46,5 @@ export async function POST(request: Request, { params }: Params) {
     forceOverwriteManual: true,
   });
 
-  return redirectTo(request, `/app/settings?household=${absence.member.householdId}&panel=planning&absence=removed`);
+  return redirectTo(request, `/app/settings/planning?household=${absence.member.householdId}&absence=removed`);
 }

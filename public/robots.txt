@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+
+Disallow: /api/
+Disallow: /app/
+Disallow: /join/
+
+Sitemap: https://makemenage.app/sitemap.xml

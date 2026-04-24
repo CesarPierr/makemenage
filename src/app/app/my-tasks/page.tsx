@@ -1,6 +1,7 @@
 import { startOfDay } from "date-fns";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { CollapsibleList } from "@/components/collapsible-list";
 import { OccurrenceCard } from "@/components/occurrence-card";
@@ -36,7 +37,18 @@ type MyTasksPageProps = {
 export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
   const user = await requireUser();
   const params = await searchParams;
-  const activeTab = params.tab ?? "daily";
+  const requestedTab: string = params.tab ?? "daily";
+  const householdSuffix = params.household ? `?household=${params.household}` : "";
+
+  // V3 IA: templates and wizard live in Réglages → Tâches now.
+  if (requestedTab === "templates") {
+    redirect(`/app/settings/tasks${householdSuffix}`);
+  }
+  if (requestedTab === "wizard") {
+    redirect(`/app/settings/tasks${householdSuffix}${householdSuffix ? "&" : "?"}tab=wizard`);
+  }
+
+  const activeTab: string = requestedTab;
   const context = await requireHouseholdContext(user.id, params.household);
   const manageable = canManageHousehold(context.membership.role);
 
@@ -108,12 +120,12 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
   return (
     <section className="space-y-6">
       <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
-        <p className="section-kicker">Tâches</p>
+        <p className="section-kicker">Planifier</p>
         <h2 className="display-title mt-2 text-4xl leading-tight">
-          {manageable ? "Gestion du foyer" : "Mes tâches du foyer"}
+          {manageable ? "Bibliothèque et suivi" : "Voir les tâches du foyer"}
         </h2>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--ink-700)]">
-          Une vue plus nette des priorités, des tâches à venir et des réglages utiles, sans mélanger l’action du jour et l’administration.
+          Aujourd&apos;hui reste la page d&apos;action. Ici, vous retrouvez les routines, les tâches à venir et les réglages liés au planning.
         </p>
 
         <div className="mt-6 summary-strip sm:grid-cols-2 xl:grid-cols-4">
@@ -180,7 +192,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
                       : "bg-white/80 border border-[var(--line)] text-[var(--ink-700)] hover:bg-white",
                   )}
                 >
-                  Récurrences
+                  Routines
                   <span
                     className={cn(
                       "rounded-full px-2 py-0.5 text-[0.6rem] font-bold",
@@ -201,7 +213,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
                       : "bg-white/80 border border-[var(--line)] text-[var(--ink-700)] hover:bg-white",
                   )}
                 >
-                  Nouveau
+                  Ajouter
                 </Link>
               </>
             ) : null}
@@ -213,10 +225,10 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <section className="app-surface deferred-section rounded-[2rem] p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="section-kicker">Priorités</p>
-                <h3 className="display-title mt-2 text-3xl">À faire aujourd&apos;hui</h3>
-              </div>
+                <div>
+                  <p className="section-kicker">Priorités</p>
+                  <h3 className="display-title mt-2 text-3xl">À faire maintenant</h3>
+                </div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="accent-pill">
                   <span className="accent-pill-dot" style={{ backgroundColor: "var(--coral-500)" }} />
@@ -268,7 +280,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="section-kicker">Prochainement</p>
-                  <h3 className="display-title mt-2 text-3xl">Tâches à venir</h3>
+                  <h3 className="display-title mt-2 text-3xl">Ensuite</h3>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="accent-pill">
@@ -318,7 +330,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="section-kicker">Récemment</p>
-                  <h3 className="display-title mt-2 text-2xl">Actions clôturées</h3>
+                  <h3 className="display-title mt-2 text-2xl">Terminé récemment</h3>
                 </div>
                 <span className="accent-pill">
                   <span className="accent-pill-dot" style={{ backgroundColor: "var(--leaf-500)" }} />
@@ -341,10 +353,10 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
         <section className="app-surface deferred-section rounded-[2rem] p-5 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="section-kicker">Récurrences</p>
-              <h3 className="display-title mt-2 text-3xl">Gérer le catalogue</h3>
+              <p className="section-kicker">Routines</p>
+              <h3 className="display-title mt-2 text-3xl">Bibliothèque de tâches</h3>
               <p className="mt-2 text-sm leading-6 text-[var(--ink-700)]">
-                Les réglages centraux des tâches restent ici, séparés des tâches du jour pour garder la navigation simple.
+                Toutes les routines du foyer restent ici, à part du quotidien, pour garder l&apos;action simple.
               </p>
             </div>
             <span className="accent-pill">

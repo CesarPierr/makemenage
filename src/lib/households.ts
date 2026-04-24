@@ -1,8 +1,6 @@
 import {
-  addMonths,
-  endOfMonth,
+  addDays,
   endOfWeek,
-  startOfMonth,
   startOfToday,
   startOfWeek,
   subDays,
@@ -11,6 +9,7 @@ import { redirect } from "next/navigation";
 
 import { shouldSyncHouseholdContext, resetHouseholdContextSyncState } from "@/lib/context-sync";
 import { db } from "@/lib/db";
+import { logWarn } from "@/lib/logger";
 import { syncHouseholdOccurrences } from "@/lib/scheduling/service";
 
 type HouseholdContextOptions = {
@@ -56,7 +55,11 @@ export async function getCurrentHouseholdContext(
       await syncHouseholdOccurrences(membership.householdId);
     } catch (error) {
       resetHouseholdContextSyncState(membership.householdId);
-      throw error;
+      logWarn("household.context_sync_failed", {
+        householdId: membership.householdId,
+        userId,
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -65,8 +68,11 @@ export async function getCurrentHouseholdContext(
   const currentWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
   const monthBaseDate = options?.monthDate ?? today;
   const monthSpan = options?.monthSpan ?? 1;
-  const monthStart = startOfMonth(monthBaseDate);
-  const monthEnd = endOfMonth(addMonths(monthBaseDate, monthSpan - 1));
+  
+  // For a sliding month view, we start from the requested date or today (whichever is later)
+  // so that past days are hidden as requested.
+  const monthStart = monthBaseDate < today ? today : monthBaseDate;
+  const monthEnd = addDays(monthStart, 30 * monthSpan);
 
   const [tasks, occurrences, actionLogs] = await Promise.all([
     db.taskTemplate.findMany({

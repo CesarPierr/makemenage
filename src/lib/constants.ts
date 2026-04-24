@@ -41,10 +41,8 @@ export const taskPalette = [
 ];
 
 export const mobileSections = [
-  { href: "/app", label: "Accueil" },
-  { href: "/app/my-tasks", label: "Tâches" },
-  { href: "/app/calendar", label: "Agenda" },
-  { href: "/app/history", label: "Journal" },
+  { href: "/app", label: "Aujourd'hui" },
+  { href: "/app/planifier", label: "Planifier" },
   { href: "/app/settings", label: "Réglages" },
 ];
 

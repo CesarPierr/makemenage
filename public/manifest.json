@@ -1,0 +1,38 @@
+{
+  "name": "MakeMenage",
+  "short_name": "MakeMenage",
+  "description": "Répartition équitable des tâches ménagères pour foyer, couple ou colocation.",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#F9F7F4",
+  "theme_color": "#D8643D",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "lifestyle"],
+  "lang": "fr",
+  "dir": "ltr",
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Mes tâches du jour",
+      "short_name": "Tâches",
+      "description": "Voir les tâches à faire aujourd'hui",
+      "url": "/app/my-tasks?tab=daily",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Calendrier",
+      "short_name": "Agenda",
+      "description": "Vue calendrier du foyer",
+      "url": "/app/calendar",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    }
+  ]
+}

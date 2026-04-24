@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { CalendarClock, Check, ChevronLeft, ChevronRight, Plus, TimerReset } from "lucide-react";
 
+import { useFormAction } from "@/lib/use-form-action";
 import { roomSuggestions, taskPalette } from "@/lib/constants";
+import { isoDateKey } from "@/lib/time";
 import { cn, formatMinutes } from "@/lib/utils";
 
 type TaskCreationWizardProps = {
@@ -23,6 +25,7 @@ type DraftTask = {
   interval: string;
   assignmentMode: string;
   eligibleMemberIds: string[];
+  isCollective: boolean;
 };
 
 const recurrenceOptions = [
@@ -50,11 +53,12 @@ function buildInitialDraft(memberIds: string[]): DraftTask {
     category: "",
     room: "",
     color: taskPalette[0],
-    startsOn: new Date().toISOString().split("T")[0],
+    startsOn: isoDateKey(new Date()),
     recurrenceType: "weekly",
     interval: "1",
     assignmentMode: "strict_alternation",
     eligibleMemberIds: memberIds,
+    isCollective: false,
   };
 }
 
@@ -63,6 +67,13 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
   const [step, setStep] = useState(1);
   const [isStep3Armed, setIsStep3Armed] = useState(false);
   const [draft, setDraft] = useState<DraftTask>(() => buildInitialDraft(members.map((member) => member.id)));
+  const { submit, isSubmitting } = useFormAction({
+    action: "/api/tasks",
+    successMessage: "Tâche créée.",
+    errorMessage: "Impossible de créer la tâche.",
+    refreshOnSuccess: false,
+    onSuccess: () => resetWizard(),
+  });
 
   const isSingleTask = draft.kind === "single";
   const everyXMode = draft.recurrenceType === "every_x_days" || draft.recurrenceType === "every_x_weeks";
@@ -192,10 +203,13 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
             action="/api/tasks"
             className="mt-6 compact-form-grid"
             method="post"
-            onSubmit={(event) => {
-              if (step < 3 || !draft.title.trim() || draft.eligibleMemberIds.length === 0) {
-                event.preventDefault();
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (step < 3 || !draft.title.trim() || draft.eligibleMemberIds.length === 0 || isSubmitting) {
+                return;
               }
+              const formData = new FormData(event.currentTarget);
+              await submit(formData);
             }}
           >
             <input name="householdId" type="hidden" value={householdId} />
@@ -204,6 +218,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
             <input name="category" type="hidden" value={draft.category} />
             <input name="room" type="hidden" value={draft.room} />
             <input name="color" type="hidden" value={draft.color} />
+            <input name="isCollective" type="hidden" value={draft.isCollective ? "on" : ""} />
             <input name="startsOn" type="hidden" value={draft.startsOn} />
             <input name="endsOn" type="hidden" value={isSingleTask ? draft.startsOn : ""} />
             <input name="singleRun" type="hidden" value={isSingleTask ? "on" : ""} />
@@ -371,6 +386,15 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                     value={draft.category}
                   />
                 </label>
+                <label className="field-label cursor-pointer flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={draft.isCollective}
+                    onChange={(event) => updateDraft("isCollective", event.target.checked)}
+                    className="size-5 accent-[var(--sky-500)]"
+                  />
+                  <span>Tâche collective (se fait à plusieurs)</span>
+                </label>
                 <div className="field-label">
                   <span>Couleur</span>
                   <div className="flex flex-wrap items-center gap-3">
@@ -519,7 +543,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                   </div>
                 ) : (
                   <div className="field-label">
-                    <span>Attribution</span>
+                    <span>Qui s&apos;en occupe</span>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {assignmentOptions.map((option) => {
                         const active = draft.assignmentMode === option.value;
@@ -561,7 +585,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
               </p>
               <button
                 className="btn-quiet inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold"
-                disabled={step === 1}
+                disabled={step === 1 || isSubmitting}
                 onClick={() => {
                   setIsStep3Armed(false);
                   setStep((current) => Math.max(1, current - 1));
@@ -575,7 +599,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
               {step < 3 ? (
                 <button
                   className="btn-primary inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold"
-                  disabled={step === 1 && !draft.title.trim()}
+                  disabled={(step === 1 && !draft.title.trim()) || isSubmitting}
                   onClick={() => {
                     setIsStep3Armed(false);
                     setStep((current) => Math.min(3, current + 1));
@@ -588,7 +612,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
               ) : (
                 <button
                   className="btn-primary inline-flex items-center justify-center px-5 py-3 text-sm font-semibold disabled:opacity-50"
-                  disabled={!isStep3Armed || !draft.title.trim() || draft.eligibleMemberIds.length === 0}
+                  disabled={!isStep3Armed || !draft.title.trim() || draft.eligibleMemberIds.length === 0 || isSubmitting}
                   type="submit"
                 >
                   {isSingleTask ? "Créer la tâche simple" : "Créer la tâche"}

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
 const authMocks = vi.hoisted(() => ({
   requireUser: vi.fn(),
 }));
@@ -63,7 +65,7 @@ describe("recalculate route", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "http://192.168.1.132/app/settings?household=house-1&panel=planning&rebalance=done",
+      "http://192.168.1.132/app/settings/planning?household=house-1&rebalance=done",
     );
     expect(schedulingMocks.syncHouseholdOccurrences).toHaveBeenCalledWith("house-1", {
       forceOverwriteManual: false,

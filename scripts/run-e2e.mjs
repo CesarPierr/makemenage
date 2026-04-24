@@ -9,6 +9,7 @@ const baseEnv = {
   APP_BASE_URL: `http://localhost:${appPort}`,
   AUTH_SECRET: "e2e-secret-change-me",
   PORT: appPort,
+  RATE_LIMIT_DISABLED: "1",
 };
 
 function run(command, args, options = {}) {
