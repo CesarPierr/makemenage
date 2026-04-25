@@ -6,6 +6,7 @@ import { HomeHeader } from "@/components/home-header";
 import { RecentActivityFeed } from "@/components/recent-activity-feed";
 import { StatsDrawer } from "@/components/stats-drawer";
 import { TaskWorkspaceClient } from "@/components/task-workspace-client";
+import { UxEventTracker } from "@/components/ux-event-tracker";
 import { WeekKanban } from "@/components/week-kanban";
 import { buildLoadMetrics, buildRollingCompletionMetrics, calculateStreak } from "@/lib/analytics";
 import { requireUser } from "@/lib/auth";
@@ -17,7 +18,7 @@ const OnboardingWizard = dynamic(
 );
 
 type DashboardPageProps = {
-  searchParams: Promise<{ household?: string; onboarding?: string; joined?: string; join?: string }>;
+  searchParams: Promise<{ household?: string; onboarding?: string; joined?: string; join?: string; start?: string }>;
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
@@ -142,6 +143,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <div className="space-y-4">
+      <UxEventTracker
+        event="home.rendered"
+        props={{ todayCount, overdueCount, weekTotal, taskCount: context.tasks.length }}
+      />
       {dashboardMessage ? (
         <div className="app-surface rounded-[1.7rem] border border-[rgba(56,115,93,0.12)] px-4 py-3 text-sm leading-6 text-[var(--leaf-600)]">
           {dashboardMessage}
@@ -187,28 +192,33 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           displayName: member.displayName,
         }))}
         occurrences={context.occurrences}
+        autoStartSession={params.start === "session"}
       />
 
-      <details className="app-surface group rounded-[2rem] p-5 sm:p-6 [&[open]>summary>span.chev]:rotate-180">
-        <summary className="flex cursor-pointer items-center justify-between gap-3 list-none">
-          <div>
-            <p className="section-kicker">Vue d&apos;ensemble</p>
-            <h3 className="display-title mt-1 text-xl">Ma semaine</h3>
+      <aside aria-label="Vue d'ensemble de la semaine">
+        <details className="app-surface group rounded-[2rem] p-5 sm:p-6 [&[open]>summary>span.chev]:rotate-180">
+          <summary className="flex cursor-pointer items-center justify-between gap-3 list-none">
+            <div>
+              <p className="section-kicker">Vue d&apos;ensemble</p>
+              <h3 className="display-title mt-1 text-xl">Ma semaine</h3>
+            </div>
+            <span className="chev rounded-full border border-[var(--line)] bg-white/70 p-1.5 text-[var(--ink-500)] transition-transform">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+            </span>
+          </summary>
+          <div className="mt-4">
+            <WeekKanban occurrences={context.weekOccurrences} currentMemberId={context.currentMember?.id} />
           </div>
-          <span className="chev rounded-full border border-[var(--line)] bg-white/70 p-1.5 text-[var(--ink-500)] transition-transform">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
-          </span>
-        </summary>
-        <div className="mt-4">
-          <WeekKanban occurrences={context.weekOccurrences} currentMemberId={context.currentMember?.id} />
-        </div>
-      </details>
+        </details>
+      </aside>
 
-      <RecentActivityFeed
-        logs={context.actionLogs}
-        householdId={context.household.id}
-        currentMemberId={context.currentMember?.id}
-      />
+      <aside aria-label="Activité récente">
+        <RecentActivityFeed
+          logs={context.actionLogs}
+          householdId={context.household.id}
+          currentMemberId={context.currentMember?.id}
+        />
+      </aside>
     </div>
   );
 }

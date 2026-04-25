@@ -358,15 +358,15 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             <a
               className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold"
-              href={`/app/my-tasks?household=${householdId}&tab=daily`}
+              href={`/app?household=${householdId}&start=session`}
             >
-              Voir mes tâches <ArrowRight className="size-4" />
+              Lancer ma première session <ArrowRight className="size-4" />
             </a>
             <a
               className="btn-secondary inline-flex items-center justify-center px-6 py-3.5 text-sm font-semibold"
               href={`/app?household=${householdId}`}
             >
-              Tableau de bord
+              Aller au tableau de bord
             </a>
           </div>
         </div>

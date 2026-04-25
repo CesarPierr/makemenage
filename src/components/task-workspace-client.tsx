@@ -2,7 +2,7 @@
 
 import { addDays, isSameDay, startOfDay } from "date-fns";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, Search } from "lucide-react";
 
 import { CollapsibleList } from "@/components/collapsible-list";
@@ -51,6 +51,7 @@ type TaskWorkspaceClientProps = {
   manageable: boolean;
   members: { id: string; displayName: string }[];
   occurrences: WorkspaceOccurrence[];
+  autoStartSession?: boolean;
 };
 
 function getSessionStorageKey(householdId: string, currentMemberId?: string | null) {
@@ -105,6 +106,7 @@ export function TaskWorkspaceClient({
   manageable,
   members,
   occurrences,
+  autoStartSession,
 }: TaskWorkspaceClientProps) {
   const router = useRouter();
   const { success, error: showError } = useToast();
@@ -248,6 +250,22 @@ export function TaskWorkspaceClient({
     window.addEventListener("storage", syncSession);
     return () => window.removeEventListener("storage", syncSession);
   }, [sessionStorageKey]);
+
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (!autoStartSession || autoStartedRef.current || activeRunningSession || !busiestNowRoom) {
+      return;
+    }
+    autoStartedRef.current = true;
+    startRoomSession(busiestNowRoom.room, busiestNowRoom.occurrences, Date.now());
+    // Strip the ?start param from the URL so reload doesn't re-trigger
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("start");
+      window.history.replaceState(null, "", url.toString());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStartSession, activeRunningSession, busiestNowRoom]);
 
   function startRoomSession(room: string, roomOccurrences: WorkspaceOccurrence[], startedAt: number) {
     setRunningSession({
@@ -629,11 +647,19 @@ export function TaskWorkspaceClient({
             ))
           ) : (
             <div className="rounded-[1.6rem] border border-[var(--line)] bg-white/75 p-6 text-center">
-              <p className="text-2xl mb-2">✅</p>
-              <p className="font-semibold text-[var(--ink-950)]">Tout est à jour !</p>
+              <p className="text-3xl" aria-hidden="true">🎉</p>
+              <p className="mt-2 font-semibold text-[var(--ink-950)]">Tout est à jour pour aujourd&apos;hui !</p>
               <p className="mt-1 text-sm text-[var(--ink-700)]">
-                Rien d&apos;urgent pour le moment. Regardez ce qui arrive dans les prochains jours.
+                Rien d&apos;urgent. Consultez la liste « Ce qui arrive » plus bas, ou profitez d&apos;une pause.
               </p>
+              {nextOccurrences.length > 0 ? (
+                <a
+                  className="btn-secondary mt-4 inline-flex items-center justify-center px-4 py-2 text-xs font-semibold"
+                  href={`/app/planifier?household=${householdId}`}
+                >
+                  Voir le planning
+                </a>
+              ) : null}
             </div>
           )}
         </div>

@@ -180,11 +180,12 @@ export function BottomSheet({ isOpen, onClose, title, children, maxHeight = 85 }
             <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-2">
               <h3 className="text-lg font-bold text-[var(--ink-950)]">{title}</h3>
               <button
-                className="flex size-8 items-center justify-center rounded-full bg-black/[0.06] text-[var(--ink-700)] transition-colors hover:bg-black/10 active:scale-90"
+                aria-label="Fermer"
+                className="flex size-11 items-center justify-center rounded-full bg-black/[0.06] text-[var(--ink-700)] transition-colors hover:bg-black/10 active:scale-90"
                 onClick={onClose}
                 type="button"
               >
-                <X className="size-4" />
+                <X className="size-5" />
               </button>
             </div>
           ) : null}

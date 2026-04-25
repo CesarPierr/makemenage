@@ -9,6 +9,7 @@ const CSRF_EXEMPT_PREFIXES = [
   "/api/invitations/redeem",
   "/api/invitations/",   // accept invitation via native form on /join/[token]
   "/api/households",      // household create/leave via native form
+  "/api/metrics",         // UX telemetry beacon (sendBeacon can't set custom headers)
 ];
 
 async function deriveCsrfToken(sessionToken: string): Promise<string> {
@@ -76,6 +77,7 @@ export async function middleware(request: NextRequest) {
   const sessionToken = request.cookies.get(SESSION_COOKIE)?.value;
   const rateLimitDisabled = process.env.RATE_LIMIT_DISABLED === "1";
   const csrfDisabled = process.env.CSRF_DISABLED === "1";
+  const requestStart = Date.now();
 
   // Rate-limit API routes
   if (pathname.startsWith("/api/")) {
@@ -129,6 +131,26 @@ export async function middleware(request: NextRequest) {
       path: "/",
       maxAge: 60 * 60 * 24 * 21, // match session duration
     });
+  }
+
+  // Lightweight request log for API routes — captures method, path, and middleware time.
+  // Real per-route response time would require route-level instrumentation; this is enough
+  // to spot pathological middleware traffic and correlate with rate-limit events.
+  if (pathname.startsWith("/api/") && process.env.LOG_REQUESTS !== "0") {
+    const duration = Date.now() - requestStart;
+    response.headers.set("Server-Timing", `mw;dur=${duration}`);
+    if (duration > 50) {
+      console.log(
+        JSON.stringify({
+          ts: new Date().toISOString(),
+          level: "info",
+          event: "request.middleware",
+          method: request.method,
+          path: pathname,
+          duration_ms: duration,
+        }),
+      );
+    }
   }
 
   return response;
