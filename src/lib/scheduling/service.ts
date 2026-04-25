@@ -3,6 +3,7 @@ import type { AssignmentMode, RecurrenceType } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { generateOccurrences } from "@/lib/scheduling/generator";
+import { computeNextAnchorAfter } from "@/lib/scheduling/recurrence";
 import type {
   AbsenceInput,
   AssignmentRuleInput,
@@ -390,19 +391,58 @@ export async function completeOccurrence(params: {
     },
   });
 
-  if (params.shiftFutureOccurrences && existing.taskTemplate) {
-    await db.recurrenceRule.update({
+  // Decide whether future occurrences should be shifted:
+  // - explicitly requested by the user, OR
+  // - the completed occurrence was overdue / scheduled in the past (auto-realign so the
+  //   recurrence resumes "interval days from the actual completion date" — e.g. an
+  //   every-2-weeks task that was 5 days late should still come back in 2 weeks, not
+  //   in 9 days as if nothing had slipped).
+  const today = startOfDay(new Date());
+  const wasOverdue =
+    existing.status === "overdue" || startOfDay(existing.scheduledDate).getTime() < today.getTime();
+  const effectiveShift = Boolean(params.shiftFutureOccurrences) || wasOverdue;
+
+  if (effectiveShift && existing.taskTemplate) {
+    const ruleRecord = await db.recurrenceRule.findUnique({
       where: { id: existing.taskTemplate.recurrenceRuleId },
-      data: {
-        anchorDate: startOfDay(new Date()),
-      },
     });
-    
-    // Request a sync to recalculate occurrences with the new anchorDate
-    await syncHouseholdOccurrences(existing.householdId, {
-      taskId: existing.taskTemplate.id,
-      forceOverwriteManual: false,
-    });
+
+    if (ruleRecord) {
+      const nextAnchor = computeNextAnchorAfter(
+        {
+          type: ruleRecord.type,
+          interval: ruleRecord.interval,
+          weekdays: parseNumberArray(ruleRecord.weekdays),
+          dayOfMonth: ruleRecord.dayOfMonth,
+          anchorDate: ruleRecord.anchorDate,
+          dueOffsetDays: ruleRecord.dueOffsetDays,
+          config: ruleRecord.config,
+        },
+        today,
+      );
+
+      await db.recurrenceRule.update({
+        where: { id: existing.taskTemplate.recurrenceRuleId },
+        data: { anchorDate: nextAnchor },
+      });
+
+      // Cancel any planned/due/overdue occurrences in the future that no longer match the
+      // new anchor (i.e. the old, pre-shift schedule). The sync below will then create the
+      // correctly-spaced future occurrences.
+      await db.taskOccurrence.updateMany({
+        where: {
+          taskTemplateId: existing.taskTemplate.id,
+          status: { in: ["planned", "due", "overdue"] },
+          scheduledDate: { gt: existing.scheduledDate },
+        },
+        data: { status: "cancelled" },
+      });
+
+      await syncHouseholdOccurrences(existing.householdId, {
+        taskId: existing.taskTemplate.id,
+        forceOverwriteManual: false,
+      });
+    }
   }
 }
 

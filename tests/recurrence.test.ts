@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import {
   buildGenerationKey,
   computeDueDate,
+  computeNextAnchorAfter,
   describeRecurrence,
   generateRecurrenceDates,
 } from "@/lib/scheduling/recurrence";
@@ -73,5 +74,70 @@ describe("recurrence engine", () => {
         config: { singleRun: true },
       }),
     ).toBe("Une seule fois");
+  });
+
+  describe("computeNextAnchorAfter", () => {
+    it("every_x_days: returns from + interval", () => {
+      const next = computeNextAnchorAfter(
+        { type: "every_x_days", interval: 14, anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
+        new Date(2026, 3, 25),
+      );
+      expect(format(next, "yyyy-MM-dd")).toBe("2026-05-09");
+    });
+
+    it("daily: returns next day", () => {
+      const next = computeNextAnchorAfter(
+        { type: "daily", interval: 1, anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
+        new Date(2026, 3, 25),
+      );
+      expect(format(next, "yyyy-MM-dd")).toBe("2026-04-26");
+    });
+
+    it("every_x_weeks: returns from + interval*7 days", () => {
+      const next = computeNextAnchorAfter(
+        { type: "every_x_weeks", interval: 2, anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
+        new Date(2026, 3, 25),
+      );
+      expect(format(next, "yyyy-MM-dd")).toBe("2026-05-09");
+    });
+
+    it("weekly: returns next matching weekday after fromDate", () => {
+      // 2026-04-25 = Saturday (6). Weekdays = [1=Mon, 4=Thu] → next is Mon 2026-04-27
+      const next = computeNextAnchorAfter(
+        { type: "weekly", interval: 1, weekdays: [1, 4], anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
+        new Date(2026, 3, 25),
+      );
+      expect(format(next, "yyyy-MM-dd")).toBe("2026-04-27");
+    });
+
+    it("monthly_simple: jumps to next month when day-of-month already passed", () => {
+      // April 25 with dayOfMonth=15 → next is May 15 (April 15 already passed)
+      const next = computeNextAnchorAfter(
+        {
+          type: "monthly_simple",
+          interval: 1,
+          dayOfMonth: 15,
+          anchorDate: new Date(2026, 0, 1),
+          dueOffsetDays: 0,
+        },
+        new Date(2026, 3, 25),
+      );
+      expect(format(next, "yyyy-MM-dd")).toBe("2026-05-15");
+    });
+
+    it("monthly_simple: stays in current month when day-of-month is still ahead", () => {
+      // April 5 with dayOfMonth=15 → next is April 15 (still ahead)
+      const next = computeNextAnchorAfter(
+        {
+          type: "monthly_simple",
+          interval: 1,
+          dayOfMonth: 15,
+          anchorDate: new Date(2026, 0, 1),
+          dueOffsetDays: 0,
+        },
+        new Date(2026, 3, 5),
+      );
+      expect(format(next, "yyyy-MM-dd")).toBe("2026-04-15");
+    });
   });
 });

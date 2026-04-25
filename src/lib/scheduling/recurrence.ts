@@ -1,5 +1,6 @@
 import {
   addDays,
+  addMonths,
   addWeeks,
   endOfDay,
   format,
@@ -144,4 +145,52 @@ export function buildGenerationKey(taskTemplateId: string, date: Date) {
 
 export function isLogicalOccurrenceDate(rule: RecurrenceRuleInput, date: Date) {
   return generateRecurrenceDates(rule, date, date).some((candidate) => sameDay(candidate, date));
+}
+
+/**
+ * Compute the next valid recurrence date strictly after `fromDate`. Used when shifting
+ * future occurrences after an early or late completion: setting `anchorDate` to this
+ * value makes the generator emit the next occurrence at `fromDate + interval` instead
+ * of at `fromDate` itself (which would create a duplicate "today" occurrence).
+ */
+export function computeNextAnchorAfter(rule: RecurrenceRuleInput, fromDate: Date): Date {
+  const from = startOfDay(fromDate);
+  const interval = Math.max(1, rule.interval || 1);
+
+  if (rule.type === "daily") {
+    return addDays(from, 1);
+  }
+
+  if (rule.type === "every_x_days") {
+    return addDays(from, interval);
+  }
+
+  if (rule.type === "weekly") {
+    const weekdays = (rule.weekdays?.length ? rule.weekdays : [getDay(rule.anchorDate)])
+      .slice()
+      .sort((a, b) => a - b);
+    let cursor = addDays(from, 1);
+    // Bound: at most 14 days to find the next matching weekday
+    for (let i = 0; i < 14; i++) {
+      if (weekdays.includes(getDay(cursor))) {
+        return cursor;
+      }
+      cursor = addDays(cursor, 1);
+    }
+    return cursor;
+  }
+
+  if (rule.type === "every_x_weeks") {
+    return addDays(from, 7 * interval);
+  }
+
+  // monthly_simple
+  const dayOfMonth = rule.dayOfMonth ?? getDate(rule.anchorDate);
+  const candidateThisMonth = setDate(from, dayOfMonth);
+  if (isAfter(candidateThisMonth, from)) {
+    return startOfDay(candidateThisMonth);
+  }
+  const nextMonth = addMonths(from, interval);
+  const lastDayOfNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+  return startOfDay(setDate(nextMonth, Math.min(dayOfMonth, lastDayOfNextMonth)));
 }

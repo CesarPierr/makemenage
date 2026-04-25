@@ -129,7 +129,17 @@ export function TaskSettingsList({
         return (
         <article
           key={task.id}
-          className="soft-panel p-4"
+          className="soft-panel p-4 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral-500)]"
+          onClick={() => setEditingTask(task)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setEditingTask(task);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label={`Modifier la tâche « ${task.title} »`}
           style={{
             borderColor: hexToRgba(task.color ?? "#D8643D", 0.18),
             background: `linear-gradient(135deg, ${hexToRgba(task.color ?? "#D8643D", 0.1)}, rgba(255, 255, 255, 0.72))`,
@@ -161,23 +171,28 @@ export function TaskSettingsList({
                 <Link
                   className="mt-1 inline-flex items-center rounded-full border border-[rgba(216,100,61,0.16)] bg-[rgba(216,100,61,0.08)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--coral-600)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[rgba(216,100,61,0.14)] hover:shadow-[0_12px_24px_rgba(216,100,61,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(216,100,61,0.3)]"
                   href={`/app/my-tasks/overrides/${task.id}?household=${householdId}`}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {manualOverrideCount} occurrence{manualOverrideCount > 1 ? "s" : ""} future{manualOverrideCount > 1 ? "s" : ""} modifiée{manualOverrideCount > 1 ? "s" : ""}
                 </Link>
               ) : null}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
               <span className="stat-pill px-3 py-1 text-sm">{method.label}</span>
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setEditingTask(task);
                 }}
                 className="text-sm font-semibold text-[var(--coral-600)] hover:underline"
               >
                 Modifier
               </button>
-              <button 
-                onClick={() => setDeletingTask(task)}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeletingTask(task);
+                }}
                 className="text-sm font-semibold text-red-600 hover:underline"
               >
                 Supprimer

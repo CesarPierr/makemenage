@@ -3,12 +3,13 @@
 import { addDays, isSameDay, startOfDay } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Play, Search } from "lucide-react";
+import { Play, Rocket, Search } from "lucide-react";
 
 import { CollapsibleList } from "@/components/collapsible-list";
 import { FocusSession } from "@/components/focus-session";
 import { OccurrenceCard } from "@/components/occurrence-card";
 import { QuickAddBar } from "@/components/quick-add-bar";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { useToast } from "@/components/ui/toast";
 import { groupOccurrencesByRoom } from "@/lib/experience";
 import { formatMinutes } from "@/lib/utils";
@@ -43,6 +44,10 @@ type RunningSession = {
   status: "running" | "paused";
   startedAt: number | null;
   elapsedMs: number;
+  /** When set to "optimized", every completion forwards `shiftFutureOccurrences=on`
+   *  so the recurrence rule realigns from each completion date. */
+  mode?: "room" | "optimized";
+  horizonDays?: number;
 };
 
 type TaskWorkspaceClientProps = {
@@ -115,6 +120,7 @@ export function TaskWorkspaceClient({
   const [roomFilter, setRoomFilter] = useState("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [overdueOnly, setOverdueOnly] = useState(false);
+  const [showOptimizedPicker, setShowOptimizedPicker] = useState(false);
   const sessionStorageKey = getSessionStorageKey(householdId, currentMemberId);
   const [runningSession, setRunningSession] = useState<RunningSession | null>(() => {
     if (typeof window === "undefined") {
@@ -275,11 +281,42 @@ export function TaskWorkspaceClient({
       status: "running",
       startedAt,
       elapsedMs: 0,
+      mode: "room",
     });
     setClock(startedAt);
     setSessionDoneCount(0);
     setSessionSkippedCount(0);
     success(`Session lancée pour ${room}.`);
+  }
+
+  function startOptimizedSession(horizonDays: number, startedAt: number) {
+    const cutoff = addDays(today, horizonDays);
+    const occs = filteredActiveOccurrences
+      .filter((o) => startOfDay(o.scheduledDate).getTime() < cutoff.getTime())
+      .sort((a, b) => a.scheduledDate.getTime() - b.scheduledDate.getTime());
+
+    if (occs.length === 0) {
+      showError("Aucune tâche à planifier dans cette plage.");
+      return;
+    }
+
+    setRunningSession({
+      room: `Plan optimisé · ${horizonDays} jour${horizonDays > 1 ? "s" : ""}`,
+      occurrenceIds: occs.map((o) => o.id),
+      currentIndex: 0,
+      status: "running",
+      startedAt,
+      elapsedMs: 0,
+      mode: "optimized",
+      horizonDays,
+    });
+    setClock(startedAt);
+    setSessionDoneCount(0);
+    setSessionSkippedCount(0);
+    setShowOptimizedPicker(false);
+    success(
+      `Mode optimisé · ${occs.length} tâche${occs.length > 1 ? "s" : ""} sur ${horizonDays} jour${horizonDays > 1 ? "s" : ""}.`,
+    );
   }
 
   function stopSession() {
@@ -369,8 +406,10 @@ export function TaskWorkspaceClient({
     setIsSubmitting(true);
     try {
       const elapsedMinutes = Math.max(1, Math.round(effectiveElapsedMs / 60000));
+      const isOptimized = activeRunningSession.mode === "optimized";
       await postTimerAction(`/api/occurrences/${currentRunningOccurrence.id}/complete`, {
         actualMinutes: String(elapsedMinutes),
+        ...(isOptimized ? { shiftFutureOccurrences: "on" } : {}),
       });
 
       if (isLast) {
@@ -602,6 +641,17 @@ export function TaskWorkspaceClient({
                 Lancer une session
               </button>
             ) : null}
+            {!activeRunningSession && filteredActiveOccurrences.length > 0 ? (
+              <button
+                aria-label="Lancer une session optimisée"
+                className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
+                onClick={() => setShowOptimizedPicker(true)}
+                type="button"
+              >
+                <Rocket className="size-4" aria-hidden="true" />
+                Mode optimisé
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -774,6 +824,47 @@ export function TaskWorkspaceClient({
           )}
         </div>
       </section>
+
+      <BottomSheet
+        isOpen={showOptimizedPicker}
+        onClose={() => setShowOptimizedPicker(false)}
+        title="Mode optimisé"
+      >
+        <div className="space-y-3">
+          <p className="text-sm leading-6 text-[var(--ink-700)]">
+            Regroupez les tâches d&apos;aujourd&apos;hui et des prochains jours en une seule session.
+            À chaque tâche terminée, le calendrier des occurrences suivantes est recalculé à partir de
+            la date de réalisation.
+          </p>
+          {[1, 2, 3].map((horizon) => {
+            const cutoff = addDays(today, horizon);
+            const count = filteredActiveOccurrences.filter(
+              (o) => startOfDay(o.scheduledDate).getTime() < cutoff.getTime(),
+            ).length;
+            const label =
+              horizon === 1 ? "Aujourd'hui" : horizon === 2 ? "Aujourd'hui + demain" : "Aujourd'hui + 2 jours";
+            return (
+              <button
+                key={horizon}
+                className="flex w-full items-center justify-between rounded-2xl border border-[var(--line)] bg-white/70 px-4 py-3 text-left transition-all hover:bg-black/[0.04] active:scale-[0.98] disabled:opacity-40"
+                disabled={count === 0}
+                onClick={(event) => startOptimizedSession(horizon, getEventTimeMs(event.timeStamp))}
+                type="button"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-[var(--ink-950)]">{label}</p>
+                  <p className="mt-0.5 text-xs text-[var(--ink-500)]">
+                    {horizon} jour{horizon > 1 ? "s" : ""} de planning
+                  </p>
+                </div>
+                <span className="stat-pill px-3 py-1 text-xs font-semibold">
+                  {count} tâche{count > 1 ? "s" : ""}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
     </div>
   );
 }
