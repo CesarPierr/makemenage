@@ -3,6 +3,7 @@ import { IntegrationSettingsPanel } from "@/components/integration-settings-pane
 import { requireUser } from "@/lib/auth";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 import { getOpenClawIntegrationSettings } from "@/lib/integrations/openclaw";
+import { generateIcalToken } from "@/lib/ical-token";
 import { redirect } from "next/navigation";
 
 type IntegrationsPageProps = {
@@ -19,6 +20,14 @@ export default async function IntegrationsSettingsPage({ searchParams }: Integra
 
   const openClawSettings = await getOpenClawIntegrationSettings(context.household.id);
   const appBaseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
+
+  const householdIcalToken = generateIcalToken(context.household.id);
+  const householdFeedUrl = `${appBaseUrl}/api/calendar/feed.ics?token=${householdIcalToken}`;
+  const memberFeedUrls = context.household.members.map((member) => ({
+    id: member.id,
+    displayName: member.displayName,
+    url: `${appBaseUrl}/api/calendar/member/${member.id}/feed.ics?token=${generateIcalToken(context.household.id, member.id)}`,
+  }));
 
   const feedbackMessage =
     params.integration === "saved"
@@ -52,6 +61,25 @@ export default async function IntegrationsSettingsPage({ searchParams }: Integra
           {feedbackMessage.text}
         </div>
       ) : null}
+
+      <article className="soft-panel p-5 space-y-4">
+        <div>
+          <p className="section-kicker">Calendrier</p>
+          <h4 className="display-title mt-2 text-2xl">Abonnement iCal</h4>
+          <p className="mt-2 text-sm text-[var(--ink-700)] leading-6">
+            Copiez ces liens dans Google Calendar, Apple Calendrier ou tout autre client compatible. Aucune connexion requise — le lien suffit.
+          </p>
+        </div>
+        <div className="space-y-3">
+          <CopyValueButton label={`Foyer — ${context.household.name}`} value={householdFeedUrl} />
+          {memberFeedUrls.map((member) => (
+            <CopyValueButton key={member.id} label={`Membre — ${member.displayName}`} value={member.url} />
+          ))}
+        </div>
+        <p className="text-xs text-[var(--ink-500)]">
+          Ces liens donnent accès en lecture aux tâches et absences. Ne les partagez pas publiquement.
+        </p>
+      </article>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_0.95fr]">
         <IntegrationSettingsPanel

@@ -194,11 +194,7 @@ export function OccurrenceCard({
   }
 
   // Build card style based on status
-  const cardBg = archived
-    ? occurrence.status === "completed"
-      ? { borderColor: meta.border, background: `linear-gradient(135deg, ${meta.surface}, rgba(255,255,255,0.98))` }
-      : { borderColor: meta.border, background: `linear-gradient(135deg, ${meta.surface}, rgba(255,255,255,0.98))` }
-    : { borderColor: meta.border, background: `linear-gradient(135deg, ${meta.surface}, rgba(255,255,255,0.99))` };
+  const cardBg = { borderColor: meta.border, background: `linear-gradient(135deg, ${meta.surface}, var(--card-end))` };
 
   return (
     <>

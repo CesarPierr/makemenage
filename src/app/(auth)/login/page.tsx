@@ -9,6 +9,7 @@ type LoginPageProps = {
     error?: string;
     email?: string;
     next?: string;
+    reset?: string;
   }>;
 };
 
@@ -19,22 +20,27 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const next = params.next ?? "";
 
   const feedbackMessage =
-    params.registered === "1"
+    params.reset === "1"
       ? {
           tone: "success" as const,
-          text: "Compte créé. Connectez-vous pour accéder à votre foyer.",
+          text: "Mot de passe mis à jour. Connectez-vous avec votre nouveau mot de passe.",
         }
-      : params.existing === "1"
+      : params.registered === "1"
         ? {
-            tone: "neutral" as const,
-            text: "Un compte existe déjà avec cet email. Connectez-vous directement.",
+            tone: "success" as const,
+            text: "Compte créé. Connectez-vous pour accéder à votre foyer.",
           }
-        : params.error === "invalid_credentials"
+        : params.existing === "1"
           ? {
-              tone: "error" as const,
-              text: "Email ou mot de passe incorrect. Vérifiez vos identifiants puis réessayez.",
+              tone: "neutral" as const,
+              text: "Un compte existe déjà avec cet email. Connectez-vous directement.",
             }
-          : null;
+          : params.error === "invalid_credentials"
+            ? {
+                tone: "error" as const,
+                text: "Email ou mot de passe incorrect. Vérifiez vos identifiants puis réessayez.",
+              }
+            : null;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-6">
@@ -92,7 +98,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Se connecter
           </button>
         </form>
-        <p className="mt-5 text-sm text-[var(--ink-700)]">
+        <p className="mt-4 text-sm text-[var(--ink-700)]">
+          <Link className="font-semibold text-[var(--coral-600)]" href="/forgot-password">
+            Mot de passe oublié ?
+          </Link>
+        </p>
+        <p className="mt-3 text-sm text-[var(--ink-700)]">
           Pas encore de compte ?{" "}
           <Link
             className="font-semibold text-[var(--coral-600)]"

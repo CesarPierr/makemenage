@@ -20,96 +20,14 @@
   --shadow: 0 20px 60px rgba(70, 48, 20, 0.12);
   --shadow-soft: 0 12px 28px rgba(70, 48, 20, 0.08);
   --shadow-strong: 0 22px 54px rgba(70, 48, 20, 0.16);
+  --ink-400: #b4bcc8;
+  --card-end: rgba(255, 255, 255, 0.99);
   --ring-soft: 0 0 0 4px rgba(56, 115, 93, 0.16);
   --motion-fast: 140ms;
   --motion-base: 180ms;
   --motion-slow: 260ms;
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-snappy: cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* ── Dark mode ── */
-[data-theme="dark"] {
-  --sand-50: #1a1b1f;
-  --sand-100: #22242a;
-  --sand-200: #2c2e36;
-  --sand-300: #363840;
-  --ink-950: #edeef0;
-  --ink-700: #a8b0bc;
-  --ink-500: #6b7280;
-  --ink-400: #4b5563;
-  --leaf-500: #4a9678;
-  --leaf-600: #5eb892;
-  --coral-500: #e07a55;
-  --coral-600: #d8643d;
-  --sky-500: #3d84a0;
-  --sky-600: #4fa0bf;
-  --card: rgba(30, 32, 38, 0.88);
-  --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.14);
-  --shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  --shadow-soft: 0 12px 28px rgba(0, 0, 0, 0.3);
-  --shadow-strong: 0 22px 54px rgba(0, 0, 0, 0.5);
-}
-
-[data-theme="dark"] body {
-  background:
-    radial-gradient(circle at top left, rgba(224, 122, 85, 0.12), transparent 32%),
-    radial-gradient(circle at top right, rgba(34, 36, 42, 0.95), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(74, 150, 120, 0.08), transparent 24%),
-    var(--sand-50);
-  color: var(--ink-950);
-}
-
-[data-theme="dark"] body::before {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 26%),
-    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.03), transparent 18%);
-}
-
-[data-theme="dark"] .app-surface {
-  background: rgba(30, 32, 38, 0.92);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-@media (max-width: 768px) {
-  [data-theme="dark"] .app-surface {
-    background: rgba(28, 30, 36, 0.96);
-  }
-}
-
-[data-theme="dark"] .field {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: var(--ink-950);
-}
-
-[data-theme="dark"] .field:hover {
-  background: rgba(255, 255, 255, 0.09);
-}
-
-[data-theme="dark"] .field:focus {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(224, 122, 85, 0.5);
-}
-
-[data-theme="dark"] .soft-panel {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-[data-theme="dark"] .metric-card {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.07);
-}
-
-[data-theme="dark"] .btn-secondary {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-[data-theme="dark"] .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.14);
 }
 
 @theme inline {
@@ -756,13 +674,15 @@ button:not(:disabled),
   --ink-950: #edeef2;
   --ink-700: #9aa3b2;
   --ink-500: #626b7a;
+  --ink-400: #4b5563;
   --leaf-500: #4d9e7e;
-  --leaf-600: #3d8268;
+  --leaf-600: #6ab89a;
   --coral-500: #e8704f;
   --coral-600: #cc5636;
   --sky-500: #4090af;
-  --sky-600: #3276931;
+  --sky-600: #327693;
   --card: rgba(38, 40, 48, 0.94);
+  --card-end: rgba(30, 32, 38, 0.98);
   --line: rgba(255, 255, 255, 0.07);
   --line-strong: rgba(255, 255, 255, 0.12);
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
@@ -777,6 +697,12 @@ button:not(:disabled),
     radial-gradient(circle at bottom right, rgba(77, 158, 126, 0.10), transparent 24%),
     #1a1b1e;
   color: var(--ink-950);
+}
+
+[data-theme="dark"] body::before {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 26%),
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.02), transparent 18%);
 }
 
 [data-theme="dark"] .app-surface {
@@ -839,6 +765,25 @@ button:not(:disabled),
   border-color: var(--line);
 }
 
+/* Tailwind bg-white/* utilities → dark-mode equivalents */
+[data-theme="dark"] .bg-white { background-color: rgb(38 40 48) !important; }
+[data-theme="dark"] .bg-white\/30 { background-color: rgb(38 40 48 / 0.30) !important; }
+[data-theme="dark"] .bg-white\/50 { background-color: rgb(38 40 48 / 0.50) !important; }
+[data-theme="dark"] .bg-white\/60 { background-color: rgb(38 40 48 / 0.60) !important; }
+[data-theme="dark"] .bg-white\/70 { background-color: rgb(38 40 48 / 0.70) !important; }
+[data-theme="dark"] .bg-white\/75 { background-color: rgb(38 40 48 / 0.75) !important; }
+[data-theme="dark"] .bg-white\/80 { background-color: rgb(38 40 48 / 0.80) !important; }
+[data-theme="dark"] .bg-white\/88 { background-color: rgb(38 40 48 / 0.88) !important; }
+
+/* Text on white surfaces → legible in dark */
+[data-theme="dark"] .text-\[var\(--ink-950\)\] { color: var(--ink-950); }
+
+/* Active pill (white bg + dark text) stays readable */
+[data-theme="dark"] .rounded-full.bg-white {
+  background-color: rgb(50 53 63) !important;
+  color: var(--ink-950);
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --sand-50: #1a1b1e;
@@ -848,13 +793,15 @@ button:not(:disabled),
     --ink-950: #edeef2;
     --ink-700: #9aa3b2;
     --ink-500: #626b7a;
+    --ink-400: #4b5563;
     --leaf-500: #4d9e7e;
-    --leaf-600: #3d8268;
+    --leaf-600: #6ab89a;
     --coral-500: #e8704f;
     --coral-600: #cc5636;
     --sky-500: #4090af;
     --sky-600: #327693;
     --card: rgba(38, 40, 48, 0.94);
+    --card-end: rgba(30, 32, 38, 0.98);
     --line: rgba(255, 255, 255, 0.07);
     --line-strong: rgba(255, 255, 255, 0.12);
     --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
