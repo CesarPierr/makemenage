@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart2 } from "lucide-react";
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
+import { ArrowRight, BarChart2, CheckCircle2, Pencil, RotateCcw, SkipForward } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 
 type MemberStat = {
@@ -24,13 +27,32 @@ type RollingPeriod = {
   }>;
 };
 
+type ActivityEntry = {
+  id: string;
+  actionType: string;
+  createdAt: Date | string;
+  actorName: string;
+  taskTitle: string;
+};
+
 type StatsDrawerProps = {
   streak: number;
   memberStats: MemberStat[];
   rollingMetrics: RollingPeriod[];
+  recentActivity?: ActivityEntry[];
+  householdId?: string;
 };
 
-export function StatsDrawer({ streak, memberStats, rollingMetrics }: StatsDrawerProps) {
+function getActivityMeta(actionType: string) {
+  if (actionType === "completed") return { icon: CheckCircle2, verb: "a validé", accent: "var(--leaf-600)" };
+  if (actionType === "skipped") return { icon: SkipForward, verb: "a passé", accent: "var(--ink-500)" };
+  if (actionType === "rescheduled") return { icon: RotateCcw, verb: "a reporté", accent: "var(--sky-600)" };
+  if (actionType === "edited") return { icon: Pencil, verb: "a modifié", accent: "var(--coral-600)" };
+  if (actionType === "reassigned") return { icon: ArrowRight, verb: "a réattribué", accent: "var(--coral-600)" };
+  return { icon: ArrowRight, verb: "a mis à jour", accent: "var(--ink-500)" };
+}
+
+export function StatsDrawer({ streak, memberStats, rollingMetrics, recentActivity = [], householdId }: StatsDrawerProps) {
   const [open, setOpen] = useState(false);
 
   const totalByPeriod = rollingMetrics.map((p) => ({
@@ -84,6 +106,47 @@ export function StatsDrawer({ streak, memberStats, rollingMetrics }: StatsDrawer
               ))}
             </div>
           </div>
+
+          {recentActivity.length > 0 && (
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-500)]">
+                  Dernières activités
+                </p>
+                {householdId ? (
+                  <Link
+                    href={`/app/settings/activity?household=${householdId}`}
+                    className="text-[0.65rem] font-semibold text-[var(--coral-600)] hover:underline"
+                  >
+                    Tout voir →
+                  </Link>
+                ) : null}
+              </div>
+              <ul className="space-y-1.5" aria-label="Activité récente">
+                {recentActivity.slice(0, 5).map((entry) => {
+                  const { icon: Icon, verb, accent } = getActivityMeta(entry.actionType);
+                  return (
+                    <li key={entry.id} className="flex items-center gap-2.5 rounded-xl px-2 py-1.5">
+                      <span
+                        className="flex size-6 shrink-0 items-center justify-center rounded-full"
+                        style={{ backgroundColor: `${accent}18`, color: accent }}
+                      >
+                        <Icon className="size-3" aria-hidden="true" />
+                      </span>
+                      <p className="min-w-0 flex-1 text-xs leading-4">
+                        <strong className="font-semibold text-[var(--ink-950)]">{entry.actorName}</strong>{" "}
+                        {verb}{" "}
+                        <span className="font-semibold text-[var(--ink-950)]">{entry.taskTitle}</span>{" "}
+                        <span className="text-[var(--ink-500)]">
+                          {formatDistanceToNow(new Date(entry.createdAt), { locale: fr, addSuffix: true })}
+                        </span>
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {memberStats.length > 0 && (
             <div>

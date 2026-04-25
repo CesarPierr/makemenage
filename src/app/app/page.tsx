@@ -163,6 +163,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             streak={streak}
             memberStats={loadData.byMember}
             rollingMetrics={rollingData}
+            householdId={context.household.id}
+            recentActivity={context.actionLogs
+              .filter((log) => log.actionType !== "created")
+              .slice(0, 5)
+              .map((log) => ({
+                id: log.id,
+                actionType: log.actionType,
+                createdAt: log.createdAt,
+                actorName: log.actorMember?.displayName ?? "Le système",
+                taskTitle: log.occurrence.taskTemplate.title,
+              }))}
           />
         </div>
       </div>

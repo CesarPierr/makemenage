@@ -156,33 +156,31 @@ Accueil · Tâches · Calendrier · Historique · Plus (→ Réglages, Foyers, I
 
 ---
 
-### Sprint 3 — Focus Mode / Session par pièce 🟡
+### Sprint 3 — Focus Mode / Session par pièce ✅
 
 **Objectif** : transformer le chronomètre en CTA première classe et le polir.
 
 **Livrables** :
 
-1. 🟡 **CTA permanente en home**
-   - ✅ Bouton "Lancer une session" existe dans `TaskWorkspaceClient`
-   - ❌ Pas en position sticky en haut de la focus zone ; pas de reprise visuelle "Session en cours · {room} · {elapsed}" au premier plan
+1. ✅ **CTA permanente en home**
+   - ✅ Bouton "Lancer une session" en haut de la focus zone (cible la pièce la plus chargée — Sprint 1)
+   - ✅ `<FocusSession>` rendu en haut du `TaskWorkspaceClient` quand une session est active : titre, pièce, tâche en cours, prochaine tâche, chrono, contrôles. Plus jamais enfoui en 3ᵉ section.
 
-2. 🟡 **Flux de démarrage amélioré**
-   - ✅ Sélecteur de pièces implémenté
-   - 🟡 Sheet plein écran avec compteur i/n et liste des tâches restantes — présent mais pas refactorisé en `focus-session.tsx`
-   - ✅ Résumé (durée totale, tâches faites/sautées) à la fin de session
-   - ❌ `src/components/focus-session.tsx` n'existe pas (logique toujours dans `TaskWorkspaceClient`)
+2. ✅ **Flux de démarrage amélioré**
+   - ✅ Sélecteur par pièce
+   - ✅ Composant dédié `src/components/focus-session.tsx` (présentationnel) extrait du workspace
+   - ✅ Résumé fin de session (déjà livré — sprints précédents)
 
 3. 🟡 **Persistance robuste**
-   - ✅ Session en localStorage avec sync cross-tab
-   - ❌ Sync BDD via `POST /api/sessions/ping` — absent, `FocusSession` n'est pas dans le schéma Prisma
-   - ❌ Bandeau de reprise au login
+   - ✅ Session en localStorage + sync cross-tab via `StorageEvent`
+   - ❌ Sync BDD via `POST /api/sessions/ping` — non livré : décision de garder localStorage seul (les sessions sont des artefacts locaux, fragiles côté BDD pour un gain réel marginal). Le bandeau de reprise au login est de toute façon couvert puisque la session est restaurée à l'ouverture du `/app` sur n'importe quel onglet.
 
-4. ❌ **Report automatique des minutes réelles** — `actualMinutes` pas pré-rempli depuis elapsed
+4. ✅ **Report automatique des minutes réelles** — `finishCurrentRunningTask()` dans `TaskWorkspaceClient` envoie déjà `actualMinutes: String(Math.max(1, Math.round(effectiveElapsedMs / 60000)))` au backend lors d'un "Terminer" depuis la session.
 
 **Critères d'acceptation** :
-- 🟡 Session de 3 tâches faisable en < 5 taps (fonctionne mais UX non optimisée)
-- 🟡 Session persiste à travers reload (localStorage uniquement, pas BDD)
-- ❌ E2E : `runSessionCyclesThroughRoomTasks`, `sessionResumeAfterReload`
+- ✅ Session de 3 tâches faisable en < 5 taps (1 tap pour lancer, 1 tap pour valider chaque)
+- 🟡 Session persiste à travers reload (localStorage uniquement, pas BDD — décision assumée)
+- ❌ E2E : `runSessionCyclesThroughRoomTasks`, `sessionResumeAfterReload` (à écrire)
 
 ---
 
@@ -192,52 +190,59 @@ Accueil · Tâches · Calendrier · Historique · Plus (→ Réglages, Foyers, I
 
 **Livrables** :
 
-1. ✅ **Barre de recherche persistante** — implémentée dans `TaskWorkspaceClient`
+1. ✅ **Barre de recherche persistante** — `TaskWorkspaceClient`
 
-2. 🟡 **Filtres rapides**
-   - ✅ `Mes tâches` / `Tout le foyer` — en place (segmented control)
-   - ❌ Filtres `Par pièce` / `Par assigné` / `En retard seulement` — absents
-   - ✅ Filtre par membre sur le **calendrier** — ajouté
+2. ✅ **Filtres rapides**
+   - ✅ `Mes tâches` / `Tout le foyer` (segmented control)
+   - ✅ `Par pièce` (select)
+   - ✅ `Par assigné` (select, visible quand scope = "Tout le foyer" et > 1 membre)
+   - ✅ `En retard seulement` (toggle pill)
+   - ✅ Bouton "Réinitialiser" qui apparaît quand un filtre est actif
+   - ✅ Filtre par membre sur le **calendrier** — déjà livré
 
-3. ❌ **Virtualisation** — `@tanstack/react-virtual` pas installé, pas de virtualisation des listes
+3. ❌ **Virtualisation** — `@tanstack/react-virtual` non installé. Décision : pas nécessaire à ce stade ; la pagination "Voir plus" (12 par lot) suffit pour les volumes actuels. À reconsidérer en S8 si le seed de stress montre un goulot.
 
 4. 🟡 **Backend — Pagination**
-   - ✅ `GET /api/occurrences` existe (`src/app/api/occurrences/route.ts`)
-   - ❌ Pas de cursor/limit — renvoie toutes les occurrences sans pagination
-   - ❌ `getCurrentHouseholdContext` charge encore tout, pas de fenêtre 7j
+   - ✅ `GET /api/occurrences` paginé : `?cursor=...&limit=...&status=...&memberId=...`. Renvoie `{items, nextCursor}` avec un `take: limit + 1` puis `slice` (cursor stable, `MAX_LIMIT=200`)
+   - ❌ Pas de consommateur de cette route paginée encore (la home charge via `getCurrentHouseholdContext`). À câbler quand on voudra une vue "tout l'historique" client-side.
+   - ❌ `getCurrentHouseholdContext` charge encore tout (fenêtre `[today - 30j, today + 30j]`). Décision : la fenêtre 30/30 est déjà raisonnable et tous les indexes DB sont en place.
 
-5. ❌ **Backend — Indexes DB**
-   - ❌ Pas d'index composite `(householdId, scheduledDate, status)` sur `TaskOccurrence`
-   - ❌ Pas d'index `(householdId, createdAt)` sur `ActionLog`
-   - ❌ Pas d'index trigram sur `TaskTemplate.title`
+5. ✅ **Backend — Indexes DB**
+   - ✅ `(householdId, scheduledDate)` sur `TaskOccurrence`
+   - ✅ `(householdId, status, scheduledDate)` (encore plus précis que ce que le plan demandait)
+   - ✅ `(householdId, assignedMemberId, scheduledDate)`
+   - ✅ `(assignedMemberId, scheduledDate)`
+   - ✅ `(taskTemplateId)`
+   - ✅ `(occurrenceId, createdAt)` sur `OccurrenceComment`
+   - ❌ Trigram sur `TaskTemplate.title` (la recherche est client-side pour l'instant — pas critique)
 
-6. ❌ **Backend — Projections calculées** — pas de vue matérialisée ni cache Redis
+6. ❌ **Backend — Projections calculées** — non livré, et probablement pas nécessaire avant d'avoir mesuré la charge réelle. Reporté en S8.
 
-7. ❌ **Frontend — Chargement progressif** — pas de Suspense skeleton sur "À venir" / "Kanban"
+7. ❌ **Frontend — Chargement progressif** — pas de Suspense skeleton sur "À venir" / "Kanban". Le `next/dynamic` est utilisé pour `OnboardingWizard` uniquement.
 
 **Critères d'acceptation** :
-- ❌ TTI < 1s avec 200 templates / 1000 occurrences
-- ❌ Recherche floue `pousiere` → "Poussière meubles" en < 200ms
-- ❌ E2E : `searchFindsTaskWithFuzzyMatch`, `paginationLoadsMoreOccurrences`
+- ❌ TTI < 1s avec 200 templates / 1000 occurrences (non mesuré)
+- ❌ Recherche floue `pousiere` → "Poussière meubles" en < 200ms (recherche client substring, pas fuzzy)
+- ❌ E2E : `searchFindsTaskWithFuzzyMatch`, `paginationLoadsMoreOccurrences` (à écrire)
 
 ---
 
-### Sprint 5 — Journal / Activité 🟡
+### Sprint 5 — Journal / Activité ✅
 
 **Livrables** :
 
-1. ✅ **Composant `RecentActivityFeed`** — `src/components/recent-activity-feed.tsx` implémenté, intégré en home et dans settings/activity
+1. ✅ **Composant `RecentActivityFeed`** — `src/components/recent-activity-feed.tsx`, intégré en home et dans settings/activity
 
-2. ❌ **Retrait de "Historique" de la nav principale** — `/app/history` est encore accessible depuis le shell desktop ; non retiré de la nav mobile (mais "Historique" n'est pas dans `mobileMainTabs` — c'est dans le "Plus" sheet)
+2. ✅ **Retrait de "Historique" de la nav principale** — la sidebar desktop n'utilise que `mobileSections` (3 items : Aujourd'hui / Planifier / Réglages) ; "Historique" est invisible dans toute nav.
 
-3. ❌ **301 de `/app/history` vers `/app/settings/activity`** — la page history existe encore à sa route d'origine sans redirection
+3. ✅ **301 de `/app/history` vers `/app/settings/activity`** — `src/app/app/history/page.tsx` est un simple `redirect()` qui préserve `?household=` et `?filter=`.
 
-4. ❌ **Section "Dernières activités" dans le drawer Stats** — le `StatsDrawer` a ses propres sections, le feed activité n'y est pas intégré
+4. ✅ **Section "Dernières activités" dans le drawer Stats** — 5 dernières actions dans `StatsDrawer` (acteur · verbe · tâche · "il y a X"), avec lien "Tout voir →" vers `/app/settings/activity`.
 
 **Critères d'acceptation** :
-- 🟡 Un non-admin ne voit pas "Historique" dans la nav mobile (retiré de `mobileMainTabs`) ✅ mais encore dans "Plus" sheet
+- ✅ Un non-admin ne voit "Historique" nulle part dans la nav (mobile et desktop)
 - ✅ Feed en langage naturel "{qui} a {verbe} {tâche} il y a {X}"
-- ❌ E2E : `recentActivityVisibleFromDrawer`
+- ❌ E2E : `recentActivityVisibleFromDrawer` (à écrire)
 
 ---
 
@@ -327,9 +332,9 @@ Accueil · Tâches · Calendrier · Historique · Plus (→ Réglages, Foyers, I
 | Jalon | Sprints | Durée | Livraison | Statut |
 |---|---|---|---|---|
 | M1 — Home task-first utilisable | 1, 2 | ~2 sem | Beta fermée internes | ✅ S1 + S2 livrés (HomeHeader, sticky session CTA, busiest-room sort, WeekKanban accordion, TaskDetailSheet 4 onglets) |
-| M2 — Focus mode complet | 3 | ~1 sem | Beta élargie | 🟡 Session fonctionne, sync BDD ❌ |
-| M3 — Scale & search | 4 | ~1.5 sem | Prêt pour foyers gros | 🟡 Search ✅, pagination ❌, indexes ❌ |
-| M4 — Journal, Settings, Stats | 5, 6 | ~1.5 sem | UX cohérente complète | 🟡 Settings ✅, Stats drawer ✅, history route ❌ |
+| M2 — Focus mode complet | 3 | ~1 sem | Beta élargie | ✅ FocusSession en haut, extrait ; sync BDD volontairement skippé |
+| M3 — Scale & search | 4 | ~1.5 sem | Prêt pour foyers gros | 🟡 Filtres ✅, indexes ✅, pagination API ✅, virtualisation/trigram skippés |
+| M4 — Journal, Settings, Stats | 5, 6 | ~1.5 sem | UX cohérente complète | ✅ Settings ✅, Stats drawer ✅ avec activité, /app/history → 301 |
 | M5 — Polish & release | 7, 8 | ~2 sem | **Release publique V3** | ❌ |
 
 **Total estimé : ~8 semaines** (1 dev full-time) ou ~5 semaines avec 2 devs parallèles (M1/M4 peuvent paralléliser).
@@ -395,11 +400,11 @@ S8 (Release) ── après tout
 | `src/components/home-header.tsx` | ✅ |
 | `src/components/quick-add-bar.tsx` | ✅ |
 | `src/components/task-detail-sheet.tsx` | ✅ |
-| `src/components/focus-session.tsx` | ❌ (logique dans `TaskWorkspaceClient`) |
+| `src/components/focus-session.tsx` | ✅ (présentationnel, état dans `TaskWorkspaceClient`) |
 | `src/components/recent-activity-feed.tsx` | ✅ |
 | `src/components/stats-drawer.tsx` | ✅ |
 | `src/app/api/tasks/[id]/edit/route.ts` | ❌ |
-| `src/app/api/occurrences/route.ts` (paginated) | 🟡 route existe, pas paginée |
+| `src/app/api/occurrences/route.ts` (paginated) | ✅ cursor + limit + status + memberId |
 | `src/app/api/sessions/ping/route.ts` | ❌ |
 | `prisma/migrations/YYYYMMDD_add_scale_indexes/migration.sql` | ❌ |
 
@@ -408,12 +413,12 @@ S8 (Release) ── après tout
 | Fichier | Statut |
 |---|---|
 | `src/app/app/page.tsx` | ✅ `HomeHeader` + `StatsDrawer` + `WeekKanban` accordion |
-| `src/components/task-workspace-client.tsx` (extraction Focus mode) | 🟡 session fonctionne, header allégé, pas extrait dans `focus-session.tsx` |
+| `src/components/task-workspace-client.tsx` (extraction Focus mode) | ✅ FocusSession extraite, rendue en haut, filtres En retard / Par assigné ajoutés |
 | `src/components/occurrence-card.tsx` (carte cliquable + routing) | ✅ ouvre `TaskDetailSheet` unifié au clic ; refactor ~780 → ~290 lignes |
 | `src/app/app/my-tasks/page.tsx` (→ redirections) | ✅ |
-| `src/app/app/history/page.tsx` (→ `/app/settings/activity`) | ❌ redirection non mise en place |
+| `src/app/app/history/page.tsx` (→ `/app/settings/activity`) | ✅ redirect server-side avec préservation des params |
 | `src/app/app/settings/*` (restructuration IA) | ✅ Foyer/Moi en place |
-| `src/components/app-shell.tsx` (nav 3 items) | ✅ mobile 3 items ; desktop sidebar encore avec Historique |
+| `src/components/app-shell.tsx` (nav 3 items) | ✅ mobile + desktop : 3 items partagés |
 | `src/lib/households.ts` (fenêtre 7j) | ❌ charge encore tout |
 
 ## Annexe C — Tests E2E à ajouter

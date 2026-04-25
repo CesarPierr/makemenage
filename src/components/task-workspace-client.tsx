@@ -1,12 +1,12 @@
 "use client";
 
-import { addDays, format, isSameDay, startOfDay } from "date-fns";
-import { fr } from "date-fns/locale";
+import { addDays, isSameDay, startOfDay } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Clock3, Pause, Play, Search, SkipForward, TimerReset } from "lucide-react";
+import { Play, Search } from "lucide-react";
 
 import { CollapsibleList } from "@/components/collapsible-list";
+import { FocusSession } from "@/components/focus-session";
 import { OccurrenceCard } from "@/components/occurrence-card";
 import { QuickAddBar } from "@/components/quick-add-bar";
 import { useToast } from "@/components/ui/toast";
@@ -52,19 +52,6 @@ type TaskWorkspaceClientProps = {
   members: { id: string; displayName: string }[];
   occurrences: WorkspaceOccurrence[];
 };
-
-function formatElapsed(ms: number) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
 
 function getSessionStorageKey(householdId: string, currentMemberId?: string | null) {
   return `makemenage:running-session:${householdId}:${currentMemberId ?? "shared"}`;
@@ -124,6 +111,8 @@ export function TaskWorkspaceClient({
   const [scope, setScope] = useState<"mine" | "household">(currentMemberId ? "mine" : "household");
   const [search, setSearch] = useState("");
   const [roomFilter, setRoomFilter] = useState("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const sessionStorageKey = getSessionStorageKey(householdId, currentMemberId);
   const [runningSession, setRunningSession] = useState<RunningSession | null>(() => {
     if (typeof window === "undefined") {
@@ -157,6 +146,8 @@ export function TaskWorkspaceClient({
   const filteredActiveOccurrences = baseOccurrences.filter((occurrence) => {
     if (!ACTIVE_STATUSES.has(occurrence.status)) return false;
     if (roomFilter !== "all" && (occurrence.taskTemplate.room?.trim() || "Tout l'appartement") !== roomFilter) return false;
+    if (assigneeFilter !== "all" && occurrence.assignedMemberId !== assigneeFilter) return false;
+    if (overdueOnly && occurrence.status !== "overdue") return false;
 
     const haystack = [
       occurrence.taskTemplate.title,
@@ -412,8 +403,34 @@ export function TaskWorkspaceClient({
     }
   }
 
+  const sessionNextOccurrence = activeRunningSession
+    ? (() => {
+        const nextIdx = activeRunningSession.currentIndex + 1;
+        return nextIdx < activeRunningSession.occurrenceIds.length
+          ? occurrenceById[activeRunningSession.occurrenceIds[nextIdx]] ?? null
+          : null;
+      })()
+    : null;
+
   return (
     <div className="space-y-4">
+      {activeRunningSession && currentRunningOccurrence ? (
+        <FocusSession
+          room={activeRunningSession.room}
+          status={activeRunningSession.status}
+          currentIndex={activeRunningSession.currentIndex}
+          totalCount={activeRunningSession.occurrenceIds.length}
+          currentOccurrence={currentRunningOccurrence}
+          nextOccurrence={sessionNextOccurrence}
+          elapsedMs={effectiveElapsedMs}
+          isSubmitting={isSubmitting}
+          onPauseOrResume={pauseOrResumeSession}
+          onFinishWithTimer={finishCurrentRunningTask}
+          onSkip={skipCurrentRunningTask}
+          onStop={stopSession}
+        />
+      ) : null}
+
       <section className="app-surface rounded-[2rem] p-4 sm:p-5">
         {manageable ? <QuickAddBar householdId={householdId} manageable={manageable} /> : null}
 
@@ -466,24 +483,80 @@ export function TaskWorkspaceClient({
             </div>
           </label>
 
-          <label className="field-label">
-            <span className="sr-only">Filtrer par pièce</span>
-            <select
-              className="field"
-              onChange={(event) => {
+          <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
+            <label className="field-label flex-1 min-w-[10rem]">
+              <span className="sr-only">Filtrer par pièce</span>
+              <select
+                className="field"
+                onChange={(event) => {
+                  setVisibleAllCount(12);
+                  setRoomFilter(event.currentTarget.value);
+                }}
+                value={roomFilter}
+              >
+                <option value="all">Toutes les pièces</option>
+                {rooms.map((room) => (
+                  <option key={room} value={room}>
+                    {room}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {scope === "household" && members.length > 1 ? (
+              <label className="field-label flex-1 min-w-[10rem]">
+                <span className="sr-only">Filtrer par personne</span>
+                <select
+                  className="field"
+                  onChange={(event) => {
+                    setVisibleAllCount(12);
+                    setAssigneeFilter(event.currentTarget.value);
+                  }}
+                  value={assigneeFilter}
+                >
+                  <option value="all">Toutes les personnes</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            aria-pressed={overdueOnly}
+            className={
+              overdueOnly
+                ? "inline-flex items-center gap-1.5 rounded-full border border-[rgba(127,29,29,0.22)] bg-[rgba(127,29,29,0.08)] px-3 py-1 text-xs font-bold text-[#7f1d1d]"
+                : "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-white/70 px-3 py-1 text-xs font-semibold text-[var(--ink-500)]"
+            }
+            onClick={() => {
+              setVisibleAllCount(12);
+              setOverdueOnly((current) => !current);
+            }}
+            type="button"
+          >
+            En retard seulement
+          </button>
+          {(overdueOnly || roomFilter !== "all" || assigneeFilter !== "all" || search) ? (
+            <button
+              className="text-xs font-semibold text-[var(--coral-600)] hover:underline"
+              onClick={() => {
+                setOverdueOnly(false);
+                setRoomFilter("all");
+                setAssigneeFilter("all");
+                setSearch("");
                 setVisibleAllCount(12);
-                setRoomFilter(event.currentTarget.value);
               }}
-              value={roomFilter}
+              type="button"
             >
-              <option value="all">Toutes les pièces</option>
-              {rooms.map((room) => (
-                <option key={room} value={room}>
-                  {room}
-                </option>
-              ))}
-            </select>
-          </label>
+              Réinitialiser
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -561,96 +634,6 @@ export function TaskWorkspaceClient({
               <p className="mt-1 text-sm text-[var(--ink-700)]">
                 Rien d&apos;urgent pour le moment. Regardez ce qui arrive dans les prochains jours.
               </p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="app-surface rounded-[2rem] p-5 sm:p-6">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="section-kicker">En cours</p>
-            <h3 className="display-title mt-2 text-2xl">Suivi en direct</h3>
-          </div>
-          <span className="accent-pill">
-            <span className="accent-pill-dot" style={{ backgroundColor: "var(--sky-500)" }} />
-            {activeRunningSession ? activeRunningSession.room : "Aucune session"}
-          </span>
-        </div>
-
-        <div className="mt-5">
-          {activeRunningSession && currentRunningOccurrence ? (
-            <div className="rounded-[1.6rem] border border-[var(--line)] bg-white/80 p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--ink-700)]">{activeRunningSession.room}</p>
-                  <h4 className="mt-1 text-2xl font-semibold text-[var(--ink-950)]">
-                    {currentRunningOccurrence.taskTemplate.title}
-                  </h4>
-                  <p className="mt-1 text-sm text-[var(--ink-700)]">
-                    Tâche {activeRunningSession.currentIndex + 1} / {activeRunningSession.occurrenceIds.length}
-                    {" "}· prévue pour {format(currentRunningOccurrence.scheduledDate, "d MMM", { locale: fr })}
-                  </p>
-                  {(() => {
-                    const nextIdx = activeRunningSession.currentIndex + 1;
-                    const nextOcc = nextIdx < activeRunningSession.occurrenceIds.length
-                      ? occurrenceById[activeRunningSession.occurrenceIds[nextIdx]]
-                      : null;
-                    return nextOcc ? (
-                      <p className="mt-1 text-xs text-[var(--ink-500)]">
-                        Ensuite : <span className="font-semibold text-[var(--ink-700)]">{nextOcc.taskTemplate.title}</span>
-                        {nextOcc.taskTemplate.estimatedMinutes ? ` · ${nextOcc.taskTemplate.estimatedMinutes} min` : ""}
-                      </p>
-                    ) : null;
-                  })()}
-                </div>
-
-                <div className="rounded-[1.4rem] border border-[var(--line)] bg-[rgba(47,109,136,0.08)] px-4 py-3 text-center">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">Temps réel</p>
-                  <p className="mt-1 text-3xl font-semibold text-[var(--ink-950)]">{formatElapsed(effectiveElapsedMs)}</p>
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
-                  onClick={(event) => pauseOrResumeSession(getEventTimeMs(event.timeStamp))}
-                  type="button"
-                >
-                  {activeRunningSession.status === "running" ? <Pause className="size-4" /> : <Play className="size-4" />}
-                  {activeRunningSession.status === "running" ? "Mettre en pause" : "Reprendre"}
-                </button>
-                <button
-                  className="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
-                  disabled={isSubmitting}
-                  onClick={finishCurrentRunningTask}
-                  type="button"
-                >
-                  <Clock3 className="size-4" />
-                  Terminer avec le temps réel
-                </button>
-                <button
-                  className="btn-quiet inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
-                  disabled={isSubmitting}
-                  onClick={skipCurrentRunningTask}
-                  type="button"
-                >
-                  <SkipForward className="size-4" />
-                  Passer la tâche
-                </button>
-                <button
-                  className="btn-quiet inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[var(--ink-500)]"
-                  onClick={stopSession}
-                  type="button"
-                >
-                  <TimerReset className="size-4" />
-                  Arrêter le suivi
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-[1.6rem] border border-[var(--line)] bg-white/75 p-5 text-sm text-[var(--ink-700)]">
-              Aucune tâche en cours. Lancez une pièce depuis la liste du moment pour suivre le temps réel pas à pas.
             </div>
           )}
         </div>
