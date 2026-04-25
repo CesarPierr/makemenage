@@ -1,9 +1,12 @@
 import dynamic from "next/dynamic";
+import { startOfDay } from "date-fns";
 
 import { ClientForm } from "@/components/client-form";
+import { HomeHeader } from "@/components/home-header";
 import { RecentActivityFeed } from "@/components/recent-activity-feed";
 import { StatsDrawer } from "@/components/stats-drawer";
 import { TaskWorkspaceClient } from "@/components/task-workspace-client";
+import { WeekKanban } from "@/components/week-kanban";
 import { buildLoadMetrics, buildRollingCompletionMetrics, calculateStreak } from "@/lib/analytics";
 import { requireUser } from "@/lib/auth";
 import { canManageHousehold, getCurrentHouseholdContext } from "@/lib/households";
@@ -125,6 +128,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const loadData = buildLoadMetrics(context.household.members, context.occurrences);
   const rollingData = buildRollingCompletionMetrics(context.household.members, context.occurrences);
 
+  const today = startOfDay(new Date());
+  const todayCount = context.occurrences.filter(
+    (o) =>
+      ["planned", "due", "rescheduled"].includes(o.status) &&
+      startOfDay(o.scheduledDate).getTime() === today.getTime(),
+  ).length;
+  const overdueCount = context.occurrences.filter((o) => o.status === "overdue").length;
+  const weekDone = context.weekOccurrences.filter((o) => o.status === "completed").length;
+  const weekTotal = context.weekOccurrences.filter((o) => o.status !== "cancelled").length;
+
+  const firstName = (context.currentMember?.displayName ?? user.displayName).split(" ")[0];
+
   return (
     <div className="space-y-4">
       {dashboardMessage ? (
@@ -133,12 +148,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
       ) : null}
 
-      <div className="flex justify-end">
-        <StatsDrawer
-          streak={streak}
-          memberStats={loadData.byMember}
-          rollingMetrics={rollingData}
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+        <div className="flex-1">
+          <HomeHeader
+            firstName={firstName}
+            todayCount={todayCount}
+            overdueCount={overdueCount}
+            weekDone={weekDone}
+            weekTotal={weekTotal}
+          />
+        </div>
+        <div className="flex justify-end sm:items-start">
+          <StatsDrawer
+            streak={streak}
+            memberStats={loadData.byMember}
+            rollingMetrics={rollingData}
+          />
+        </div>
       </div>
 
       <TaskWorkspaceClient
@@ -151,6 +177,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         }))}
         occurrences={context.occurrences}
       />
+
+      <details className="app-surface group rounded-[2rem] p-5 sm:p-6 [&[open]>summary>span.chev]:rotate-180">
+        <summary className="flex cursor-pointer items-center justify-between gap-3 list-none">
+          <div>
+            <p className="section-kicker">Vue d&apos;ensemble</p>
+            <h3 className="display-title mt-1 text-xl">Ma semaine</h3>
+          </div>
+          <span className="chev rounded-full border border-[var(--line)] bg-white/70 p-1.5 text-[var(--ink-500)] transition-transform">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+          </span>
+        </summary>
+        <div className="mt-4">
+          <WeekKanban occurrences={context.weekOccurrences} currentMemberId={context.currentMember?.id} />
+        </div>
+      </details>
 
       <RecentActivityFeed
         logs={context.actionLogs}

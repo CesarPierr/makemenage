@@ -2,7 +2,6 @@
 
 import { addDays, format, isSameDay, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Clock3, Pause, Play, Search, SkipForward, TimerReset } from "lucide-react";
@@ -11,7 +10,7 @@ import { CollapsibleList } from "@/components/collapsible-list";
 import { OccurrenceCard } from "@/components/occurrence-card";
 import { QuickAddBar } from "@/components/quick-add-bar";
 import { useToast } from "@/components/ui/toast";
-import { groupOccurrencesByRoom, sumOccurrenceMinutes } from "@/lib/experience";
+import { groupOccurrencesByRoom } from "@/lib/experience";
 import { formatMinutes } from "@/lib/utils";
 
 const ACTIVE_STATUSES = new Set(["planned", "due", "overdue", "rescheduled"]);
@@ -196,7 +195,15 @@ export function TaskWorkspaceClient({
 
   const nowGroups = groupOccurrencesByRoom(nowOccurrences);
   const nextGroups = groupOccurrencesByRoom(nextOccurrences);
-  const nowMinutes = sumOccurrenceMinutes(nowOccurrences);
+
+  // Sort focus zone: groups with overdue first, then by count desc, keeping "Tout l'appartement" handled by helper
+  const sortedNowGroups = [...nowGroups].sort((a, b) => {
+    const aOverdue = a.occurrences.filter((o) => o.status === "overdue").length;
+    const bOverdue = b.occurrences.filter((o) => o.status === "overdue").length;
+    if (aOverdue !== bOverdue) return bOverdue - aOverdue;
+    return b.occurrences.length - a.occurrences.length;
+  });
+  const busiestNowRoom = sortedNowGroups[0] ?? null;
 
   const occurrenceById = useMemo(
     () =>
@@ -407,34 +414,10 @@ export function TaskWorkspaceClient({
 
   return (
     <div className="space-y-4">
-      <section className="app-surface glow-card rounded-[2rem] p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="section-kicker">{format(new Date(), "EEEE d MMMM", { locale: fr })}</p>
-            <p className="mt-1.5 text-sm text-[var(--ink-700)]">
-              <span className="font-semibold text-[var(--coral-600)]">{nowOccurrences.length}</span>{" "}
-              à faire
-              {nowMinutes > 0 ? ` · ${formatMinutes(nowMinutes)}` : ""}
-              {nextOccurrences.length > 0 ? ` · ${nextOccurrences.length} à venir` : ""}
-              {activeRunningSession ? ` · Session : ${activeRunningSession.room}` : ""}
-            </p>
-          </div>
-          <Link
-            aria-label="Voir le planning"
-            className="btn-quiet shrink-0 rounded-xl px-3 py-2 text-xs font-semibold"
-            href={`/app/planifier?household=${householdId}`}
-          >
-            Planifier
-          </Link>
-        </div>
+      <section className="app-surface rounded-[2rem] p-4 sm:p-5">
+        {manageable ? <QuickAddBar householdId={householdId} manageable={manageable} /> : null}
 
-        {manageable ? (
-          <div className="mt-4">
-            <QuickAddBar householdId={householdId} manageable={manageable} />
-          </div>
-        ) : null}
-
-        <div className="mt-4 grid gap-3 lg:grid-cols-[auto_1fr_auto]">
+        <div className={`grid gap-3 lg:grid-cols-[auto_1fr_auto] ${manageable ? "mt-3" : ""}`}>
           {currentMemberId ? (
             <div
               className="flex rounded-full border border-[var(--line)] bg-[rgba(30,31,34,0.05)] p-0.5"
@@ -505,20 +488,35 @@ export function TaskWorkspaceClient({
       </section>
 
       <section aria-label="Tâches du jour" className="app-surface rounded-[2rem] p-5 sm:p-6">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="section-kicker">À faire maintenant</p>
-            <h3 className="display-title mt-2 text-3xl">Ce qu&apos;il reste</h3>
+            <h3 className="display-title mt-2 text-3xl">Aujourd&apos;hui</h3>
           </div>
-          <span aria-live="polite" className="accent-pill">
-            <span className="accent-pill-dot" style={{ backgroundColor: "var(--coral-500)" }} />
-            {nowOccurrences.length} tâche{nowOccurrences.length > 1 ? "s" : ""}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span aria-live="polite" className="accent-pill">
+              <span className="accent-pill-dot" style={{ backgroundColor: "var(--coral-500)" }} />
+              {nowOccurrences.length} tâche{nowOccurrences.length > 1 ? "s" : ""}
+            </span>
+            {!activeRunningSession && busiestNowRoom ? (
+              <button
+                aria-label={`Lancer une session pour ${busiestNowRoom.room}`}
+                className="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
+                onClick={(event) =>
+                  startRoomSession(busiestNowRoom.room, busiestNowRoom.occurrences, getEventTimeMs(event.timeStamp))
+                }
+                type="button"
+              >
+                <Play className="size-4" aria-hidden="true" />
+                Lancer une session
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-5 space-y-4">
-          {nowGroups.length ? (
-            nowGroups.map(({ room, occurrences: roomOccurrences, totalMinutes }) => (
+          {sortedNowGroups.length ? (
+            sortedNowGroups.map(({ room, occurrences: roomOccurrences, totalMinutes }) => (
               <div key={room} className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">

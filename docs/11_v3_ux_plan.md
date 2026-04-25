@@ -93,66 +93,66 @@ Accueil · Tâches · Calendrier · Historique · Plus (→ Réglages, Foyers, I
 
 ## 4. Sprints — Plan d'exécution détaillé
 
-### Sprint 1 — Accueil task-first 🟡
+### Sprint 1 — Accueil task-first ✅
 
 **Objectif** : refondre `/app` pour que 90% de la valeur soit au-dessus du fold sur mobile (375×812).
 
 **Livrables** :
 
-1. 🟡 **Header minimal** (3 lignes max)
-   - ❌ Ligne 1 : `Bonjour {prénom} · {jour}` — pas implémenté, `home-header.tsx` n'existe pas
-   - ❌ Ligne 2 : compteur `{X} à faire aujourd'hui` + `Y en retard` (liens vers les filtres) — absent
-   - ❌ Ligne 3 : barre de progression hebdo `N/M validées` — absente
-   - ❌ Strip "5 metric cards" déplacée dans un drawer — les metric cards sont encore en home
+1. ✅ **Header minimal** (`src/components/home-header.tsx`)
+   - ✅ Ligne 1 : `Bonjour {prénom} · {jour}`
+   - ✅ Ligne 2 : compteurs `{X} à faire aujourd'hui` + `Y en retard` (pills)
+   - ✅ Ligne 3 : barre de progression hebdo `N/M validées` avec pourcentage `aria-valuenow`
+   - ✅ Strip 5 metric cards déjà déplacée dans `StatsDrawer`
 
-2. 🟡 **Focus zone** (ce que l'utilisateur voit après le header)
-   - 🟡 Titre "Aujourd'hui" + bouton **"Lancer une session"** — le bouton existe dans `TaskWorkspaceClient` mais pas en CTA permanente en haut
-   - ✅ Liste groupée par pièce dans `TaskWorkspaceClient`
-   - ❌ Tri : pièce la plus chargée en premier, retard remonté — ordre non garanti
+2. ✅ **Focus zone**
+   - ✅ Titre "Aujourd'hui" + CTA **"Lancer une session"** dans l'en-tête de section, qui démarre la pièce la plus chargée
+   - ✅ Liste groupée par pièce
+   - ✅ Tri : pièces avec retard en premier, puis nombre de tâches décroissant (`sortedNowGroups`)
 
-3. ❌ **Second niveau** (sous le fold)
-   - ❌ Accordéon "À venir (7 jours)" — absent
-   - ❌ Accordéon "Kanban de la semaine" — `WeekKanban` existe mais n'est pas intégré dans home
+3. 🟡 **Second niveau**
+   - ✅ Accordéon "À venir (7 jours)" via `CollapsibleList` (déjà présent)
+   - ✅ Accordéon "Ma semaine" (`WeekKanban`) intégré dans `/app/page.tsx` via `<details>`
 
-4. ✅ **Quick-add barre flottante** — `src/components/quick-add-bar.tsx` implémenté, intégré dans `TaskWorkspaceClient`
+4. ✅ **Quick-add barre flottante** — `src/components/quick-add-bar.tsx`
 
-5. ❌ **Suppression des rolling metrics / strip métriques** — toujours présentes
+5. ✅ **Header `TaskWorkspaceClient` allégé** — date/count/lien "Planifier" supprimés (redondant avec `HomeHeader`)
 
 **Critères d'acceptation** :
-- ❌ Sur iPhone 13, header + titre + 1ère tâche visibles sans scroll
-- ❌ Lighthouse Performance ≥ 90 sur `/app` avec 50 tâches
-- ❌ Tests E2E : `quickAddOccurrence`, `sessionCtaOpensChronometer`, `upcomingSectionCollapsed`
+- 🟡 Header + titre + 1ère tâche visibles sans scroll sur iPhone 13 (à vérifier en QA mobile)
+- ❌ Lighthouse Performance ≥ 90 sur `/app` avec 50 tâches (non mesuré)
+- ❌ Tests E2E : `quickAddOccurrence`, `sessionCtaOpensChronometer`, `upcomingSectionCollapsed` (à écrire)
 
-**Fichiers touchés** : `src/app/app/page.tsx`, `src/components/task-workspace-client.tsx`, ✅ `src/components/quick-add-bar.tsx`, ❌ `src/components/home-header.tsx`
+**Fichiers touchés** : ✅ `src/app/app/page.tsx`, ✅ `src/components/task-workspace-client.tsx`, ✅ `src/components/quick-add-bar.tsx`, ✅ `src/components/home-header.tsx`
 
 ---
 
-### Sprint 2 — Task Detail sheet unifié ❌
+### Sprint 2 — Task Detail sheet unifié ✅
 
 **Objectif** : un clic sur le corps d'une carte d'occurrence ouvre **une seule** surface qui couvre TOUTES les actions.
 
 **Livrables** :
 
-1. 🟡 **Carte cliquable entière**
-   - ✅ `OccurrenceCard` ouvre déjà un panneau détail au clic sur le corps
-   - ❌ Les actions sont réparties sur plusieurs bottom-sheets au lieu d'un `TaskDetailSheet` unifié
+1. ✅ **Carte cliquable entière**
+   - ✅ `OccurrenceCard` ouvre `TaskDetailSheet` unifié au clic (corps + bouton "...")
+   - ✅ Tous les bottom-sheets éphémères supprimés (showActions, showReschedule, showReassign, showDetailedComplete, showComments, showTemplateEdit, showTaskHistory) — un seul sheet à 4 onglets
 
-2. ❌ **Nouveau composant `TaskDetailSheet`** — `task-detail-sheet.tsx` n'existe pas
-   - ❌ Tab "Cette fois-ci" (override occurrence)
-   - ❌ Tab "Template" (admin only, édition template)
-   - ❌ Tab "Historique" (5 dernières runs)
-   - ✅ Tab "Commentaires" — existe dans l'OccurrenceCard actuelle
+2. ✅ **Nouveau composant `TaskDetailSheet`** — `src/components/task-detail-sheet.tsx`
+   - ✅ Tab "Cette fois-ci" : Terminer / Terminer avec détails / Faire plus tard / Changer la personne / Passer avec note (sous-modes inline avec retour)
+   - ✅ Tab "Modèle" (admin only) : `TemplateEditPanel` existant
+   - ✅ Tab "Historique" : `TaskHistoryPanel` existant
+   - ✅ Tab "Commentaires" : fetch + post déplacés dans le sheet
 
-3. ❌ **Endpoint unifié `/api/tasks/[id]/edit`** — n'existe pas ; les routes actuelles (`/api/occurrences/[id]/complete`, `/reschedule`, etc.) restent séparées
+3. 🟡 **Endpoint unifié `/api/tasks/[id]/edit`** — non créé ; les routes existantes restent (split est intentionnel : chaque action a sa permission/validation propre, et le sheet appelle déjà la bonne route. À reconsidérer plus tard si on factorise.)
 
-4. ✅ **Suppression du tab "templates"** — redirection 301 vers `/app/settings/tasks` en place
+4. ✅ **Suppression du tab "templates"** — redirection 301 vers `/app/settings/tasks`
 
 **Critères d'acceptation** :
-- ❌ 1 seul clic ouvre TOUT sans navigation
-- ❌ Actions occurrence vs template visuellement distinctes
-- ❌ E2E : `taskDetailSheetCoversAllActions`, `editTemplateFromOccurrenceSheet`, `seeLast5RunsOfTask`
+- ✅ 1 seul clic sur la carte ouvre TOUT sans navigation
+- ✅ Actions occurrence vs template visuellement distinctes (onglets séparés)
+- ❌ E2E : `taskDetailSheetCoversAllActions`, `editTemplateFromOccurrenceSheet`, `seeLast5RunsOfTask` (à écrire)
 
-**Fichiers touchés** : ❌ `src/components/task-detail-sheet.tsx`, ❌ `src/app/api/tasks/[id]/edit/route.ts`
+**Fichiers touchés** : ✅ `src/components/task-detail-sheet.tsx`, ✅ `src/components/occurrence-card.tsx` (refactor : ~780 → ~290 lignes), 🟡 `src/app/api/tasks/[id]/edit/route.ts` (non fait, justification ci-dessus)
 
 ---
 
@@ -326,7 +326,7 @@ Accueil · Tâches · Calendrier · Historique · Plus (→ Réglages, Foyers, I
 
 | Jalon | Sprints | Durée | Livraison | Statut |
 |---|---|---|---|---|
-| M1 — Home task-first utilisable | 1, 2 | ~2 sem | Beta fermée internes | 🟡 Quick-add ✅, header minimal ❌, TaskDetailSheet ❌ |
+| M1 — Home task-first utilisable | 1, 2 | ~2 sem | Beta fermée internes | ✅ S1 + S2 livrés (HomeHeader, sticky session CTA, busiest-room sort, WeekKanban accordion, TaskDetailSheet 4 onglets) |
 | M2 — Focus mode complet | 3 | ~1 sem | Beta élargie | 🟡 Session fonctionne, sync BDD ❌ |
 | M3 — Scale & search | 4 | ~1.5 sem | Prêt pour foyers gros | 🟡 Search ✅, pagination ❌, indexes ❌ |
 | M4 — Journal, Settings, Stats | 5, 6 | ~1.5 sem | UX cohérente complète | 🟡 Settings ✅, Stats drawer ✅, history route ❌ |
@@ -392,9 +392,9 @@ S8 (Release) ── après tout
 
 | Fichier | Statut |
 |---|---|
-| `src/components/home-header.tsx` | ❌ |
+| `src/components/home-header.tsx` | ✅ |
 | `src/components/quick-add-bar.tsx` | ✅ |
-| `src/components/task-detail-sheet.tsx` | ❌ |
+| `src/components/task-detail-sheet.tsx` | ✅ |
 | `src/components/focus-session.tsx` | ❌ (logique dans `TaskWorkspaceClient`) |
 | `src/components/recent-activity-feed.tsx` | ✅ |
 | `src/components/stats-drawer.tsx` | ✅ |
@@ -407,9 +407,9 @@ S8 (Release) ── après tout
 
 | Fichier | Statut |
 |---|---|
-| `src/app/app/page.tsx` | 🟡 `StatsDrawer` + `QuickAdd` ajoutés, header V3 ❌ |
-| `src/components/task-workspace-client.tsx` (extraction Focus mode) | 🟡 session fonctionne, pas extrait |
-| `src/components/occurrence-card.tsx` (carte cliquable + routing) | 🟡 cliquable ✅, `TaskDetailSheet` unifié ❌ |
+| `src/app/app/page.tsx` | ✅ `HomeHeader` + `StatsDrawer` + `WeekKanban` accordion |
+| `src/components/task-workspace-client.tsx` (extraction Focus mode) | 🟡 session fonctionne, header allégé, pas extrait dans `focus-session.tsx` |
+| `src/components/occurrence-card.tsx` (carte cliquable + routing) | ✅ ouvre `TaskDetailSheet` unifié au clic ; refactor ~780 → ~290 lignes |
 | `src/app/app/my-tasks/page.tsx` (→ redirections) | ✅ |
 | `src/app/app/history/page.tsx` (→ `/app/settings/activity`) | ❌ redirection non mise en place |
 | `src/app/app/settings/*` (restructuration IA) | ✅ Foyer/Moi en place |
