@@ -1,3 +1,4 @@
+import React from "react";
 import { addDays, format, startOfToday } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -10,10 +11,11 @@ import Link from "next/link";
 import { CalendarSidebar } from "@/components/calendar-sidebar";
 
 type CalendarPageProps = {
-  searchParams: Promise<{ 
+  searchParams: Promise<{
     household?: string;
     monthOffset?: string;
     dayOffset?: string;
+    member?: string;
   }>;
 };
 
@@ -32,6 +34,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   const params = await searchParams;
   const monthOffset = parseOffset(params.monthOffset, { min: -24, max: 24 });
   const dayOffset = parseOffset(params.dayOffset, { min: -30, max: 30 });
+  const memberFilter = params.member ?? null;
   const today = startOfToday();
   const currentMonth = addDays(today, monthOffset * 30);
   const currentDayBase = addDays(today, dayOffset);
@@ -43,12 +46,20 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
 
   const startDate = currentMonth < today ? today : currentMonth;
   const endDate = addDays(startDate, 30);
-  
+
   const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
   const householdFeedUrl = `${baseUrl}/api/calendar/feed.ics?household=${context.household.id}`;
   const personalFeedUrl = context.currentMember
     ? `${baseUrl}/api/calendar/member/${context.currentMember.id}/feed.ics?household=${context.household.id}`
     : null;
+
+  const members = context.household.members.map((m) => ({ id: m.id, displayName: m.displayName, color: m.color }));
+  const activeMember = memberFilter ? members.find((m) => m.id === memberFilter) ?? null : null;
+
+  const filteredOccurrences = activeMember
+    ? context.monthOccurrences.filter((o) => o.assignedMemberId === activeMember.id)
+    : context.monthOccurrences;
+
   const absences = context.household.members.flatMap((member) =>
     member.availabilities
       .filter((availability) => availability.type === "date_range_absence")
@@ -63,14 +74,17 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         },
       })),
   );
-  const overview = buildCalendarOverview(context.monthOccurrences, absences);
+  const overview = buildCalendarOverview(filteredOccurrences, absences);
 
-  const prevMonthHref = `/app/calendar?household=${context.household.id}&monthOffset=${monthOffset - 1}&dayOffset=0`;
-  const nextMonthHref = `/app/calendar?household=${context.household.id}&monthOffset=${monthOffset + 1}&dayOffset=0`;
+  const baseHref = (extra?: string) =>
+    `/app/calendar?household=${context.household.id}${memberFilter ? `&member=${memberFilter}` : ""}${extra ?? ""}`;
+
+  const prevMonthHref = baseHref(`&monthOffset=${monthOffset - 1}&dayOffset=0`);
+  const nextMonthHref = baseHref(`&monthOffset=${monthOffset + 1}&dayOffset=0`);
   const todayHref = `/app/calendar?household=${context.household.id}&monthOffset=0&dayOffset=0`;
-  
-  const prevDaysHref = `/app/calendar?household=${context.household.id}&monthOffset=${monthOffset}&dayOffset=${dayOffset - 4}`;
-  const nextDaysHref = `/app/calendar?household=${context.household.id}&monthOffset=${monthOffset}&dayOffset=${dayOffset + 4}`;
+
+  const prevDaysHref = baseHref(`&monthOffset=${monthOffset}&dayOffset=${dayOffset - 4}`);
+  const nextDaysHref = baseHref(`&monthOffset=${monthOffset}&dayOffset=${dayOffset + 4}`);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
@@ -163,7 +177,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
             ))}
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap items-center gap-2">
             <span className="accent-pill">
               <span className="accent-pill-dot" style={{ backgroundColor: "var(--coral-500)" }} />
               Tâche du planning
@@ -177,12 +191,36 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
               Absence
             </span>
           </div>
+
+          {members.length > 1 ? (
+            <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filtrer par membre">
+              <Link
+                href={`/app/calendar?household=${context.household.id}&monthOffset=${monthOffset}&dayOffset=${dayOffset}`}
+                className={`accent-pill transition-all ${!activeMember ? "ring-2 ring-[var(--sky-500)] ring-offset-1 font-semibold" : "opacity-60 hover:opacity-100"}`}
+                aria-current={!activeMember ? "true" : undefined}
+              >
+                Tous
+              </Link>
+              {members.map((m) => (
+                <Link
+                  key={m.id}
+                  href={`/app/calendar?household=${context.household.id}&monthOffset=${monthOffset}&dayOffset=${dayOffset}&member=${m.id}`}
+                  className={`accent-pill transition-all ${activeMember?.id === m.id ? "ring-2 ring-offset-1 font-semibold" : "opacity-60 hover:opacity-100"}`}
+                  style={activeMember?.id === m.id ? ({ "--tw-ring-color": m.color } as React.CSSProperties) : undefined}
+                  aria-current={activeMember?.id === m.id ? "true" : undefined}
+                >
+                  <span className="accent-pill-dot" style={{ backgroundColor: m.color }} />
+                  {m.displayName}
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="deferred-section animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <CalendarMonth 
-            month={currentMonth} 
-            occurrences={context.monthOccurrences}
+          <CalendarMonth
+            month={currentMonth}
+            occurrences={filteredOccurrences}
             absences={absences}
             mobileDayBase={currentDayBase}
           />
