@@ -8,5 +8,7 @@
 | [backup.md](backup.md) | Sauvegarde et restauration PostgreSQL |
 | [reverse-proxy-caddy.md](reverse-proxy-caddy.md) | Exemple Caddy |
 | [reverse-proxy-nginx.md](reverse-proxy-nginx.md) | Exemple Nginx |
+| [audit-2026-04.md](audit-2026-04.md) | Audit code & plan de simplification |
+| [audit-progress.md](audit-progress.md) | Journal de simplification |
 
 Pour les conventions de contribution et le brief destiné aux agents IA, voir [../AGENTS.md](../AGENTS.md).

@@ -43,7 +43,6 @@
     "deploy:install-local-cron": "bash scripts/server/install-local-cron.sh"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@prisma/client": "^6.19.0",
     "@types/nodemailer": "^8.0.0",
