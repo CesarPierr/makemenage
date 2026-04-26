@@ -584,7 +584,7 @@ export function TaskWorkspaceClient({
                 type="button"
               >
                 <div className={cn("size-2 rounded-full", scope === "mine" ? "bg-[var(--coral-500)]" : "bg-[var(--ink-300)]")} />
-                {scope === "mine" ? "Mes tâches" : "Tout le foyer"}
+                {scope === "mine" ? "Tout le foyer" : "Mes tâches"}
               </button>
             )}
 
@@ -594,7 +594,7 @@ export function TaskWorkspaceClient({
               type="button"
             >
               <div className={cn("size-2 rounded-full", filterType === "active" ? "bg-[var(--leaf-500)]" : "bg-[var(--ink-300)]")} />
-              {filterType === "active" ? "À faire" : "Historique"}
+              {filterType === "active" ? "Historique" : "À faire"}
             </button>
 
             <button
