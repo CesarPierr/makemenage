@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { dataErrorOrRedirect, withHousehold } from "@/lib/api";
+import { parseDateInput } from "@/lib/date-input";
 import { declareHoliday } from "@/lib/holidays";
 import { isDataRequest, redirectTo } from "@/lib/request";
-import { parseDateInput } from "@/lib/date-input";
 
 const schema = z.object({
   startDate: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
@@ -13,58 +12,43 @@ const schema = z.object({
   label: z.string().max(60).optional(),
 });
 
-type Params = {
-  params: Promise<{ id: string }>;
-};
+export const POST = withHousehold<{ id: string }>(
+  async ({ request, params, membership, formData }) => {
+    const householdId = params.id;
+    const fallback = `/app/settings/holidays?household=${householdId}`;
 
-export async function POST(request: Request, { params }: Params) {
-  const dataRequest = isDataRequest(request);
-  const user = await requireUser();
-  const { id: householdId } = await params;
+    const parsed = schema.safeParse({
+      startDate: formData.get("startDate"),
+      endDate: formData.get("endDate"),
+      label: formData.get("label") || undefined,
+    });
 
-  const membership = await db.householdMember.findFirst({
-    where: { userId: user.id, householdId },
-  });
-
-  if (!membership || !["owner", "admin"].includes(membership.role)) {
-    if (dataRequest) {
-      return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
+    if (!parsed.success) {
+      return dataErrorOrRedirect(request, 400, "Dates invalides.", `${fallback}&error=invalid`);
     }
-    return redirectTo(request, `/app/settings/holidays?household=${householdId}`);
-  }
 
-  const formData = await request.formData();
-  const parsed = schema.safeParse({
-    startDate: formData.get("startDate"),
-    endDate: formData.get("endDate"),
-    label: formData.get("label") || undefined,
-  });
-
-  if (!parsed.success) {
-    if (dataRequest) {
-      return NextResponse.json({ error: "Dates invalides." }, { status: 400 });
+    if (parsed.data.endDate < parsed.data.startDate) {
+      return dataErrorOrRedirect(
+        request,
+        400,
+        "Date de fin antérieure à la date de début.",
+        `${fallback}&error=order`,
+      );
     }
-    return redirectTo(request, `/app/settings/holidays?household=${householdId}&error=invalid`);
-  }
 
-  if (parsed.data.endDate < parsed.data.startDate) {
-    if (dataRequest) {
-      return NextResponse.json({ error: "Date de fin antérieure à la date de début." }, { status: 400 });
+    const result = await declareHoliday({
+      householdId,
+      startDate: parsed.data.startDate,
+      endDate: parsed.data.endDate,
+      label: parsed.data.label,
+      actorMemberId: membership.id,
+    });
+
+    if (isDataRequest(request)) {
+      return NextResponse.json({ ok: true, ...result });
     }
-    return redirectTo(request, `/app/settings/holidays?household=${householdId}&error=order`);
-  }
 
-  const result = await declareHoliday({
-    householdId,
-    startDate: parsed.data.startDate,
-    endDate: parsed.data.endDate,
-    label: parsed.data.label,
-    actorMemberId: membership.id,
-  });
-
-  if (dataRequest) {
-    return NextResponse.json({ ok: true, ...result });
-  }
-
-  return redirectTo(request, `/app/settings/holidays?household=${householdId}&shifted=${result.shiftedCount}`);
-}
+    return redirectTo(request, `${fallback}&shifted=${result.shiftedCount}`);
+  },
+  { requireManage: true },
+);
