@@ -2,6 +2,25 @@
   "name": "makemenage",
   "version": "0.1.0",
   "private": true,
+  "description": "App self-hostable de gestion équitable des tâches du foyer — récurrences automatiques, rotation entre membres, mobile-first, PWA.",
+  "homepage": "https://github.com/CesarPierr/makemenage#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CesarPierr/makemenage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CesarPierr/makemenage/issues"
+  },
+  "keywords": [
+    "household",
+    "chores",
+    "tasks",
+    "recurring",
+    "pwa",
+    "nextjs",
+    "self-hosted",
+    "prisma"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
