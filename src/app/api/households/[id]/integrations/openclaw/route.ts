@@ -1,49 +1,38 @@
-import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { canManageHousehold } from "@/lib/households";
+import { withHousehold } from "@/lib/api";
 import { upsertOpenClawIntegrationSettings } from "@/lib/integrations/openclaw";
 import { redirectTo } from "@/lib/request";
 
-type Params = {
-  params: Promise<{ id: string }>;
-};
+export const POST = withHousehold<{ id: string }>(
+  async ({ request, params, formData }) => {
+    try {
+      const result = await upsertOpenClawIntegrationSettings({
+        householdId: params.id,
+        isEnabled: formData.get("isEnabled") === "on",
+        serverUrl: String(formData.get("serverUrl") ?? ""),
+        clientLabel: String(formData.get("clientLabel") ?? ""),
+        regenerateKey: formData.get("regenerateKey") === "on",
+      });
 
-export async function POST(request: Request, { params }: Params) {
-  const user = await requireUser();
-  const { id } = await params;
-  const membership = await db.householdMember.findFirst({
-    where: {
-      householdId: id,
-      userId: user.id,
-    },
-  });
+      const searchParams = new URLSearchParams({
+        household: params.id,
+        integration: result.apiKey
+          ? "key_created"
+          : result.integration.isEnabled
+            ? "saved"
+            : "disabled",
+      });
 
-  if (!membership || !canManageHousehold(membership.role)) {
-    return redirectTo(request, `/app/settings/integrations?household=${id}&integration=forbidden`);
-  }
+      if (result.apiKey) {
+        searchParams.set("generatedKey", result.apiKey);
+      }
 
-  const formData = await request.formData();
-
-  try {
-    const result = await upsertOpenClawIntegrationSettings({
-      householdId: id,
-      isEnabled: formData.get("isEnabled") === "on",
-      serverUrl: String(formData.get("serverUrl") ?? ""),
-      clientLabel: String(formData.get("clientLabel") ?? ""),
-      regenerateKey: formData.get("regenerateKey") === "on",
-    });
-
-    const searchParams = new URLSearchParams({
-      household: id,
-      integration: result.apiKey ? "key_created" : result.integration.isEnabled ? "saved" : "disabled",
-    });
-
-    if (result.apiKey) {
-      searchParams.set("generatedKey", result.apiKey);
+      return redirectTo(request, `/app/settings/integrations?${searchParams.toString()}`);
+    } catch {
+      return redirectTo(
+        request,
+        `/app/settings/integrations?household=${params.id}&integration=invalid`,
+      );
     }
-
-    return redirectTo(request, `/app/settings/integrations?${searchParams.toString()}`);
-  } catch {
-    return redirectTo(request, `/app/settings/integrations?household=${id}&integration=invalid`);
-  }
-}
+  },
+  { requireManage: true },
+);

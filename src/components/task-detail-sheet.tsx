@@ -58,7 +58,7 @@ export type TaskDetailSheetProps = {
   canEditOccurrence: boolean;
   statusLabel: string;
   isSubmitting: boolean;
-  onSubmit: (url: string, body?: Record<string, string>) => Promise<void>;
+  onSubmit: (url: string, body?: Record<string, string>) => void;
   onTemplateSaved?: () => void;
 };
 

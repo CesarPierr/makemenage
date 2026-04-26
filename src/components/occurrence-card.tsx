@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type SyntheticEvent } from "react";
+import { useOptimistic, useState, useTransition, type SyntheticEvent } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -120,10 +120,14 @@ export function OccurrenceCard({
 }: OccurrenceCardProps) {
   const router = useRouter();
   const { success, error: showError } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [optimisticStatus, setOptimisticStatus] = useState(occurrence.status);
+  const [isPending, startTransition] = useTransition();
+  // useOptimistic syncs back to occurrence.status when the server response
+  // arrives, so we don't need a manual rollback on error — React drops the
+  // optimistic value once the surrounding transition resolves.
+  const [optimisticStatus, applyOptimisticStatus] = useOptimistic(occurrence.status);
   const [showSheet, setShowSheet] = useState(false);
 
+  const isSubmitting = isPending;
   const currentStatus = optimisticStatus;
   const canEditOccurrence = currentStatus !== "cancelled";
   const archived = ["completed", "skipped", "cancelled"].includes(currentStatus);
@@ -137,47 +141,43 @@ export function OccurrenceCard({
     event.stopPropagation();
   }
 
-  async function submitAction(url: string, body?: Record<string, string>) {
+  function submitAction(url: string, body?: Record<string, string>) {
     if (isSubmitting) return;
 
-    const prevStatus = optimisticStatus;
-    if (url.endsWith("/complete")) setOptimisticStatus("completed");
-    else if (url.endsWith("/skip")) setOptimisticStatus("skipped");
-    else if (url.endsWith("/reopen")) setOptimisticStatus("planned");
+    startTransition(async () => {
+      if (url.endsWith("/complete")) applyOptimisticStatus("completed");
+      else if (url.endsWith("/skip")) applyOptimisticStatus("skipped");
+      else if (url.endsWith("/reopen")) applyOptimisticStatus("planned");
 
-    setIsSubmitting(true);
-
-    try {
-      const formData = new FormData();
-      formData.set("memberId", currentMemberId ?? "");
-      if (returnTo) formData.set("nextPath", returnTo);
-      if (body) {
-        for (const [key, value] of Object.entries(body)) {
-          formData.set(key, value);
+      try {
+        const formData = new FormData();
+        formData.set("memberId", currentMemberId ?? "");
+        if (returnTo) formData.set("nextPath", returnTo);
+        if (body) {
+          for (const [key, value] of Object.entries(body)) {
+            formData.set(key, value);
+          }
         }
+
+        const csrfToken = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/)?.[1] ?? "";
+        const response = await fetch(url, {
+          method: "POST",
+          body: formData,
+          headers: {
+            Accept: "application/json",
+            "x-requested-with": "fetch",
+            ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
+          },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        success("Action enregistrée");
+        router.refresh();
+        setShowSheet(false);
+      } catch {
+        showError("Impossible d'effectuer cette action.");
       }
-
-      const csrfToken = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/)?.[1] ?? "";
-      const response = await fetch(url, {
-        method: "POST",
-        body: formData,
-        headers: {
-          Accept: "application/json",
-          "x-requested-with": "fetch",
-          ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
-        },
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      success("Action enregistrée");
-      router.refresh();
-      setShowSheet(false);
-    } catch {
-      setOptimisticStatus(prevStatus);
-      showError("Impossible d'effectuer cette action.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   const cardBg = { borderColor: meta.border, background: `linear-gradient(135deg, ${meta.surface}, var(--card-end))` };
