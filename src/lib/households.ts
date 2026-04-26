@@ -10,7 +10,7 @@ import { redirect } from "next/navigation";
 import { shouldSyncHouseholdContext, resetHouseholdContextSyncState } from "@/lib/context-sync";
 import { db } from "@/lib/db";
 import { logWarn } from "@/lib/logger";
-import { syncHouseholdOccurrences } from "@/lib/scheduling/service";
+import { realignOverdueRecurrences, syncHouseholdOccurrences } from "@/lib/scheduling/service";
 
 type HouseholdContextOptions = {
   monthDate?: Date;
@@ -53,6 +53,7 @@ export async function getCurrentHouseholdContext(
   if (shouldSyncHouseholdContext(membership.householdId)) {
     try {
       await syncHouseholdOccurrences(membership.householdId);
+      await realignOverdueRecurrences(membership.householdId);
     } catch (error) {
       resetHouseholdContextSyncState(membership.householdId);
       logWarn("household.context_sync_failed", {

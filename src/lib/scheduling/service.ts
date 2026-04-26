@@ -288,6 +288,80 @@ export async function syncHouseholdOccurrences(
   }
 }
 
+/**
+ * For each task with an overdue occurrence, push the recurrence anchor forward to "interval
+ * units after today" and let the next sync regenerate future occurrences. Each day the late
+ * task remains undone, the next ones drift forward by a day — matching what an actual
+ * completion would do on that day.
+ *
+ * Idempotent: if the next planned occurrence is already at or beyond the projected anchor,
+ * the rule is left alone.
+ */
+export async function realignOverdueRecurrences(householdId: string) {
+  const today = startOfDay(new Date());
+
+  const tasks = await db.taskTemplate.findMany({
+    where: {
+      householdId,
+      isActive: true,
+      occurrences: { some: { status: "overdue" } },
+    },
+    include: { recurrenceRule: true },
+  });
+
+  let anyChange = false;
+
+  for (const task of tasks) {
+    if (!task.recurrenceRule) continue;
+
+    const latestOverdue = await db.taskOccurrence.findFirst({
+      where: { taskTemplateId: task.id, status: "overdue" },
+      orderBy: { scheduledDate: "desc" },
+      select: { scheduledDate: true },
+    });
+    if (!latestOverdue) continue;
+
+    const nextOccurrence = await db.taskOccurrence.findFirst({
+      where: {
+        taskTemplateId: task.id,
+        status: { in: ["planned", "due"] },
+        scheduledDate: { gt: latestOverdue.scheduledDate },
+      },
+      orderBy: { scheduledDate: "asc" },
+      select: { scheduledDate: true },
+    });
+    if (!nextOccurrence) continue;
+
+    const rule = task.recurrenceRule;
+    const newAnchor = computeNextAnchorAfter(
+      {
+        type: rule.type,
+        interval: rule.interval,
+        weekdays: parseNumberArray(rule.weekdays),
+        dayOfMonth: rule.dayOfMonth,
+        anchorDate: rule.anchorDate,
+        dueOffsetDays: rule.dueOffsetDays,
+        config: rule.config,
+      },
+      today,
+    );
+
+    if (startOfDay(nextOccurrence.scheduledDate) >= startOfDay(newAnchor)) {
+      continue;
+    }
+
+    await db.recurrenceRule.update({
+      where: { id: rule.id },
+      data: { anchorDate: newAnchor },
+    });
+    anyChange = true;
+  }
+
+  if (anyChange) {
+    await syncHouseholdOccurrences(householdId);
+  }
+}
+
 export async function addMemberToExistingAssignments(params: {
   householdId: string;
   memberId: string;
