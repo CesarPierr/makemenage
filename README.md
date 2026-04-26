@@ -127,4 +127,4 @@ Conventions clés (voir [AGENTS.md](AGENTS.md)) :
 
 ## Licence
 
-À définir par le mainteneur du dépôt.
+[PolyForm Noncommercial License 1.0.0](LICENSE) — usage personnel, hobby, recherche, associatif et institutionnel autorisés sans frais. **Toute utilisation commerciale nécessite un accord séparé** avec l'auteur.
