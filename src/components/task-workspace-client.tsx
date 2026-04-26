@@ -3,7 +3,7 @@
 import { addDays, isSameDay, startOfDay } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Play, Rocket, Search } from "lucide-react";
+import { AlertCircle, Play, Rocket, Search } from "lucide-react";
 
 import { CollapsibleList } from "@/components/collapsible-list";
 import { FocusSession } from "@/components/focus-session";
@@ -20,7 +20,7 @@ import {
   sanitizeRunningSession,
   type RunningSession,
 } from "@/lib/running-session";
-import { formatMinutes } from "@/lib/utils";
+import { cn, formatMinutes } from "@/lib/utils";
 
 type WorkspaceOccurrence = {
   id: string;
@@ -36,12 +36,15 @@ type WorkspaceOccurrence = {
     title: string;
     category: string | null;
     room?: string | null;
+    icon?: string | null;
     estimatedMinutes: number;
     color: string;
     isCollective?: boolean;
   };
   assignedMember: { id: string; displayName: string; color: string } | null;
   wasCompletedAlone?: boolean | null;
+  updatedAt: Date | string;
+  completedAt?: Date | string | null;
 };
 
 type TaskWorkspaceClientProps = {
@@ -68,6 +71,7 @@ export function TaskWorkspaceClient({
   const [roomFilter, setRoomFilter] = useState("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [overdueOnly, setOverdueOnly] = useState(false);
+  const [filterType, setFilterType] = useState<"active" | "history">("active");
   const [showOptimizedPicker, setShowOptimizedPicker] = useState(false);
   const sessionStorageKey = getRunningSessionStorageKey(householdId, currentMemberId);
   const [runningSession, setRunningSession] = useState<RunningSession | null>(() => {
@@ -89,6 +93,8 @@ export function TaskWorkspaceClient({
       occurrences.map((occurrence) => ({
         ...occurrence,
         scheduledDate: new Date(occurrence.scheduledDate),
+        updatedAt: new Date(occurrence.updatedAt),
+        completedAt: occurrence.completedAt ? new Date(occurrence.completedAt) : null,
       })),
     [occurrences],
   );
@@ -100,7 +106,12 @@ export function TaskWorkspaceClient({
       : normalizedOccurrences;
 
   const filteredActiveOccurrences = baseOccurrences.filter((occurrence) => {
-    if (!ACTIVE_STATUSES.has(occurrence.status)) return false;
+    const isActive = ACTIVE_STATUSES.has(occurrence.status);
+    const isDone = occurrence.status === "completed" || occurrence.status === "skipped";
+    
+    if (filterType === "active" && !isActive) return false;
+    if (filterType === "history" && !isDone) return false;
+    
     if (roomFilter !== "all" && (occurrence.taskTemplate.room?.trim() || "Tout l'appartement") !== roomFilter) return false;
     if (assigneeFilter !== "all" && occurrence.assignedMemberId !== assigneeFilter) return false;
     if (overdueOnly && occurrence.status !== "overdue") return false;
@@ -110,6 +121,9 @@ export function TaskWorkspaceClient({
       occurrence.taskTemplate.room ?? "",
       occurrence.taskTemplate.category ?? "",
       occurrence.assignedMember?.displayName ?? "",
+      occurrence.status === "completed" ? "terminée fait" : "",
+      occurrence.status === "skipped" ? "sautée" : "",
+      occurrence.status === "cancelled" ? "annulée" : "",
     ]
       .join(" ")
       .toLowerCase();
@@ -117,18 +131,81 @@ export function TaskWorkspaceClient({
     return haystack.includes(search.trim().toLowerCase());
   });
 
-  const nowOccurrences = filteredActiveOccurrences.filter((occurrence) => startOfDay(occurrence.scheduledDate) <= today);
-  const nextOccurrences = filteredActiveOccurrences.filter(
-    (occurrence) =>
-      occurrence.scheduledDate > today && occurrence.scheduledDate <= addDays(today, 7),
-  );
-  const allActiveOccurrences = [...filteredActiveOccurrences].sort((left, right) => {
-    if (left.scheduledDate.getTime() !== right.scheduledDate.getTime()) {
-      return left.scheduledDate.getTime() - right.scheduledDate.getTime();
+  const sortedFiltered = useMemo(() => {
+    return [...filteredActiveOccurrences].sort((left, right) => {
+      if (filterType === "active") {
+        // Sort by status priority: overdue first, then by date
+        if (left.status === "overdue" && right.status !== "overdue") return -1;
+        if (left.status !== "overdue" && right.status === "overdue") return 1;
+
+        if (left.scheduledDate.getTime() !== right.scheduledDate.getTime()) {
+          return left.scheduledDate.getTime() - right.scheduledDate.getTime();
+        }
+      } else {
+        // History: Most recent first
+        if (left.scheduledDate.getTime() !== right.scheduledDate.getTime()) {
+          return right.scheduledDate.getTime() - left.scheduledDate.getTime();
+        }
+      }
+
+      return left.taskTemplate.title.localeCompare(right.taskTemplate.title, "fr");
+    });
+  }, [filteredActiveOccurrences, filterType]);
+
+  const timelineGroups = useMemo(() => {
+    const groups: { label: string; date?: Date; occurrences: WorkspaceOccurrence[] }[] = [];
+    
+    const overdue = sortedFiltered.filter(o => o.status === "overdue" && startOfDay(o.scheduledDate) < today);
+    if (overdue.length > 0) {
+      groups.push({ label: "En retard", occurrences: overdue });
     }
 
-    return left.taskTemplate.title.localeCompare(right.taskTemplate.title, "fr");
-  });
+    const others = sortedFiltered.filter(o => !(o.status === "overdue" && startOfDay(o.scheduledDate) < today));
+    
+    const dayMap = new Map<string, WorkspaceOccurrence[]>();
+    others.forEach(o => {
+      const key = startOfDay(o.scheduledDate).toISOString();
+      if (!dayMap.has(key)) dayMap.set(key, []);
+      dayMap.get(key)!.push(o);
+    });
+
+    const sortedDays = [...dayMap.keys()].sort();
+    if (filterType === "history") sortedDays.reverse();
+    
+    sortedDays.forEach(key => {
+      const date = new Date(key);
+      const occurrences = dayMap.get(key)!;
+      let label = "";
+      
+      if (isSameDay(date, today)) label = "Aujourd'hui";
+      else if (isSameDay(date, addDays(today, 1))) label = "Demain";
+      else if (date < addDays(today, 7)) {
+        label = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric" }).format(date);
+      } else {
+        label = "Plus tard";
+      }
+
+      const existing = groups.find(g => g.label === label);
+      if (existing) {
+        existing.occurrences.push(...occurrences);
+      } else {
+        groups.push({ label, date, occurrences });
+      }
+    });
+
+    return groups;
+  }, [sortedFiltered, today]);
+
+  const busiestNowRoom = useMemo(() => {
+    const now = sortedFiltered.filter(o => startOfDay(o.scheduledDate).getTime() <= today.getTime() && ACTIVE_STATUSES.has(o.status));
+    const groups = groupOccurrencesByRoom(now);
+    return groups.sort((a, b) => {
+      const aOverdue = a.occurrences.filter((o) => o.status === "overdue").length;
+      const bOverdue = b.occurrences.filter((o) => o.status === "overdue").length;
+      if (aOverdue !== bOverdue) return bOverdue - aOverdue;
+      return b.occurrences.length - a.occurrences.length;
+    })[0] ?? null;
+  }, [sortedFiltered, today]);
 
   const rooms = useMemo(
     () =>
@@ -139,18 +216,6 @@ export function TaskWorkspaceClient({
       )].sort((left, right) => left.localeCompare(right, "fr")),
     [normalizedOccurrences],
   );
-
-  const nowGroups = groupOccurrencesByRoom(nowOccurrences);
-  const nextGroups = groupOccurrencesByRoom(nextOccurrences);
-
-  // Sort focus zone: groups with overdue first, then by count desc, keeping "Tout l'appartement" handled by helper
-  const sortedNowGroups = [...nowGroups].sort((a, b) => {
-    const aOverdue = a.occurrences.filter((o) => o.status === "overdue").length;
-    const bOverdue = b.occurrences.filter((o) => o.status === "overdue").length;
-    if (aOverdue !== bOverdue) return bOverdue - aOverdue;
-    return b.occurrences.length - a.occurrences.length;
-  });
-  const busiestNowRoom = sortedNowGroups[0] ?? null;
 
   const occurrenceById = useMemo(
     () =>
@@ -434,338 +499,180 @@ export function TaskWorkspaceClient({
         />
       ) : null}
 
-      <section className="app-surface rounded-[2rem] p-4 sm:p-5">
+      <section className="app-surface flex flex-col gap-4 rounded-[2rem] p-4 sm:p-5">
         {manageable ? <QuickAddBar householdId={householdId} manageable={manageable} /> : null}
 
-        <div className={`grid gap-3 lg:grid-cols-[auto_1fr_auto] ${manageable ? "mt-3" : ""}`}>
-          {currentMemberId ? (
-            <div
-              className="flex rounded-full border border-[var(--line)] bg-[rgba(30,31,34,0.05)] p-0.5"
-              role="group"
-              aria-label="Portée des tâches"
-            >
-              {[
-                { value: "mine" as const, label: "Mes tâches" },
-                { value: "household" as const, label: "Tout le foyer" },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  aria-pressed={scope === option.value}
-                  className={
-                    scope === option.value
-                      ? "flex-1 rounded-full bg-white px-4 py-1.5 text-sm font-bold text-[var(--ink-950)] shadow-sm transition-all"
-                      : "flex-1 rounded-full px-4 py-1.5 text-sm font-semibold text-[var(--ink-500)] transition-all"
-                  }
-                  onClick={() => setScope(option.value)}
-                  type="button"
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div />
-          )}
-
-          <label className="field-label">
-            <span className="sr-only">Rechercher une tâche</span>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center">
-                <Search className="size-4 text-[var(--ink-400)]" />
-              </div>
-              <input
-                className="field pl-10"
-                onChange={(event) => {
-                  setVisibleAllCount(12);
-                  setSearch(event.currentTarget.value);
-                }}
-                placeholder="Rechercher une tâche, une pièce, une personne"
-                type="search"
-                value={search}
-              />
-            </div>
-          </label>
-
-          <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
-            <label className="field-label flex-1 min-w-[10rem]">
-              <span className="sr-only">Filtrer par pièce</span>
-              <select
-                className="field"
-                onChange={(event) => {
-                  setVisibleAllCount(12);
-                  setRoomFilter(event.currentTarget.value);
-                }}
-                value={roomFilter}
-              >
-                <option value="all">Toutes les pièces</option>
-                {rooms.map((room) => (
-                  <option key={room} value={room}>
-                    {room}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {scope === "household" && members.length > 1 ? (
-              <label className="field-label flex-1 min-w-[10rem]">
-                <span className="sr-only">Filtrer par personne</span>
-                <select
-                  className="field"
-                  onChange={(event) => {
-                    setVisibleAllCount(12);
-                    setAssigneeFilter(event.currentTarget.value);
-                  }}
-                  value={assigneeFilter}
-                >
-                  <option value="all">Toutes les personnes</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.displayName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-          </div>
+        <div className="relative">
+          <input
+            className="field h-11 w-full px-4 text-sm"
+            onChange={(event) => {
+              setVisibleAllCount(12);
+              setSearch(event.currentTarget.value);
+            }}
+            placeholder="Rechercher une tâche, pièce..."
+            type="search"
+            value={search}
+          />
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            aria-pressed={overdueOnly}
-            className={
-              overdueOnly
-                ? "inline-flex items-center gap-1.5 rounded-full border border-[rgba(127,29,29,0.22)] bg-[rgba(127,29,29,0.08)] px-3 py-1 text-xs font-bold text-[#7f1d1d]"
-                : "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-white/70 px-3 py-1 text-xs font-semibold text-[var(--ink-500)]"
-            }
-            onClick={() => {
+        {/* Filters Row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            className="field h-11 min-w-[140px] flex-1 px-3 text-sm font-semibold sm:flex-none"
+            onChange={(event) => {
               setVisibleAllCount(12);
-              setOverdueOnly((current) => !current);
+              setRoomFilter(event.currentTarget.value);
             }}
-            type="button"
+            value={roomFilter}
           >
-            En retard seulement
-          </button>
-          {(overdueOnly || roomFilter !== "all" || assigneeFilter !== "all" || search) ? (
-            <button
-              className="text-xs font-semibold text-[var(--coral-600)] hover:underline"
+            <option value="all">Toutes les pièces</option>
+            {rooms.map((room) => (
+              <option key={room} value={room}>
+                {room}
+              </option>
+            ))}
+          </select>
+
+          {scope === "household" && members.length > 1 && (
+            <select
+              className="field h-11 min-w-[140px] flex-1 px-3 text-sm font-semibold sm:flex-none"
+              onChange={(event) => {
+                setVisibleAllCount(12);
+                setAssigneeFilter(event.currentTarget.value);
+              }}
+              value={assigneeFilter}
+            >
+              <option value="all">Tout le monde</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.displayName}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {(roomFilter !== "all" || (scope === "household" && assigneeFilter !== "all") || search || overdueOnly) && (
+            <button 
               onClick={() => {
-                setOverdueOnly(false);
                 setRoomFilter("all");
                 setAssigneeFilter("all");
                 setSearch("");
+                setOverdueOnly(false);
                 setVisibleAllCount(12);
               }}
-              type="button"
+              className="ml-auto text-[0.65rem] font-bold uppercase tracking-wider text-[var(--coral-600)] hover:underline"
             >
               Réinitialiser
             </button>
-          ) : null}
+          )}
         </div>
       </section>
 
-      <section aria-label="Tâches du jour" className="app-surface rounded-[2rem] p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <section className="app-surface rounded-[2rem] p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="section-kicker">À faire maintenant</p>
-            <h3 className="display-title mt-2 text-3xl">Aujourd&apos;hui</h3>
+            <h3 className="display-title text-3xl">
+              {search ? "Tâches correspondantes" : "Votre semaine"}
+            </h3>
           </div>
+          
           <div className="flex flex-wrap items-center gap-2">
-            <span aria-live="polite" className="accent-pill">
-              <span className="accent-pill-dot" style={{ backgroundColor: "var(--coral-500)" }} />
-              {nowOccurrences.length} tâche{nowOccurrences.length > 1 ? "s" : ""}
-            </span>
-            {!activeRunningSession && busiestNowRoom ? (
+            {currentMemberId && (
               <button
-                aria-label={`Lancer une session pour ${busiestNowRoom.room}`}
-                className="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
-                onClick={(event) =>
-                  startRoomSession(busiestNowRoom.room, busiestNowRoom.occurrences, getEventTimeMs(event.timeStamp))
-                }
+                onClick={() => setScope(scope === "mine" ? "household" : "mine")}
+                className="btn-quiet flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold"
                 type="button"
               >
-                <Play className="size-4" aria-hidden="true" />
-                Lancer une session
+                <div className={cn("size-2 rounded-full", scope === "mine" ? "bg-[var(--coral-500)]" : "bg-[var(--ink-300)]")} />
+                {scope === "mine" ? "Mes tâches" : "Tout le foyer"}
               </button>
-            ) : null}
-            {!activeRunningSession && filteredActiveOccurrences.length > 0 ? (
+            )}
+
+            <button
+              onClick={() => setFilterType(filterType === "active" ? "history" : "active")}
+              className="btn-quiet flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold"
+              type="button"
+            >
+              <div className={cn("size-2 rounded-full", filterType === "active" ? "bg-[var(--leaf-500)]" : "bg-[var(--ink-300)]")} />
+              {filterType === "active" ? "À faire" : "Historique"}
+            </button>
+
+            <button
+              className={cn(
+                "flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition-all",
+                overdueOnly
+                  ? "border-[rgba(127,29,29,0.2)] bg-[rgba(127,29,29,0.08)] text-[#7f1d1d]"
+                  : "btn-quiet text-[var(--ink-500)]"
+              )}
+              onClick={() => {
+                setVisibleAllCount(12);
+                setOverdueOnly((prev) => !prev);
+              }}
+              type="button"
+            >
+              <AlertCircle className="size-3.5" />
+              Retards
+            </button>
+
+            <span aria-live="polite" className="accent-pill">
+              <span className="accent-pill-dot" style={{ backgroundColor: "var(--coral-500)" }} />
+              {filteredActiveOccurrences.length} tâche{filteredActiveOccurrences.length > 1 ? "s" : ""}
+            </span>
+            
+            {!activeRunningSession && (
               <button
-                aria-label="Lancer une session optimisée"
-                className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
+                className="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
                 onClick={() => setShowOptimizedPicker(true)}
                 type="button"
               >
-                <Rocket className="size-4" aria-hidden="true" />
-                Mode optimisé
+                <Rocket className="size-4" />
+                Session optimisée
               </button>
-            ) : null}
+            )}
           </div>
         </div>
 
-        <div className="mt-5 space-y-4">
-          {sortedNowGroups.length ? (
-            sortedNowGroups.map(({ room, occurrences: roomOccurrences, totalMinutes }) => (
-              <div key={room} className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="stat-pill px-3 py-1 text-xs font-semibold">{room}</span>
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">
-                      {roomOccurrences.length} tâche{roomOccurrences.length > 1 ? "s" : ""}
-                    </span>
-                    <span className="stat-pill px-3 py-1 text-xs font-semibold">{formatMinutes(totalMinutes)}</span>
-                  </div>
-                  {!activeRunningSession ? (
-                    <button
-                      className="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold"
-                      onClick={(event) => startRoomSession(room, roomOccurrences, getEventTimeMs(event.timeStamp))}
-                      type="button"
-                    >
-                      <Play className="size-4" />
-                      Lancer cette pièce
-                    </button>
-                  ) : null}
+        <div className="mt-6 space-y-8">
+          {timelineGroups.length > 0 ? (
+            timelineGroups.map((group) => (
+              <div key={group.label} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--ink-500)]">
+                    {group.label}
+                  </h4>
+                  <div className="h-px flex-1 bg-[var(--line)]" />
                 </div>
-
-                <div className="space-y-3">
-                  {roomOccurrences.map((occurrence) => (
-                      <OccurrenceCard
-                        key={occurrence.id}
-                        occurrence={occurrence}
-                        members={members}
-                        currentMemberId={currentMemberId}
-                        returnTo={dashboardPath}
-                        householdId={householdId}
-                        canEditTemplate={manageable}
-                        taskTemplateId={occurrence.taskTemplateId}
-                      />
+                
+                <div className="grid gap-3">
+                  {group.occurrences.map((occurrence) => (
+                    <OccurrenceCard
+                      key={occurrence.id}
+                      compact={!isSameDay(occurrence.scheduledDate, today) && occurrence.status !== "overdue"}
+                      occurrence={occurrence}
+                      members={members}
+                      currentMemberId={currentMemberId}
+                      returnTo={dashboardPath}
+                      householdId={householdId}
+                      canEditTemplate={manageable}
+                      taskTemplateId={occurrence.taskTemplateId}
+                    />
                   ))}
                 </div>
               </div>
             ))
           ) : (
-            <div className="rounded-[1.6rem] border border-[var(--line)] bg-white/75 p-6 text-center">
-              <p className="text-3xl" aria-hidden="true">🎉</p>
-              <p className="mt-2 font-semibold text-[var(--ink-950)]">Tout est à jour pour aujourd&apos;hui !</p>
-              <p className="mt-1 text-sm text-[var(--ink-700)]">
-                Rien d&apos;urgent. Consultez la liste « Ce qui arrive » plus bas, ou profitez d&apos;une pause.
-              </p>
-              {nextOccurrences.length > 0 ? (
-                <a
-                  className="btn-secondary mt-4 inline-flex items-center justify-center px-4 py-2 text-xs font-semibold"
-                  href={`/app/planifier?household=${householdId}`}
-                >
-                  Voir le planning
-                </a>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="app-surface rounded-[2rem] p-5 sm:p-6">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="section-kicker">Ensuite</p>
-            <h3 className="display-title mt-2 text-3xl">Ce qui arrive</h3>
-          </div>
-          <span className="accent-pill">
-            <span className="accent-pill-dot" style={{ backgroundColor: "var(--leaf-500)" }} />
-            {nextOccurrences.length} tâche{nextOccurrences.length > 1 ? "s" : ""}
-          </span>
-        </div>
-
-        <div className="mt-5">
-          {nextGroups.length ? (
-            <CollapsibleList
-              initialCount={3}
-              label="Voir plus de groupes"
-              items={nextGroups.map(({ room, occurrences: roomOccurrences, totalMinutes }) => (
-                <div key={room} className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="stat-pill px-3 py-1 text-xs font-semibold">{room}</span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">
-                        {roomOccurrences.length} tâche{roomOccurrences.length > 1 ? "s" : ""}
-                      </span>
-                      <span className="stat-pill px-3 py-1 text-xs font-semibold">{formatMinutes(totalMinutes)}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {roomOccurrences.map((occurrence) => (
-                      <OccurrenceCard
-                        key={occurrence.id}
-                        compact
-                        occurrence={occurrence}
-                        members={members}
-                        currentMemberId={currentMemberId}
-                        returnTo={dashboardPath}
-                        householdId={householdId}
-                        canEditTemplate={manageable}
-                        taskTemplateId={occurrence.taskTemplateId}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            />
-          ) : (
-            <div className="rounded-[1.6rem] border border-[var(--line)] bg-white/75 p-5 text-sm text-[var(--ink-700)]">
-              Rien de particulier dans les prochains jours.
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="app-surface rounded-[2rem] p-5 sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="section-kicker">Toutes les tâches</p>
-            <h3 className="display-title mt-2 text-3xl">Retrouver n&apos;importe quelle tâche</h3>
-          </div>
-          <p aria-live="polite" className="text-sm text-[var(--ink-700)]">
-            {allActiveOccurrences.length} tâche{allActiveOccurrences.length > 1 ? "s" : ""}
-            {" "}active{allActiveOccurrences.length > 1 ? "s" : ""}
-            {search || roomFilter !== "all" ? " après filtres" : ""}
-          </p>
-        </div>
-
-        <div className="mt-5 space-y-3">
-          {allActiveOccurrences.length ? (
-            <>
-              {allActiveOccurrences.slice(0, visibleAllCount).map((occurrence) => (
-                <OccurrenceCard
-                  key={occurrence.id}
-                  compact={!isSameDay(occurrence.scheduledDate, today)}
-                  occurrence={occurrence}
-                  members={members}
-                  currentMemberId={currentMemberId}
-                  returnTo={dashboardPath}
-                  householdId={householdId}
-                  canEditTemplate={manageable}
-                  taskTemplateId={occurrence.taskTemplateId}
-                />
-              ))}
-
-              {visibleAllCount < allActiveOccurrences.length ? (
+            <div className="rounded-[1.6rem] border border-[var(--line)] bg-white/75 p-8 text-center text-sm text-[var(--ink-700)]">
+              {search 
+                ? "Aucune tâche ne correspond à votre recherche."
+                : "Rien de prévu pour le moment. Profitez-en !"}
+              {search && (
                 <button
-                  className="btn-quiet w-full px-4 py-3 text-sm font-semibold"
-                  onClick={() => setVisibleAllCount((current) => current + 12)}
-                  type="button"
+                  onClick={() => setSearch("")}
+                  className="mt-4 block w-full text-xs font-bold text-[var(--coral-600)] hover:underline"
                 >
-                  Voir plus de tâches ({allActiveOccurrences.length - visibleAllCount})
+                  Réinitialiser la recherche
                 </button>
-              ) : null}
-            </>
-          ) : (
-            <div className="rounded-[1.6rem] border border-[var(--line)] bg-white/75 p-5 text-center text-sm text-[var(--ink-700)]">
-              Aucune tâche ne correspond à vos critères.
-              <br />
-              <button
-                type="button"
-                className="mt-2 text-xs font-semibold text-[var(--coral-600)] hover:underline"
-                onClick={() => { setSearch(""); setScope(currentMemberId ? "mine" : "household"); setRoomFilter("all"); }}
-              >
-                Réinitialiser les filtres
-              </button>
+              )}
             </div>
           )}
         </div>

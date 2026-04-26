@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
 
 import { useToast } from "@/components/ui/toast";
 import { roomSuggestions, taskPalette } from "@/lib/constants";
+import { AVAILABLE_ICONS, getRoomIcon } from "@/lib/room-icons";
+import { cn } from "@/lib/utils";
 
 export type TaskTemplateEditable = {
   id: string;
@@ -23,6 +25,7 @@ export type TaskTemplateEditable = {
     dueOffsetDays: number;
     config?: unknown;
   };
+  icon?: string | null;
   assignmentRule: {
     mode:
       | "fixed"
@@ -56,6 +59,7 @@ export function TaskTemplateEditForm({ task, householdId, onCancel, onSuccess }:
   const [recurrenceType, setRecurrenceType] = useState<string>(
     isSingleRunTask(task) ? "single" : task.recurrenceRule.type,
   );
+  const [selectedIcon, setSelectedIcon] = useState<string>(task.icon ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -96,6 +100,7 @@ export function TaskTemplateEditForm({ task, householdId, onCancel, onSuccess }:
         name="endsOn"
         value={recurrenceType === "single" ? startsOnIso : ""}
       />
+      <input type="hidden" name="icon" value={selectedIcon} />
       {Array.isArray(task.assignmentRule.eligibleMemberIds) &&
         task.assignmentRule.eligibleMemberIds.map((memberId: unknown) => (
           <input key={String(memberId)} type="hidden" name="eligibleMemberIds" value={String(memberId)} />
@@ -138,6 +143,37 @@ export function TaskTemplateEditForm({ task, householdId, onCancel, onSuccess }:
           <option key={room} value={room} />
         ))}
       </datalist>
+
+      <div className="mt-4 field-label">
+        <span>Icône (optionnel)</span>
+        <div className="flex flex-wrap gap-2 overflow-y-auto max-h-40 rounded-2xl border border-[var(--line)] bg-white/50 p-3">
+          <button
+            className={cn(
+              "flex size-10 items-center justify-center rounded-lg border-2 transition-all",
+              selectedIcon === "" ? "border-[var(--coral-500)] bg-[var(--coral-50)]" : "border-transparent hover:bg-black/5"
+            )}
+            onClick={() => setSelectedIcon("")}
+            title="Utiliser l'icône par défaut de la pièce"
+            type="button"
+          >
+            <div className="size-5 opacity-40 flex items-center justify-center">?</div>
+          </button>
+          {Object.entries(AVAILABLE_ICONS).map(([name, IconComponent]) => (
+            <button
+              key={name}
+              className={cn(
+                "flex size-10 items-center justify-center rounded-lg border-2 transition-all",
+                selectedIcon === name ? "border-[var(--coral-500)] bg-[var(--coral-50)]" : "border-transparent hover:bg-black/5"
+              )}
+              onClick={() => setSelectedIcon(name)}
+              title={name}
+              type="button"
+            >
+              <IconComponent className="size-5" />
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <span className="text-sm font-semibold text-[var(--ink-950)]">Couleur</span>

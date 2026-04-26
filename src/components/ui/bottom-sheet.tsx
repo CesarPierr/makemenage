@@ -192,7 +192,7 @@ export function BottomSheet({ isOpen, onClose, title, children, maxHeight = 85 }
 
           {/* Content */}
           <div
-            className="overflow-y-auto overscroll-contain px-4 pb-4"
+            className="overflow-y-auto overscroll-contain px-4 pb-12"
             style={{ maxHeight: `calc(${maxHeight}vh - 4rem)` }}
           >
             {children}

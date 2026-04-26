@@ -2,15 +2,33 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { AlertCircle, Calendar, CheckCircle2 } from "lucide-react";
 
+import { StatsDrawer, type MemberStat, type RollingPeriod, type ActivityEntry } from "@/components/stats-drawer";
+
 type HomeHeaderProps = {
   firstName: string;
   todayCount: number;
   overdueCount: number;
   weekDone: number;
   weekTotal: number;
+  streak: number;
+  memberStats: MemberStat[];
+  rollingMetrics: RollingPeriod[];
+  recentActivity?: ActivityEntry[];
+  householdId?: string;
 };
 
-export function HomeHeader({ firstName, todayCount, overdueCount, weekDone, weekTotal }: HomeHeaderProps) {
+export function HomeHeader({
+  firstName,
+  todayCount,
+  overdueCount,
+  weekDone,
+  weekTotal,
+  streak,
+  memberStats,
+  rollingMetrics,
+  recentActivity,
+  householdId,
+}: HomeHeaderProps) {
   const dayLabel = format(new Date(), "EEEE d MMMM", { locale: fr });
   const progressPct = weekTotal > 0 ? Math.round((weekDone / weekTotal) * 100) : 0;
 
@@ -18,13 +36,20 @@ export function HomeHeader({ firstName, todayCount, overdueCount, weekDone, week
     <section className="app-surface glow-card rounded-[2rem] p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)] mb-1">
             {dayLabel}
           </p>
-          <h1 className="display-title mt-1 truncate text-2xl leading-tight sm:text-3xl">
+          <h1 className="display-title truncate text-2xl leading-tight sm:text-3xl">
             Bonjour {firstName}
           </h1>
         </div>
+        <StatsDrawer
+          streak={streak}
+          memberStats={memberStats}
+          rollingMetrics={rollingMetrics}
+          recentActivity={recentActivity}
+          householdId={householdId}
+        />
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
@@ -34,7 +59,7 @@ export function HomeHeader({ firstName, todayCount, overdueCount, weekDone, week
         >
           <Calendar className="size-3.5" aria-hidden="true" />
           <span aria-live="polite">
-            <span className="font-bold">{todayCount}</span> à faire aujourd&apos;hui
+            <span className="font-bold">{todayCount}</span>&nbsp;à faire aujourd&apos;hui
           </span>
         </span>
         {overdueCount > 0 ? (
@@ -44,7 +69,7 @@ export function HomeHeader({ firstName, todayCount, overdueCount, weekDone, week
           >
             <AlertCircle className="size-3.5" aria-hidden="true" />
             <span aria-live="polite">
-              <span className="font-bold">{overdueCount}</span> en retard
+              <span className="font-bold">{overdueCount}</span>{" "}en retard
             </span>
           </span>
         ) : null}

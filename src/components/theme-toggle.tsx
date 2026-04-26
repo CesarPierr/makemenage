@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun, Monitor } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
@@ -8,31 +8,30 @@ import { cn } from "@/lib/utils";
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
-  const options = [
-    { value: "light" as const, icon: Sun, label: "Clair" },
-    { value: "dark" as const, icon: Moon, label: "Sombre" },
-    { value: "system" as const, icon: Monitor, label: "Auto" },
-  ];
+  const isDark = theme === "dark";
 
   return (
-    <div className="flex items-center gap-1 rounded-2xl border border-[var(--line)] bg-white/30 p-1" role="group" aria-label="Thème de l'interface">
-      {options.map(({ value, icon: Icon, label }) => (
-        <button
-          aria-pressed={theme === value}
-          key={value}
-          onClick={() => setTheme(value)}
-          type="button"
-          className={cn(
-            "flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all",
-            theme === value
-              ? "bg-[var(--coral-500)] text-white shadow-sm"
-              : "text-[var(--ink-700)] hover:bg-white/60",
-          )}
-        >
-          <Icon className="size-3.5" aria-hidden="true" />
-          {label}
-        </button>
-      ))}
-    </div>
+    <button
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      type="button"
+      className={cn(
+        "flex items-center gap-2 rounded-2xl border border-[var(--line)] px-4 py-2 text-xs font-bold transition-all",
+        isDark 
+          ? "bg-[rgba(30,31,34,0.4)] text-[var(--ink-950)] border-white/10" 
+          : "bg-white text-[var(--ink-950)] shadow-sm"
+      )}
+    >
+      {isDark ? (
+        <>
+          <Sun className="size-3.5" />
+          <span>Mode Clair</span>
+        </>
+      ) : (
+        <>
+          <Moon className="size-3.5" />
+          <span>Mode Sombre</span>
+        </>
+      )}
+    </button>
   );
 }

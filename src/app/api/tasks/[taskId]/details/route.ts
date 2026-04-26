@@ -46,6 +46,7 @@ export async function GET(
       description: task.description,
       category: task.category,
       room: task.room,
+      icon: task.icon,
       color: task.color,
       estimatedMinutes: task.estimatedMinutes,
       startsOn: task.startsOn,

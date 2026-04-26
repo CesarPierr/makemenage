@@ -7,23 +7,42 @@ import {
   startOfWeek,
   addDays,
   startOfToday,
+  isSameDay,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { Clock, ListTodo } from "lucide-react";
 
+import { TaskDetailSheet } from "@/components/task-detail-sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { useToast } from "@/components/ui/toast";
 import { hexToRgba } from "@/lib/colors";
+
+type CalendarOccurrence = {
+  id: string;
+  scheduledDate: Date;
+  status: string;
+  notes: string | null;
+  actualMinutes: number | null;
+  taskTemplateId?: string;
+  isManuallyModified?: boolean;
+  taskTemplate: { 
+    id: string;
+    title: string; 
+    color: string; 
+    estimatedMinutes: number;
+    room?: string | null;
+    isCollective?: boolean;
+    category?: string | null;
+  };
+  assignedMember: { id: string; displayName: string; color: string } | null;
+};
 
 type CalendarMonthProps = {
   month: Date;
   mobileDayBase?: Date;
-  occurrences: {
-    id: string;
-    scheduledDate: Date;
-    status: string;
-    taskTemplate: { title: string; color: string; estimatedMinutes: number };
-    assignedMember: { displayName: string; color: string } | null;
-  }[];
+  occurrences: CalendarOccurrence[];
   absences: {
     id: string;
     startDate: Date;
@@ -31,10 +50,27 @@ type CalendarMonthProps = {
     notes: string | null;
     member: { displayName: string; color: string };
   }[];
+  householdId?: string;
+  currentMemberId?: string | null;
+  members?: { id: string; displayName: string; color: string }[];
 };
 
-export function CalendarMonth({ month, occurrences, absences, mobileDayBase }: CalendarMonthProps) {
+export function CalendarMonth({ 
+  month, 
+  occurrences, 
+  absences, 
+  mobileDayBase,
+  householdId,
+  currentMemberId,
+  members = []
+}: CalendarMonthProps) {
+  const router = useRouter();
+  const { success, error: showError } = useToast();
+  const [isPending, startTransition] = useTransition();
   const [viewType, setViewType] = useState<"tasks" | "minutes">("tasks");
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<string | null>(null);
+
   const gridDays = eachDayOfInterval({
     start: startOfWeek(month, { weekStartsOn: 1 }),
     end: endOfWeek(addDays(month, 30), { weekStartsOn: 1 }),
@@ -64,6 +100,74 @@ export function CalendarMonth({ month, occurrences, absences, mobileDayBase }: C
         format(absence.startDate, "yyyy-MM-dd") <= format(day, "yyyy-MM-dd") &&
         format(absence.endDate, "yyyy-MM-dd") >= format(day, "yyyy-MM-dd"),
     );
+
+  const selectedOccurrence = occurrences.find(o => o.id === selectedOccurrenceId);
+  const selectedDayOccurrences = selectedDay 
+    ? occurrences.filter(o => isSameDay(o.scheduledDate, selectedDay))
+    : [];
+
+  function submitAction(url: string, body?: Record<string, string>) {
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set("memberId", currentMemberId ?? "");
+        if (body) {
+          for (const [key, value] of Object.entries(body)) {
+            formData.set(key, value);
+          }
+        }
+
+        const csrfToken = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/)?.[1] ?? "";
+        const response = await fetch(url, {
+          method: "POST",
+          body: formData,
+          headers: {
+            Accept: "application/json",
+            "x-requested-with": "fetch",
+            ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
+          },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        success("Action enregistrée");
+        router.refresh();
+        setSelectedOccurrenceId(null);
+      } catch {
+        showError("Impossible d'effectuer cette action.");
+      }
+    });
+  }
+
+  function getOccurrenceStyle(status: string, baseColor: string) {
+    if (status === "completed") {
+      return {
+        className: "bg-stripes opacity-80",
+        style: {
+          backgroundColor: hexToRgba(baseColor, 0.1),
+          color: "var(--ink-950)",
+          border: `1px solid ${hexToRgba(baseColor, 0.3)}`,
+        }
+      };
+    }
+    if (status === "skipped") {
+      return {
+        className: "opacity-40",
+        style: {
+          backgroundColor: hexToRgba(baseColor, 0.05),
+          color: "var(--ink-500)",
+          border: `1px dashed ${hexToRgba(baseColor, 0.2)}`,
+        }
+      };
+    }
+    return {
+      className: "shadow-sm",
+      style: {
+        backgroundColor: hexToRgba(baseColor, 0.15),
+        color: "var(--ink-950)",
+        border: `1px solid ${hexToRgba(baseColor, 0.25)}`,
+      }
+    };
+  }
 
   return (
     <>
@@ -182,6 +286,8 @@ export function CalendarMonth({ month, occurrences, absences, mobileDayBase }: C
                         ? "border-[rgba(216,100,61,0.24)] bg-[rgba(216,100,61,0.08)]"
                         : "border-[var(--line)] bg-white/75"
                     }`}
+                    onClick={() => setSelectedDay(day)}
+                    role="button"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -216,31 +322,39 @@ export function CalendarMonth({ month, occurrences, absences, mobileDayBase }: C
                       ))}
 
                       {dayOccurrences.length ? (
-                        dayOccurrences.map((occurrence) => (
-                          <div
-                            aria-label={`${occurrence.taskTemplate.title} · ${occurrence.assignedMember?.displayName ?? "À attribuer"}`}
-                            key={occurrence.id}
-                            className="rounded-[1.1rem] px-3 py-3 text-sm text-white"
-                            role="group"
-                            style={{ backgroundColor: occurrence.taskTemplate.color ?? "#D8643D" }}
-                          >
-                            <p className="font-semibold leading-5">{occurrence.taskTemplate.title}</p>
-                            <div className="mt-1 inline-flex items-center gap-2 text-xs opacity-90">
-                              {occurrence.assignedMember ? (
-                                <span
-                                  className="size-2 rounded-full border border-white/70"
-                                  style={{ backgroundColor: occurrence.assignedMember.color }}
-                                />
-                              ) : null}
-                              <span>{occurrence.assignedMember?.displayName ?? "À attribuer"}</span>
+                        dayOccurrences.slice(0, 3).map((occurrence) => {
+                          const { className, style } = getOccurrenceStyle(occurrence.status, occurrence.taskTemplate.color ?? "#D8643D");
+                          return (
+                            <div
+                              aria-label={`${occurrence.taskTemplate.title} · ${occurrence.assignedMember?.displayName ?? "À attribuer"}`}
+                              key={occurrence.id}
+                              className={`rounded-[1.1rem] px-3 py-2 text-sm ${className}`}
+                              role="group"
+                              style={style}
+                            >
+                              <p className="font-semibold leading-5 truncate">{occurrence.taskTemplate.title}</p>
+                              <div className="mt-0.5 inline-flex items-center gap-2 text-[10px] opacity-80">
+                                {occurrence.assignedMember ? (
+                                  <span
+                                    className="size-1.5 rounded-full border border-black/10"
+                                    style={{ backgroundColor: occurrence.assignedMember.color }}
+                                  />
+                                ) : null}
+                                <span>{occurrence.assignedMember?.displayName ?? "À attribuer"}</span>
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       ) : !activeAbsences.length ? (
                         <p className="rounded-[1.1rem] border border-dashed border-[var(--line)] px-3 py-3 text-center text-xs text-[var(--ink-500)]">
                           Rien à signaler ce jour-là.
                         </p>
                       ) : null}
+                      {dayOccurrences.length > 3 && (
+                        <p className="text-center text-[10px] font-black uppercase tracking-widest text-[var(--ink-400)]">
+                          + {dayOccurrences.length - 3} plus
+                        </p>
+                      )}
                     </div>
                   </article>
                 );
@@ -348,52 +462,56 @@ export function CalendarMonth({ month, occurrences, absences, mobileDayBase }: C
                 return (
                   <div
                     key={day.toISOString()}
-                    className={`calendar-cell min-h-[110px] border-b border-r border-[var(--line)] px-2 py-3 align-top last:border-r-0 transition-colors ${isToday ? "bg-[var(--coral-50)]/40" : ""} ${!isVisible ? "bg-[var(--ink-50)]/20" : ""}`}
+                    className={`calendar-cell min-h-[110px] border-b border-r border-[var(--line)] px-2 py-3 align-top last:border-r-0 transition-all hover:bg-black/[0.02] cursor-pointer group/cell ${isToday ? "bg-[var(--coral-50)]/40" : ""} ${!isVisible ? "bg-[var(--ink-50)]/20" : ""}`}
+                    onClick={() => setSelectedDay(day)}
                   >
                     <div className={isVisible ? "" : "opacity-30"}>
                       <div className="mb-3 flex items-center justify-between px-1">
-                        <p className={`text-sm font-black ${isToday ? "text-[var(--coral-600)]" : "text-[var(--ink-950)]"}`}>
+                        <p className={`text-sm font-black transition-transform group-hover/cell:scale-110 ${isToday ? "text-[var(--coral-600)]" : "text-[var(--ink-950)]"}`}>
                           {format(day, "d")}
                         </p>
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-1">
                         {activeAbsences.map((absence) => (
                           <div
                             key={absence.id}
-                            className="rounded-xl px-2.5 py-1.5 text-[10px] font-bold shadow-sm"
+                            className="rounded-lg px-2 py-1 text-[9px] font-bold shadow-sm"
                             style={{
                               backgroundColor: hexToRgba(absence.member.color, 0.1),
                               color: "var(--ink-950)",
                               border: `1px solid ${hexToRgba(absence.member.color, 0.2)}`,
                             }}
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="size-2 rounded-full shadow-inner" style={{ backgroundColor: absence.member.color }} />
-                              <p className="truncate">Absence · {absence.member.displayName}</p>
+                            <div className="flex items-center gap-1.5">
+                              <span className="size-1.5 rounded-full shadow-inner" style={{ backgroundColor: absence.member.color }} />
+                              <p className="truncate">Abs. {absence.member.displayName.split(" ")[0]}</p>
                             </div>
                           </div>
                         ))}
-                        {dayOccurrences.slice(0, 3).map((o) => (
-                          <div
-                            aria-label={`${o.taskTemplate.title} · ${o.assignedMember?.displayName ?? "À attribuer"}`}
-                            key={o.id}
-                            className="rounded-xl px-2.5 py-1.5 text-[10px] font-bold shadow-sm transition-all hover:scale-[1.02] hover:shadow-md cursor-default"
-                            role="group"
-                            style={{
-                              backgroundColor: hexToRgba(o.taskTemplate.color ?? "#D8643D", 0.15),
-                              color: "var(--ink-950)",
-                              border: `1px solid ${hexToRgba(o.taskTemplate.color ?? "#D8643D", 0.25)}`,
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="size-2 rounded-full shadow-inner" style={{ backgroundColor: o.taskTemplate.color ?? "#D8643D" }} />
-                              <p className="truncate">{o.taskTemplate.title}</p>
+                        {dayOccurrences.slice(0, 4).map((o) => {
+                          const { className, style } = getOccurrenceStyle(o.status, o.taskTemplate.color ?? "#D8643D");
+                          return (
+                            <div
+                              aria-label={`${o.taskTemplate.title} · ${o.assignedMember?.displayName ?? "À attribuer"}`}
+                              key={o.id}
+                              className={`rounded-lg px-2 py-1 text-[9px] font-bold transition-all hover:brightness-95 ${className}`}
+                              role="group"
+                              style={style}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedOccurrenceId(o.id);
+                              }}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span className="size-1.5 rounded-full shadow-inner shrink-0" style={{ backgroundColor: o.taskTemplate.color ?? "#D8643D" }} />
+                                <p className="truncate">{o.taskTemplate.title}</p>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                        {dayOccurrences.length > 3 && (
-                          <p className="px-2 pt-1 text-[9px] font-black uppercase tracking-tighter text-[var(--ink-400)]">
-                            + {dayOccurrences.length - 3} plus
+                          );
+                        })}
+                        {dayOccurrences.length > 4 && (
+                          <p className="px-2 pt-0.5 text-[8px] font-black uppercase tracking-tighter text-[var(--ink-400)]">
+                            + {dayOccurrences.length - 4} autres
                           </p>
                         )}
                       </div>
@@ -405,6 +523,92 @@ export function CalendarMonth({ month, occurrences, absences, mobileDayBase }: C
           </>
         )}
       </div>
+
+      {/* Day Zoom BottomSheet */}
+      <BottomSheet
+        isOpen={Boolean(selectedDay)}
+        onClose={() => setSelectedDay(null)}
+        title={selectedDay ? format(selectedDay, "EEEE d MMMM", { locale: fr }) : "Détails du jour"}
+      >
+        <div className="space-y-4">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--ink-500)]">
+            Toutes les tâches de ce jour
+          </p>
+          <div className="space-y-2">
+            {selectedDayOccurrences.length ? (
+              selectedDayOccurrences.map((o) => {
+                const { className, style } = getOccurrenceStyle(o.status, o.taskTemplate.color ?? "#D8643D");
+                return (
+                  <button
+                    key={o.id}
+                    className={`flex w-full items-center justify-between gap-3 rounded-2xl p-4 text-left transition-all active:scale-[0.98] ${className}`}
+                    style={style}
+                    onClick={() => setSelectedOccurrenceId(o.id)}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold leading-tight">{o.taskTemplate.title}</p>
+                      <div className="mt-1 flex items-center gap-2 text-[11px] opacity-80">
+                        {o.taskTemplate.room && (
+                          <span className="rounded-full bg-black/5 px-2 py-0.5">{o.taskTemplate.room}</span>
+                        )}
+                        <span>{o.assignedMember?.displayName ?? "À attribuer"}</span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] font-black uppercase opacity-60">
+                        {o.status === "completed" ? "Terminée" : o.status === "skipped" ? "Sautée" : "À faire"}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="rounded-[1.3rem] border border-dashed border-[var(--line)] p-8 text-center">
+                <p className="text-sm text-[var(--ink-500)] font-medium">Aucune tâche prévue pour ce jour.</p>
+              </div>
+            )}
+          </div>
+
+          {selectedDay && dayAbsences(selectedDay).length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-[var(--line)]">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--ink-400)]">Absences</p>
+              {dayAbsences(selectedDay).map((absence) => (
+                <div
+                  key={absence.id}
+                  className="rounded-2xl border px-4 py-3 text-sm"
+                  style={{
+                    backgroundColor: hexToRgba(absence.member.color, 0.05),
+                    borderColor: hexToRgba(absence.member.color, 0.15),
+                  }}
+                >
+                  <p className="font-bold text-[var(--ink-950)]">{absence.member.displayName}</p>
+                  {absence.notes && <p className="mt-1 text-xs text-[var(--ink-700)]">{absence.notes}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </BottomSheet>
+
+      {/* Task Detail Sheet */}
+      {selectedOccurrence && (
+        <TaskDetailSheet
+          isOpen={Boolean(selectedOccurrenceId)}
+          onClose={() => setSelectedOccurrenceId(null)}
+          occurrence={selectedOccurrence as any}
+          members={members}
+          currentMemberId={currentMemberId}
+          householdId={householdId}
+          canEditTemplate={true} // Usually admins can edit
+          taskTemplateId={selectedOccurrence.taskTemplate.id}
+          archived={["completed", "skipped", "cancelled"].includes(selectedOccurrence.status)}
+          canEditOccurrence={selectedOccurrence.status !== "cancelled"}
+          statusLabel={selectedOccurrence.status === "completed" ? "Terminée" : "À faire"}
+          isSubmitting={isPending}
+          onSubmit={submitAction}
+          onTemplateSaved={() => router.refresh()}
+        />
+      )}
     </>
   );
 }

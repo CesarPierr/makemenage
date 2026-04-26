@@ -161,10 +161,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             overdueCount={overdueCount}
             weekDone={weekDone}
             weekTotal={weekTotal}
-          />
-        </div>
-        <div className="flex justify-end sm:items-start">
-          <StatsDrawer
             streak={streak}
             memberStats={loadData.byMember}
             rollingMetrics={rollingData}
@@ -181,6 +177,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               }))}
           />
         </div>
+        <div className="hidden sm:block" />
       </div>
 
       <TaskWorkspaceClient
@@ -212,13 +209,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </details>
       </aside>
 
-      <aside aria-label="Activité récente">
-        <RecentActivityFeed
-          logs={context.actionLogs}
-          householdId={context.household.id}
-          currentMemberId={context.currentMember?.id}
-        />
-      </aside>
+      <footer className="pb-8 pt-4 text-center">
+        <a
+          href={`/app/history?household=${context.household.id}`}
+          className="btn-quiet px-6 py-3 text-sm font-semibold inline-flex items-center gap-2"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20v-6M9 20V10M15 20V4M3 20h18" /></svg>
+          Voir tout le journal d&apos;activité
+        </a>
+      </footer>
     </div>
   );
 }

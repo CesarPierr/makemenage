@@ -68,7 +68,7 @@ export function QuickAddBar({ householdId, manageable }: QuickAddBarProps) {
 
   return (
     <form
-      className="app-surface flex items-center gap-2 rounded-[1.6rem] p-2 sm:p-2.5"
+      className="flex items-center gap-2"
       onSubmit={handleSubmit}
     >
       <label className="flex-1">

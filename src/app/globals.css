@@ -115,6 +115,20 @@ textarea {
   }
 }
 
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--line-strong);
+}
+
 .display-title {
   font-family: var(--font-display), serif;
 }
@@ -654,6 +668,27 @@ button:not(:disabled),
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Utility: oblique stripes for completed tasks */
+.bg-stripes {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(0, 0, 0, 0.05) 4px,
+    rgba(0, 0, 0, 0.05) 8px
+  );
+}
+
+[data-theme="dark"] .bg-stripes {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 255, 255, 0.05) 4px,
+    rgba(255, 255, 255, 0.05) 8px
+  );
 }
 
 /* Utility: hide scrollbar */

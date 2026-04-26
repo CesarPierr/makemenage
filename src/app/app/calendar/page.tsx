@@ -220,9 +220,12 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         <div className="deferred-section animate-in fade-in slide-in-from-bottom-4 duration-500">
           <CalendarMonth
             month={currentMonth}
-            occurrences={filteredOccurrences}
+            occurrences={filteredOccurrences as any}
             absences={absences}
             mobileDayBase={currentDayBase}
+            householdId={context.household.id}
+            currentMemberId={context.currentMember?.id}
+            members={members}
           />
         </div>
       </section>

@@ -5,6 +5,7 @@ import { CalendarClock, Check, ChevronLeft, ChevronRight, Plus, TimerReset } fro
 
 import { useFormAction } from "@/lib/use-form-action";
 import { roomSuggestions, taskPalette } from "@/lib/constants";
+import { AVAILABLE_ICONS, getRoomIcon, type IconName } from "@/lib/room-icons";
 import { isoDateKey } from "@/lib/time";
 import { cn, formatMinutes } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ type DraftTask = {
   assignmentMode: string;
   eligibleMemberIds: string[];
   isCollective: boolean;
+  icon: string;
 };
 
 const recurrenceOptions = [
@@ -59,6 +61,7 @@ function buildInitialDraft(memberIds: string[]): DraftTask {
     assignmentMode: "strict_alternation",
     eligibleMemberIds: memberIds,
     isCollective: false,
+    icon: "",
   };
 }
 
@@ -145,7 +148,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
             <div>
               <p className="section-kicker">Étape {step} / 3</p>
               <h3 className="display-title mt-1 text-2xl">
-                {step === 1 ? "La tâche" : step === 2 ? (isSingleTask ? "La date" : "Le rythme") : (isSingleTask ? "L’attribution" : "L’attribution")}
+                {step === 1 ? "La tâche" : step === 2 ? (isSingleTask ? "La date" : "Le rythme") : "L’attribution"}
               </h3>
             </div>
             <button className="btn-quiet px-4 py-2 text-sm font-semibold" onClick={resetWizard} type="button">
@@ -217,6 +220,7 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
             <input name="estimatedMinutes" type="hidden" value={draft.estimatedMinutes || "1"} />
             <input name="category" type="hidden" value={draft.category} />
             <input name="room" type="hidden" value={draft.room} />
+            <input name="icon" type="hidden" value={draft.icon} />
             <input name="color" type="hidden" value={draft.color} />
             <input name="isCollective" type="hidden" value={draft.isCollective ? "on" : ""} />
             <input name="startsOn" type="hidden" value={draft.startsOn} />
@@ -240,9 +244,15 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                     {recurrenceLabel} · {draft.estimatedMinutes ? formatMinutes(Number(draft.estimatedMinutes) || 0) : "Durée à définir"} · {selectedAssignmentLabel}
                   </p>
                 </div>
-                <span className="stat-pill px-3 py-1 text-xs font-semibold">
-                  {draft.room.trim() || "Pièce libre"}
-                </span>
+                <div className="flex flex-col items-end gap-2">
+                  <span className="stat-pill px-3 py-1 text-xs font-semibold">
+                    {draft.room.trim() || "Pièce libre"}
+                  </span>
+                  {(() => {
+                    const PreviewIcon = getRoomIcon(draft.room, draft.icon);
+                    return <PreviewIcon className="size-5 opacity-40" />;
+                  })()}
+                </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <span className="stat-pill inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold">
@@ -386,6 +396,38 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
                     value={draft.category}
                   />
                 </label>
+
+                <div className="field-label">
+                  <span>Icône (optionnel)</span>
+                  <div className="flex flex-wrap gap-2 overflow-y-auto max-h-40 rounded-2xl border border-[var(--line)] bg-white/50 p-3">
+                    <button
+                      className={cn(
+                        "flex size-10 items-center justify-center rounded-lg border-2 transition-all",
+                        draft.icon === "" ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)]" : "border-transparent hover:bg-black/5"
+                      )}
+                      onClick={() => updateDraft("icon", "")}
+                      title="Utiliser l'icône par défaut de la pièce"
+                      type="button"
+                    >
+                      <Plus className="size-5 opacity-40" />
+                    </button>
+                    {Object.entries(AVAILABLE_ICONS).map(([name, IconComponent]) => (
+                      <button
+                        key={name}
+                        className={cn(
+                          "flex size-10 items-center justify-center rounded-lg border-2 transition-all",
+                          draft.icon === name ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)]" : "border-transparent hover:bg-black/5"
+                        )}
+                        onClick={() => updateDraft("icon", name)}
+                        title={name}
+                        type="button"
+                      >
+                        <IconComponent className="size-5" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <label className="field-label cursor-pointer flex items-center gap-3">
                   <input
                     type="checkbox"

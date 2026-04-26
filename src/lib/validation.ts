@@ -71,6 +71,7 @@ export const taskTemplateSchema = z.object({
   description: z.string().max(280).optional(),
   category: z.string().max(40).optional(),
   room: z.string().max(40).optional(),
+  icon: z.string().max(40).optional(),
   color: z
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/)

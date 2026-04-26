@@ -17,6 +17,7 @@ import {
 import { TaskDetailSheet } from "@/components/task-detail-sheet";
 import { useToast } from "@/components/ui/toast";
 import { classifyRelative, formatRelative } from "@/lib/relative-date";
+import { getRoomIcon } from "@/lib/room-icons";
 import { formatMinutes } from "@/lib/utils";
 
 type OccurrenceCardProps = {
@@ -32,6 +33,7 @@ type OccurrenceCardProps = {
       title: string;
       category: string | null;
       room?: string | null;
+      icon?: string | null;
       estimatedMinutes: number;
       color: string;
       isCollective?: boolean;
@@ -241,11 +243,15 @@ export function OccurrenceCard({
                   ) : null}
                 </h3>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-700)]">
-                  {occurrence.taskTemplate.room ? (
-                    <span className="rounded-full bg-white/80 border border-[var(--line)] px-2 py-0.5 font-medium">
-                      {occurrence.taskTemplate.room}
-                    </span>
-                  ) : null}
+                  {occurrence.taskTemplate.room ? (() => {
+                    const RoomIcon = getRoomIcon(occurrence.taskTemplate.room, occurrence.taskTemplate.icon);
+                    return (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-[var(--line)] px-2 py-0.5 font-medium">
+                        <RoomIcon className="size-3 opacity-60" />
+                        {occurrence.taskTemplate.room}
+                      </span>
+                    );
+                  })() : null}
                   <span className="rounded-full bg-white/80 border border-[var(--line)] px-2 py-0.5 font-medium">
                     {formatMinutes(occurrence.taskTemplate.estimatedMinutes)}
                   </span>

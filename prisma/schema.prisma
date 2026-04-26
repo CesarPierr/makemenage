@@ -240,6 +240,7 @@ model TaskTemplate {
   description      String?
   category         String?
   room             String?
+  icon             String?
   color            String          @default("#D8643D")
   tags             Json?
   estimatedMinutes Int             @default(30)

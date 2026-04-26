@@ -48,7 +48,7 @@ export default async function SettingsLayout({ children }: SettingsLayoutProps) 
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:max-w-5xl">
       {/* Header */}
       <section className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
         <p className="section-kicker">Réglages</p>

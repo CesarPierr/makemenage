@@ -97,8 +97,25 @@ export async function getCurrentHouseholdContext(
         status: { not: "cancelled" },
       },
       include: {
-        taskTemplate: true,
-        assignedMember: true,
+        taskTemplate: {
+          select: {
+            id: true,
+            title: true,
+            color: true,
+            estimatedMinutes: true,
+            room: true,
+            category: true,
+            icon: true,
+            isCollective: true,
+          },
+        },
+        assignedMember: {
+          select: {
+            id: true,
+            displayName: true,
+            color: true,
+          },
+        },
         completedByMember: true,
       },
       orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],

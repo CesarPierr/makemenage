@@ -7,7 +7,7 @@ import { fr } from "date-fns/locale";
 import { ArrowRight, BarChart2, CheckCircle2, Pencil, RotateCcw, SkipForward } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 
-type MemberStat = {
+export type MemberStat = {
   memberId: string;
   displayName: string;
   color: string;
@@ -16,7 +16,7 @@ type MemberStat = {
   completionRate: number;
 };
 
-type RollingPeriod = {
+export type RollingPeriod = {
   days: number;
   byMember: Array<{
     memberId: string;
@@ -27,7 +27,7 @@ type RollingPeriod = {
   }>;
 };
 
-type ActivityEntry = {
+export type ActivityEntry = {
   id: string;
   actionType: string;
   createdAt: Date | string;
@@ -35,7 +35,7 @@ type ActivityEntry = {
   taskTitle: string;
 };
 
-type StatsDrawerProps = {
+export type StatsDrawerProps = {
   streak: number;
   memberStats: MemberStat[];
   rollingMetrics: RollingPeriod[];
