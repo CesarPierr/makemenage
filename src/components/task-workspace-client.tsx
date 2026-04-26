@@ -12,9 +12,15 @@ import { QuickAddBar } from "@/components/quick-add-bar";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { useToast } from "@/components/ui/toast";
 import { groupOccurrencesByRoom } from "@/lib/experience";
+import {
+  getEventTimeMs,
+  getRunningSessionStorageKey,
+  parseStoredRunningSession,
+  RUNNING_SESSION_ACTIVE_STATUSES as ACTIVE_STATUSES,
+  sanitizeRunningSession,
+  type RunningSession,
+} from "@/lib/running-session";
 import { formatMinutes } from "@/lib/utils";
-
-const ACTIVE_STATUSES = new Set(["planned", "due", "overdue", "rescheduled"]);
 
 type WorkspaceOccurrence = {
   id: string;
@@ -38,19 +44,6 @@ type WorkspaceOccurrence = {
   wasCompletedAlone?: boolean | null;
 };
 
-type RunningSession = {
-  room: string;
-  occurrenceIds: string[];
-  currentIndex: number;
-  status: "running" | "paused";
-  startedAt: number | null;
-  elapsedMs: number;
-  /** "optimized" sessions pull tasks across multiple days into a single sequence;
-   *  they share the same auto-realign behavior as any completion (always-on). */
-  mode?: "room" | "optimized";
-  horizonDays?: number;
-};
-
 type TaskWorkspaceClientProps = {
   householdId: string;
   currentMemberId?: string | null;
@@ -59,52 +52,6 @@ type TaskWorkspaceClientProps = {
   occurrences: WorkspaceOccurrence[];
   autoStartSession?: boolean;
 };
-
-function getSessionStorageKey(householdId: string, currentMemberId?: string | null) {
-  return `makemenage:running-session:${householdId}:${currentMemberId ?? "shared"}`;
-}
-
-function getEventTimeMs(eventTimeStamp: number) {
-  return Math.round(performance.timeOrigin + eventTimeStamp);
-}
-
-function parseStoredRunningSession(value: string | null) {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(value) as RunningSession;
-  } catch {
-    return null;
-  }
-}
-
-function sanitizeRunningSession(
-  session: RunningSession | null,
-  occurrenceById: Record<string, WorkspaceOccurrence>,
-) {
-  if (!session) {
-    return null;
-  }
-
-  const validOccurrenceIds = session.occurrenceIds.filter((occurrenceId) => {
-    const occurrence = occurrenceById[occurrenceId];
-    return occurrence ? ACTIVE_STATUSES.has(occurrence.status) : false;
-  });
-
-  if (!validOccurrenceIds.length) {
-    return null;
-  }
-
-  return {
-    ...session,
-    occurrenceIds: validOccurrenceIds,
-    currentIndex: Math.min(session.currentIndex, validOccurrenceIds.length - 1),
-    elapsedMs: Math.max(0, session.elapsedMs),
-    startedAt: session.startedAt ? Math.max(0, session.startedAt) : null,
-  };
-}
 
 export function TaskWorkspaceClient({
   householdId,
@@ -122,7 +69,7 @@ export function TaskWorkspaceClient({
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [showOptimizedPicker, setShowOptimizedPicker] = useState(false);
-  const sessionStorageKey = getSessionStorageKey(householdId, currentMemberId);
+  const sessionStorageKey = getRunningSessionStorageKey(householdId, currentMemberId);
   const [runningSession, setRunningSession] = useState<RunningSession | null>(() => {
     if (typeof window === "undefined") {
       return null;

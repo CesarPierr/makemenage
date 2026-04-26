@@ -5,6 +5,17 @@ Chaque entrée résume une PR/commit en moins de 200 caractères.
 
 ## 2026-04-26
 
+### Extraction `lib/running-session.ts` + migration `tasks/[taskId]`
+
+`task-workspace-client.tsx` passe de **869 → 816 lignes** : helpers et type
+`RunningSession` extraits dans [src/lib/running-session.ts](../src/lib/running-session.ts)
+(78 lignes). Module isolé, réutilisable, testable indépendamment.
+
+`tasks/[taskId]` (180 lignes, plus grosse route restante) migré vers
+`withHousehold` avec l'option `resolveHouseholdId` qui lit l'ID dans le
+formData plutôt que dans les params. Branches DELETE et PUT-as-POST conservées
+intactes. **13 routes** au total utilisent désormais les wrappers.
+
 ### `1212977` — useOptimistic + 4 routes household migrées
 
 OccurrenceCard passe à React 19 `useOptimistic` + `startTransition` au lieu d'un
@@ -38,7 +49,9 @@ Dépendance `@hookform/resolvers` retirée (déclarée mais jamais importée).
 | Migration des 5 routes occurrence | ✅ | `64eae39` |
 | `useOptimistic` sur `OccurrenceCard` | ✅ | `1212977` |
 | Migration de 6 routes household | ✅ | `64eae39`, `1212977` |
-| Migration des routes restantes (`tasks/*`, `comments`) | 🟡 partiel | — |
+| Migration `tasks/[taskId]` | ✅ | (à venir) |
+| Extraction `lib/running-session.ts` | ✅ | (à venir) |
+| Migration des routes restantes (`comments`, MCP) | ⏸ | — |
 | CSS dark mode → `@variant dark` | ⏸ reporté | — |
 | Découpage `task-workspace-client.tsx` | ⏸ | — |
 | Server Actions sur les forms d'auth | ⏸ | — |
