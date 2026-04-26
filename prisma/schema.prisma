@@ -115,6 +115,7 @@ model Household {
   integrations    HouseholdIntegration[]
   tasks           TaskTemplate[]
   occurrences     TaskOccurrence[]
+  holidays        HouseholdHoliday[]
 
   @@index([createdByUserId])
 }
@@ -279,6 +280,7 @@ model TaskOccurrence {
   notes               String?
   wasCompletedAlone   Boolean?
   isManuallyModified  Boolean              @default(false)
+  rescheduleCount     Int                  @default(0)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   household           Household            @relation(fields: [householdId], references: [id], onDelete: Cascade)
@@ -293,6 +295,19 @@ model TaskOccurrence {
   @@index([householdId, assignedMemberId, scheduledDate])
   @@index([assignedMemberId, scheduledDate])
   @@index([taskTemplateId])
+}
+
+model HouseholdHoliday {
+  id          String    @id @default(cuid())
+  householdId String
+  startDate   DateTime
+  endDate     DateTime
+  label       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([householdId, startDate])
 }
 
 model OccurrenceActionLog {

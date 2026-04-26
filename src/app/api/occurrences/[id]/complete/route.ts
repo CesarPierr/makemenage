@@ -46,22 +46,16 @@ export async function POST(request: Request, { params }: Params) {
     memberId: String(formData.get("memberId") || membership.id),
     actualMinutes: formData.get("actualMinutes") || undefined,
     notes: formData.get("notes") || undefined,
-    shiftFutureOccurrences: formData.get("shiftFutureOccurrences") === "on",
     wasCompletedAlone: formData.get("wasCompletedAlone") === "on",
   });
   const nextPath = normalizeNextPath(formData.get("nextPath")?.toString());
 
-  const isAheadOfSchedule = occurrence.scheduledDate > new Date();
-  const shiftRequested = formData.has("shiftFutureOccurrences") 
-    ? formData.get("shiftFutureOccurrences") === "on"
-    : isAheadOfSchedule;
-
+  // Future occurrences always realign from the actual completion date — no user toggle.
   await completeOccurrence({
     occurrenceId: id,
     actorMemberId: parsed.success ? parsed.data.memberId : membership.id,
     actualMinutes: parsed.success ? parsed.data.actualMinutes : undefined,
     notes: parsed.success ? parsed.data.notes : undefined,
-    shiftFutureOccurrences: shiftRequested,
     wasCompletedAlone: parsed.success ? parsed.data.wasCompletedAlone : false,
   });
 

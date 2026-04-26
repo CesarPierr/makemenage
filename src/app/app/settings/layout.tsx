@@ -7,6 +7,7 @@ import {
   History,
   KeyRound,
   LayoutGrid,
+  Plane,
   Users,
 } from "lucide-react";
 
@@ -26,6 +27,7 @@ const settingsPanels = [
   { id: "tasks", label: "Tâches", icon: ClipboardList, description: "Catalogue et création de routines.", requiredRole: "admin" as const },
   { id: "access", label: "Accès", icon: KeyRound, description: "Invitations et partage.", requiredRole: "admin" as const },
   { id: "planning", label: "Planning", icon: Calendar, description: "Absences et rééquilibrage.", requiredRole: "admin" as const },
+  { id: "holidays", label: "Vacances", icon: Plane, description: "Périodes où tout le foyer est en pause.", requiredRole: "admin" as const },
   { id: "integrations", label: "Intégrations", icon: Globe, description: "OpenClaw et MCP.", requiredRole: "admin" as const },
   { id: "danger", label: "Danger", icon: AlertTriangle, description: "Suppression du foyer.", requiredRole: "owner" as const },
   // Moi group

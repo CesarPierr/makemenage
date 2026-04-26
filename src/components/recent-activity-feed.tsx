@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CheckCircle2, SkipForward, RotateCcw, Pencil, ArrowRight } from "lucide-react";
 
 import { ReopenButton } from "@/components/reopen-button";
+import { formatRelative } from "@/lib/relative-date";
 
 type ActivityLog = {
   id: string;
@@ -43,8 +44,7 @@ function readObject(value: unknown): Record<string, unknown> {
 function getTimeSuffix(log: ActivityLog): string {
   const values = readObject(log.newValues);
   if (log.actionType === "rescheduled" && typeof values.scheduledDate === "string") {
-    const dateStr = values.scheduledDate.slice(0, 10);
-    return `au ${format(new Date(dateStr), "d MMM", { locale: fr })}`;
+    return `à ${formatRelative(values.scheduledDate)}`;
   }
   return formatDistanceToNow(log.createdAt, { locale: fr, addSuffix: true });
 }

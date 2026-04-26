@@ -89,7 +89,6 @@ export const occurrenceActionSchema = z.object({
   notes: z.string().max(280).optional(),
   date: z.preprocess((value) => (value ? parseDateInput(String(value)) : undefined), z.date()).optional(),
   actualMinutes: z.coerce.number().int().min(0).max(480).optional(),
-  shiftFutureOccurrences: z.coerce.boolean().optional(),
   wasCompletedAlone: z.coerce.boolean().optional(),
 });
 

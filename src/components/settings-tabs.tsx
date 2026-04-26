@@ -11,6 +11,7 @@ import {
   History,
   KeyRound,
   LayoutGrid,
+  Plane,
   Users,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ type SettingsPanelId =
   | "activity"
   | "access"
   | "planning"
+  | "holidays"
   | "integrations"
   | "notifications"
   | "danger";
@@ -43,12 +45,22 @@ const panelIcons = {
   activity: History,
   access: KeyRound,
   planning: Calendar,
+  holidays: Plane,
   integrations: Globe,
   notifications: Bell,
   danger: AlertTriangle,
 } as const;
 
-const FOYER_IDS = new Set<SettingsPanelId>(["households", "team", "tasks", "access", "planning", "integrations", "danger"]);
+const FOYER_IDS = new Set<SettingsPanelId>([
+  "households",
+  "team",
+  "tasks",
+  "access",
+  "planning",
+  "holidays",
+  "integrations",
+  "danger",
+]);
 const MOI_IDS = new Set<SettingsPanelId>(["activity", "notifications"]);
 
 export function SettingsTabs({ panels, householdId }: SettingsTabsProps) {

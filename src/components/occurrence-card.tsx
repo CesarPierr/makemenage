@@ -1,7 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import { useState, type SyntheticEvent } from "react";
 import {
@@ -9,13 +7,16 @@ import {
   CheckCircle2,
   CircleDashed,
   Clock3,
+  Coffee,
   MoreHorizontal,
   RotateCcw,
   SkipForward,
+  Sunrise,
 } from "lucide-react";
 
 import { TaskDetailSheet } from "@/components/task-detail-sheet";
 import { useToast } from "@/components/ui/toast";
+import { classifyRelative, formatRelative } from "@/lib/relative-date";
 import { formatMinutes } from "@/lib/utils";
 
 type OccurrenceCardProps = {
@@ -26,6 +27,7 @@ type OccurrenceCardProps = {
     notes: string | null;
     actualMinutes: number | null;
     isManuallyModified?: boolean;
+    rescheduleCount?: number;
     taskTemplate: {
       title: string;
       category: string | null;
@@ -46,7 +48,18 @@ type OccurrenceCardProps = {
   taskTemplateId?: string;
 };
 
-function getStatusMeta(status: string) {
+type StatusMeta = {
+  label: string;
+  hint: string;
+  icon: typeof CheckCircle2;
+  accent: string;
+  surface: string;
+  border: string;
+  /** When set, the card pulses softly to flag a long delay. */
+  pulse?: boolean;
+};
+
+function getStatusMeta(status: string, scheduledDate: Date): StatusMeta {
   if (status === "completed") {
     return { label: "Terminée", hint: "Déjà faite", icon: CheckCircle2, accent: "#064e3b", surface: "rgba(6, 78, 59, 0.08)", border: "rgba(6, 78, 59, 0.2)" };
   }
@@ -57,7 +70,37 @@ function getStatusMeta(status: string) {
     return { label: "Reportée", hint: "Nouvelle date", icon: RotateCcw, accent: "#0c4a6e", surface: "rgba(12, 74, 110, 0.08)", border: "rgba(12, 74, 110, 0.2)" };
   }
   if (status === "overdue") {
-    return { label: "En retard", hint: "À rattraper", icon: AlertCircle, accent: "#7f1d1d", surface: "rgba(127, 29, 29, 0.08)", border: "rgba(127, 29, 29, 0.22)" };
+    const cls = classifyRelative(scheduledDate);
+    if (cls.kind === "very-late") {
+      return {
+        label: `${cls.daysLate} j de retard`,
+        hint: "À rattraper en priorité",
+        icon: AlertCircle,
+        accent: "#7f1d1d",
+        surface: "rgba(127, 29, 29, 0.16)",
+        border: "rgba(127, 29, 29, 0.45)",
+        pulse: true,
+      };
+    }
+    if (cls.kind === "late") {
+      return {
+        label: `${cls.daysLate} j de retard`,
+        hint: "À rattraper",
+        icon: AlertCircle,
+        accent: "#991b1b",
+        surface: "rgba(153, 27, 27, 0.1)",
+        border: "rgba(153, 27, 27, 0.3)",
+      };
+    }
+    // slightly-late
+    return {
+      label: cls.kind === "slightly-late" ? `${cls.daysLate} j de retard` : "En retard",
+      hint: "À rattraper",
+      icon: AlertCircle,
+      accent: "#b45309",
+      surface: "rgba(180, 83, 9, 0.1)",
+      border: "rgba(180, 83, 9, 0.25)",
+    };
   }
   if (status === "due") {
     return { label: "Aujourd'hui", hint: "À faire maintenant", icon: Clock3, accent: "#78350f", surface: "rgba(120, 53, 15, 0.08)", border: "rgba(120, 53, 15, 0.2)" };
@@ -84,10 +127,11 @@ export function OccurrenceCard({
   const currentStatus = optimisticStatus;
   const canEditOccurrence = currentStatus !== "cancelled";
   const archived = ["completed", "skipped", "cancelled"].includes(currentStatus);
-  const meta = getStatusMeta(currentStatus);
-  const StatusIcon = meta.icon;
   const scheduledDate =
     occurrence.scheduledDate instanceof Date ? occurrence.scheduledDate : new Date(occurrence.scheduledDate);
+  const meta = getStatusMeta(currentStatus, scheduledDate);
+  const StatusIcon = meta.icon;
+  const relativeLabel = formatRelative(scheduledDate);
 
   function stopEvent<T extends SyntheticEvent>(event: T) {
     event.stopPropagation();
@@ -138,10 +182,28 @@ export function OccurrenceCard({
 
   const cardBg = { borderColor: meta.border, background: `linear-gradient(135deg, ${meta.surface}, var(--card-end))` };
 
+  function quickReschedule(target: "tomorrow" | "after-tomorrow" | "weekend") {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const date = new Date(today);
+    if (target === "tomorrow") {
+      date.setDate(date.getDate() + 1);
+    } else if (target === "after-tomorrow") {
+      date.setDate(date.getDate() + 2);
+    } else {
+      // Next Saturday (or this Saturday if today is before Saturday)
+      const dayOfWeek = today.getDay(); // 0 Sun .. 6 Sat
+      const daysUntilSat = ((6 - dayOfWeek + 7) % 7) || 7;
+      date.setDate(date.getDate() + daysUntilSat);
+    }
+    const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    submitAction(`/api/occurrences/${occurrence.id}/reschedule`, { date: iso });
+  }
+
   return (
     <>
       <article
-        className="relative overflow-hidden rounded-2xl border p-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] sm:rounded-[1.7rem] sm:p-5"
+        className={`relative overflow-hidden rounded-2xl border p-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] sm:rounded-[1.7rem] sm:p-5 ${meta.pulse ? "ring-2 ring-[rgba(127,29,29,0.18)] shadow-[0_8px_24px_rgba(127,29,29,0.18)]" : ""}`}
         onClick={() => setShowSheet(true)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -198,14 +260,28 @@ export function OccurrenceCard({
                       {occurrence.assignedMember.displayName}
                     </span>
                   ) : null}
+                  {occurrence.rescheduleCount && occurrence.rescheduleCount > 0 ? (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium"
+                      style={{ borderColor: "rgba(216, 100, 61, 0.25)", backgroundColor: "rgba(216, 100, 61, 0.08)", color: "var(--coral-600)" }}
+                      title={`Reportée ${occurrence.rescheduleCount} fois`}
+                    >
+                      <RotateCcw className="size-3" aria-hidden="true" />
+                      Reportée ×{occurrence.rescheduleCount}
+                    </span>
+                  ) : null}
                   <span className="font-semibold" style={{ color: meta.accent }}>
                     {meta.label}
                   </span>
                 </div>
               </div>
 
-              <span className="shrink-0 rounded-lg bg-white/80 border border-[var(--line)] px-2 py-1 text-[0.65rem] font-bold uppercase tracking-wider text-[var(--ink-500)]">
-                {format(scheduledDate, "d MMM", { locale: fr })}
+              <span
+                className="shrink-0 rounded-lg bg-white/80 border border-[var(--line)] px-2 py-1 text-[0.65rem] font-bold uppercase tracking-wider"
+                style={{ color: meta.accent }}
+                title={scheduledDate.toLocaleDateString("fr-FR")}
+              >
+                {relativeLabel}
               </span>
             </div>
 
@@ -221,6 +297,49 @@ export function OccurrenceCard({
             ) : null}
           </div>
         </div>
+
+        {!compact && canEditOccurrence && !archived && (currentStatus === "overdue" || currentStatus === "due") ? (
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[var(--ink-500)]">
+              Reporter à :
+            </span>
+            <button
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--ink-700)] transition-all hover:bg-white active:scale-95 disabled:opacity-40"
+              disabled={isSubmitting}
+              onClick={(event) => {
+                stopEvent(event);
+                quickReschedule("tomorrow");
+              }}
+              type="button"
+            >
+              <Sunrise className="size-3" aria-hidden="true" />
+              Demain
+            </button>
+            <button
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--ink-700)] transition-all hover:bg-white active:scale-95 disabled:opacity-40"
+              disabled={isSubmitting}
+              onClick={(event) => {
+                stopEvent(event);
+                quickReschedule("after-tomorrow");
+              }}
+              type="button"
+            >
+              Après-demain
+            </button>
+            <button
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--ink-700)] transition-all hover:bg-white active:scale-95 disabled:opacity-40"
+              disabled={isSubmitting}
+              onClick={(event) => {
+                stopEvent(event);
+                quickReschedule("weekend");
+              }}
+              type="button"
+            >
+              <Coffee className="size-3" aria-hidden="true" />
+              Week-end
+            </button>
+          </div>
+        ) : null}
 
         {!compact && canEditOccurrence && !archived ? (
           <div className="mt-3 flex items-center gap-2 pt-1">

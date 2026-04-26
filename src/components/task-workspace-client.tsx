@@ -25,6 +25,7 @@ type WorkspaceOccurrence = {
   assignedMemberId?: string | null;
   taskTemplateId?: string;
   isManuallyModified?: boolean;
+  rescheduleCount?: number;
   taskTemplate: {
     title: string;
     category: string | null;
@@ -44,8 +45,8 @@ type RunningSession = {
   status: "running" | "paused";
   startedAt: number | null;
   elapsedMs: number;
-  /** When set to "optimized", every completion forwards `shiftFutureOccurrences=on`
-   *  so the recurrence rule realigns from each completion date. */
+  /** "optimized" sessions pull tasks across multiple days into a single sequence;
+   *  they share the same auto-realign behavior as any completion (always-on). */
   mode?: "room" | "optimized";
   horizonDays?: number;
 };
@@ -406,10 +407,8 @@ export function TaskWorkspaceClient({
     setIsSubmitting(true);
     try {
       const elapsedMinutes = Math.max(1, Math.round(effectiveElapsedMs / 60000));
-      const isOptimized = activeRunningSession.mode === "optimized";
       await postTimerAction(`/api/occurrences/${currentRunningOccurrence.id}/complete`, {
         actualMinutes: String(elapsedMinutes),
-        ...(isOptimized ? { shiftFutureOccurrences: "on" } : {}),
       });
 
       if (isLast) {

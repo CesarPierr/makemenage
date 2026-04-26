@@ -338,7 +338,6 @@ export async function completeOccurrence(params: {
   actorMemberId?: string | null;
   actualMinutes?: number;
   notes?: string;
-  shiftFutureOccurrences?: boolean;
   wasCompletedAlone?: boolean;
 }) {
   const existing = await db.taskOccurrence.findUnique({
@@ -391,18 +390,11 @@ export async function completeOccurrence(params: {
     },
   });
 
-  // Decide whether future occurrences should be shifted:
-  // - explicitly requested by the user, OR
-  // - the completed occurrence was overdue / scheduled in the past (auto-realign so the
-  //   recurrence resumes "interval days from the actual completion date" — e.g. an
-  //   every-2-weeks task that was 5 days late should still come back in 2 weeks, not
-  //   in 9 days as if nothing had slipped).
+  // Future occurrences always realign from the actual completion date so the recurrence
+  // resumes "interval units from now" — early or late, the cadence remains stable.
   const today = startOfDay(new Date());
-  const wasOverdue =
-    existing.status === "overdue" || startOfDay(existing.scheduledDate).getTime() < today.getTime();
-  const effectiveShift = Boolean(params.shiftFutureOccurrences) || wasOverdue;
 
-  if (effectiveShift && existing.taskTemplate) {
+  if (existing.taskTemplate) {
     const ruleRecord = await db.recurrenceRule.findUnique({
       where: { id: existing.taskTemplate.recurrenceRuleId },
     });
@@ -519,6 +511,7 @@ export async function rescheduleOccurrence(params: {
       status: "rescheduled",
       notes: params.notes ?? existing.notes,
       isManuallyModified: true,
+      rescheduleCount: { increment: 1 },
     },
   });
 

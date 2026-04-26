@@ -1,8 +1,8 @@
 "use client";
 
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { Clock3, Pause, Play, SkipForward, TimerReset } from "lucide-react";
+
+import { formatRelative } from "@/lib/relative-date";
 
 type FocusOccurrence = {
   scheduledDate: Date;
@@ -79,7 +79,7 @@ export function FocusSession({
               {currentOccurrence.taskTemplate.title}
             </h4>
             <p className="mt-1 text-xs text-[var(--ink-700)]">
-              Prévue pour {format(currentOccurrence.scheduledDate, "d MMM", { locale: fr })}
+              Prévue {formatRelative(currentOccurrence.scheduledDate)}
             </p>
             {nextOccurrence ? (
               <p className="mt-1 text-xs text-[var(--ink-500)]">
