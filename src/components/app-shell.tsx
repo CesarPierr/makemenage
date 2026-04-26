@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { CalendarDays, LayoutGrid, LogOut, Moon, Settings2, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarDays, Compass, LayoutGrid, LogOut, Moon, Settings2, Sun } from "lucide-react";
 
+import { FeatureTour } from "@/components/feature-tour";
 import { PWAInstallBanner } from "@/components/pwa-install-banner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/components/theme-provider";
@@ -80,10 +82,38 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
   const householdIdFromUrl = searchParams.get("household");
   const activeHouseholdId = currentHouseholdId ?? householdIdFromUrl;
   const suffix = activeHouseholdId ? `?household=${activeHouseholdId}` : "";
+  const [tourOpen, setTourOpen] = useState(false);
 
   const activeSection =
     mobileSections.find((item) => isActivePath(pathname, item.href)) ?? mobileSections[0];
   const activeMeta = sectionMeta[activeSection.href as keyof typeof sectionMeta];
+
+  useEffect(() => {
+    if (searchParams.get("tour") === "1") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTourOpen(true);
+      return;
+    }
+    if (typeof window === "undefined") return;
+    try {
+      const seen = window.localStorage.getItem("mm.tour.v1.completed");
+      const dismissed = window.sessionStorage.getItem("mm.tour.v1.dismissed");
+      if (!seen && !dismissed && pathname === "/app") {
+        setTourOpen(true);
+      }
+    } catch {
+      // localStorage may be unavailable
+    }
+  }, [pathname, searchParams]);
+
+  function closeTour() {
+    setTourOpen(false);
+    try {
+      window.sessionStorage.setItem("mm.tour.v1.dismissed", "1");
+    } catch {
+      // no-op
+    }
+  }
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col lg:flex-row lg:gap-6 lg:p-6">
@@ -128,6 +158,19 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
         </div>
 
         <div className="mt-auto space-y-3 pt-6">
+          <button
+            className="interactive-surface flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-[var(--ink-700)] hover:bg-white hover:text-[var(--ink-950)] hover:shadow-sm"
+            onClick={() => setTourOpen(true)}
+            type="button"
+          >
+            <Compass className="size-5 shrink-0 text-[var(--coral-500)]" />
+            <div className="min-w-0 text-left">
+              <span className="block">Découvrir</span>
+              <span className="truncate text-[0.72rem] font-medium text-[var(--ink-500)]">
+                Visite guidée des panneaux
+              </span>
+            </div>
+          </button>
           <ThemeToggle />
           <form action="/api/auth/logout" method="post">
             <button
@@ -160,6 +203,14 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2 lg:hidden">
+              <button
+                aria-label="Découvrir l'application"
+                className="btn-secondary p-2"
+                onClick={() => setTourOpen(true)}
+                type="button"
+              >
+                <Compass className="size-4" />
+              </button>
               <ThemeIconButton />
               <form action="/api/auth/logout" method="post">
                 <button
@@ -209,6 +260,7 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
           </div>
         </nav>
       </div>
+      <FeatureTour open={tourOpen} onClose={closeTour} />
     </div>
   );
 }

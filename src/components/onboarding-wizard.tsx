@@ -6,13 +6,18 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronRight,
+  Compass,
+  Flame,
   House,
   ListChecks,
+  Plane,
   Shuffle,
   Sparkles,
+  Timer,
   Users,
 } from "lucide-react";
 
+import { FeatureTourInline } from "@/components/feature-tour";
 import { useToast } from "@/components/ui/toast";
 import { isoDateKey } from "@/lib/time";
 
@@ -69,6 +74,7 @@ const STEPS = [
   { id: "pack", label: "Profil" },
   { id: "tasks", label: "Tâches" },
   { id: "invite", label: "Équipe" },
+  { id: "tour", label: "Visite" },
   { id: "done", label: "C'est parti !" },
 ] as const;
 
@@ -167,24 +173,39 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
             Bienvenue dans<br />{householdName} !
           </h2>
           <p className="mt-4 text-[var(--ink-700)] leading-7">
-            Bonjour <strong>{currentMemberName}</strong> ! MakeMenage va vous aider à répartir les tâches ménagères
-            de façon équitable et automatique. Configurons l&apos;essentiel en 2 minutes.
+            Bonjour <strong>{currentMemberName}</strong>. MakeMenage répartit les tâches du foyer
+            <br className="hidden sm:block" />
+            de façon équitable et automatique. Voici ce qui vous attend.
           </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className="mt-8 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 text-left">
             {[
-              { icon: ListChecks, label: "Tâches récurrentes", desc: "Planifiées automatiquement" },
-              { icon: Shuffle, label: "Rotation juste", desc: "Alternance équitable" },
-              { icon: CalendarDays, label: "Vue calendrier", desc: "Qui fait quoi et quand" },
-            ].map(({ icon: Icon, label, desc }) => (
-              <div key={label} className="soft-panel p-4 text-center">
-                <Icon className="mx-auto size-6 text-[var(--coral-500)] mb-2" />
-                <p className="text-sm font-semibold">{label}</p>
-                <p className="text-xs text-[var(--ink-500)] mt-0.5">{desc}</p>
+              { icon: ListChecks, label: "Tâches récurrentes", desc: "Générées et planifiées automatiquement", color: "var(--coral-500)" },
+              { icon: Shuffle, label: "Rotation équitable", desc: "Alternance entre tous les membres", color: "var(--leaf-600)" },
+              { icon: Timer, label: "Sessions focus", desc: "Chronomètre par pièce, sans friction", color: "var(--sky-500)" },
+              { icon: CalendarDays, label: "Calendrier", desc: "Qui fait quoi, jour après jour", color: "var(--coral-600)" },
+              { icon: Plane, label: "Vacances", desc: "Tout reporter en un geste", color: "var(--sky-600)" },
+              { icon: Flame, label: "Streaks & équité", desc: "Suivi de la charge et motivation", color: "var(--coral-500)" },
+            ].map(({ icon: Icon, label, desc, color }) => (
+              <div
+                key={label}
+                className="flex items-start gap-2.5 rounded-2xl border border-[var(--line)] bg-white/60 p-3"
+              >
+                <span
+                  className="flex size-9 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: `${color}1a`, color }}
+                >
+                  <Icon className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-tight">{label}</p>
+                  <p className="mt-0.5 text-xs leading-snug text-[var(--ink-500)]">{desc}</p>
+                </div>
               </div>
             ))}
           </div>
+          <p className="mt-5 text-xs text-[var(--ink-500)]">Configuration en 2 minutes — vous pourrez tout ajuster ensuite.</p>
           <button
-            className="btn-primary mt-8 inline-flex items-center gap-2 px-6 py-3.5 text-sm font-bold"
+            className="btn-primary mt-3 inline-flex items-center gap-2 px-6 py-3.5 text-sm font-bold"
             onClick={() => setStep("pack")}
             type="button"
           >
@@ -337,11 +358,42 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
 
           <button
             className="btn-quiet w-full px-4 py-3 text-sm font-semibold"
-            onClick={() => setStep("done")}
+            onClick={() => setStep("tour")}
             type="button"
           >
-            Je ferai ça plus tard <ChevronRight className="inline size-4" />
+            Continuer la visite <ChevronRight className="inline size-4" />
           </button>
+        </div>
+      )}
+
+      {/* Step: Tour */}
+      {step === "tour" && (
+        <div className="app-surface rounded-[2rem] p-6 sm:p-8 space-y-5">
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-[rgba(216,100,61,0.12)] text-[var(--coral-600)]">
+              <Compass className="size-7" />
+            </div>
+            <h2 className="display-title text-2xl sm:text-3xl">Visite guidée</h2>
+            <p className="mt-2 text-sm text-[var(--ink-700)]">
+              5 écrans pour comprendre où tout se passe. Vous pourrez relancer cette visite depuis l&apos;icône
+              <span className="mx-1 inline-flex size-4 items-center justify-center rounded-full bg-[var(--coral-500)] text-white align-middle">
+                <Compass className="size-2.5" />
+              </span>
+              en haut.
+            </p>
+          </div>
+
+          <FeatureTourInline onComplete={() => setStep("done")} />
+
+          <div className="text-center">
+            <button
+              className="text-xs text-[var(--ink-400)] hover:text-[var(--ink-700)]"
+              onClick={() => setStep("done")}
+              type="button"
+            >
+              Passer la visite
+            </button>
+          </div>
         </div>
       )}
 
