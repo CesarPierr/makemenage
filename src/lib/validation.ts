@@ -41,6 +41,7 @@ export const absenceSchema = z.object({
 
 export const recurrenceSchema = z.object({
   type: z.enum(["daily", "every_x_days", "weekly", "every_x_weeks", "monthly_simple"]),
+  mode: z.enum(["FIXED", "SLIDING"]).default("SLIDING"),
   interval: z.coerce.number().int().min(1).max(90).default(1),
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
   dayOfMonth: z.coerce.number().int().min(1).max(31).optional(),

@@ -61,6 +61,7 @@ function mapAbsences(
 
 function mapRecurrenceRule(rule: {
   type: RecurrenceType;
+  mode: "FIXED" | "SLIDING";
   interval: number;
   weekdays: unknown;
   dayOfMonth: number | null;
@@ -69,6 +70,7 @@ function mapRecurrenceRule(rule: {
 }): RecurrenceRuleInput {
   return {
     type: rule.type,
+    mode: rule.mode,
     interval: rule.interval,
     weekdays: parseNumberArray(rule.weekdays),
     dayOfMonth: rule.dayOfMonth,
@@ -187,8 +189,9 @@ export async function syncHouseholdOccurrences(
       estimatedMinutes: task.estimatedMinutes,
       startsOn: task.startsOn,
       endsOn: task.endsOn,
-      recurrence: mapRecurrenceRule(task.recurrenceRule),
-      assignment: mapAssignmentRule(task.assignmentRule, {
+      lastCompletedAt: task.lastCompletedAt,
+      recurrence: mapRecurrenceRule(task.recurrenceRule as any),
+      assignment: mapAssignmentRule(task.assignmentRule as any, {
         preserveRotationOnSkip: options?.preserveRotationOnSkipOverride ?? null,
       }),
     };
@@ -329,6 +332,7 @@ export async function realignOverdueRecurrences(householdId: string) {
     const newAnchor = computeNextAnchorAfter(
       {
         type: rule.type,
+        mode: rule.mode as any,
         interval: rule.interval,
         weekdays: parseNumberArray(rule.weekdays),
         dayOfMonth: rule.dayOfMonth,
@@ -439,6 +443,12 @@ export async function completeOccurrence(params: {
     },
   });
 
+  // Update lastCompletedAt on the template
+  await db.taskTemplate.update({
+    where: { id: existing.taskTemplateId },
+    data: { lastCompletedAt: occurrence.completedAt },
+  });
+
   await db.occurrenceActionLog.create({
     data: {
       occurrenceId: occurrence.id,
@@ -467,35 +477,38 @@ export async function completeOccurrence(params: {
     });
 
     if (ruleRecord) {
-      const nextAnchor = computeNextAnchorAfter(
-        {
-          type: ruleRecord.type,
-          interval: ruleRecord.interval,
-          weekdays: parseNumberArray(ruleRecord.weekdays),
-          dayOfMonth: ruleRecord.dayOfMonth,
-          anchorDate: ruleRecord.anchorDate,
-          dueOffsetDays: ruleRecord.dueOffsetDays,
-          config: ruleRecord.config,
-        },
-        today,
-      );
+      // ONLY for FIXED mode tasks, we manually realign the anchor.
+      // SLIDING mode tasks rely on the generator to look at lastCompletedAt.
+      if (ruleRecord.mode === "FIXED") {
+        const nextAnchor = computeNextAnchorAfter(
+          {
+            type: ruleRecord.type,
+            mode: "FIXED",
+            interval: ruleRecord.interval,
+            weekdays: parseNumberArray(ruleRecord.weekdays),
+            dayOfMonth: ruleRecord.dayOfMonth,
+            anchorDate: ruleRecord.anchorDate,
+            dueOffsetDays: ruleRecord.dueOffsetDays,
+            config: ruleRecord.config,
+          },
+          today,
+        );
 
-      await db.recurrenceRule.update({
-        where: { id: existing.taskTemplate.recurrenceRuleId },
-        data: { anchorDate: nextAnchor },
-      });
+        await db.recurrenceRule.update({
+          where: { id: existing.taskTemplate.recurrenceRuleId },
+          data: { anchorDate: nextAnchor },
+        });
 
-      // Cancel any planned/due/overdue occurrences in the future that no longer match the
-      // new anchor (i.e. the old, pre-shift schedule). The sync below will then create the
-      // correctly-spaced future occurrences.
-      await db.taskOccurrence.updateMany({
-        where: {
-          taskTemplateId: existing.taskTemplate.id,
-          status: { in: ["planned", "due", "overdue"] },
-          scheduledDate: { gt: existing.scheduledDate },
-        },
-        data: { status: "cancelled" },
-      });
+        // Cancel future ones for FIXED tasks specifically
+        await db.taskOccurrence.updateMany({
+          where: {
+            taskTemplateId: existing.taskTemplate.id,
+            status: { in: ["planned", "due", "overdue"] },
+            scheduledDate: { gt: existing.scheduledDate },
+          },
+          data: { status: "cancelled" },
+        });
+      }
 
       await syncHouseholdOccurrences(existing.householdId, {
         taskId: existing.taskTemplate.id,
@@ -611,41 +624,40 @@ export async function rescheduleOccurrence(params: {
     });
 
     if (ruleRecord) {
-      const nextAnchor = computeNextAnchorAfter(
-        {
-          type: ruleRecord.type,
-          interval: ruleRecord.interval,
-          weekdays: parseNumberArray(ruleRecord.weekdays),
-          dayOfMonth: ruleRecord.dayOfMonth,
-          anchorDate: ruleRecord.anchorDate,
-          dueOffsetDays: ruleRecord.dueOffsetDays,
-          config: ruleRecord.config,
-        },
+      // For FIXED mode, we still move the anchor to the new date to "baseline" it.
+      if (ruleRecord.mode === "FIXED") {
+        await db.recurrenceRule.update({
+          where: { id: existing.taskTemplate.recurrenceRuleId },
+          data: { anchorDate: params.scheduledDate },
+        });
+      }
+
+      // Re-key the current occurrence for stability
+      // For SLIDING, the generator will pick up this rescheduled date as the new base
+      // because it's "locked" (status = rescheduled).
+      const newKey = buildGenerationKey(
+        existing.taskTemplate.id,
         params.scheduledDate,
+        ruleRecord.mode as any,
+        ruleRecord.mode === "SLIDING" ? 0 : undefined, // Index will be recalculated during sync if needed
       );
 
-      await db.recurrenceRule.update({
-        where: { id: existing.taskTemplate.recurrenceRuleId },
-        data: { anchorDate: params.scheduledDate },
-      });
-
-      // Update the key of the current occurrence to match the new anchor
-      const newKey = buildGenerationKey(existing.taskTemplate.id, params.scheduledDate);
       await db.taskOccurrence.update({
         where: { id: params.occurrenceId },
         data: { sourceGenerationKey: newKey },
       });
 
-      // Cancel future occurrences that no longer match the new anchor
-      // syncHouseholdOccurrences will also do its part but we preempt it here
-      await db.taskOccurrence.updateMany({
-        where: {
-          taskTemplateId: existing.taskTemplate.id,
-          status: { in: ["planned", "due", "overdue"] },
-          scheduledDate: { gt: params.scheduledDate },
-        },
-        data: { status: "cancelled" },
-      });
+      // For FIXED, we preemptively cancel others. For SLIDING, sync will handle it.
+      if (ruleRecord.mode === "FIXED") {
+        await db.taskOccurrence.updateMany({
+          where: {
+            taskTemplateId: existing.taskTemplate.id,
+            status: { in: ["planned", "due", "overdue"] },
+            scheduledDate: { gt: params.scheduledDate },
+          },
+          data: { status: "cancelled" },
+        });
+      }
 
       await syncHouseholdOccurrences(existing.householdId, {
         taskId: existing.taskTemplate.id,

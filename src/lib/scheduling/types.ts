@@ -1,5 +1,6 @@
 export type RecurrenceRuleInput = {
   type: "daily" | "every_x_days" | "weekly" | "every_x_weeks" | "monthly_simple";
+  mode: "FIXED" | "SLIDING";
   interval: number;
   weekdays?: number[];
   dayOfMonth?: number | null;
@@ -48,6 +49,7 @@ export type TaskTemplateInput = {
   estimatedMinutes: number;
   startsOn: Date;
   endsOn?: Date | null;
+  lastCompletedAt?: Date | null;
   recurrence: RecurrenceRuleInput;
   assignment: AssignmentRuleInput;
 };

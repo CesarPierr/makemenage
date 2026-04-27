@@ -38,6 +38,7 @@ type DraftTask = {
   color: string;
   startsOn: string;
   recurrenceType: string;
+  recurrenceMode: "FIXED" | "SLIDING";
   interval: string;
   assignmentMode: string;
   eligibleMemberIds: string[];
@@ -72,6 +73,7 @@ function buildInitialDraft(memberIds: string[]): DraftTask {
     color: taskPalette[0],
     startsOn: isoDateKey(new Date()),
     recurrenceType: "weekly",
+    recurrenceMode: "SLIDING",
     interval: "1",
     assignmentMode: "strict_alternation",
     eligibleMemberIds: memberIds,
@@ -347,6 +349,43 @@ export function TaskCreationWizard({ members, compact = false }: TaskCreationWiz
                         </span>
                       </div>
                     )}
+
+                    <div className="pt-4 border-t border-[var(--line)]">
+                      <p className="field-label px-1 text-sm">Mode de planification</p>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => updateDraft("recurrenceMode", "SLIDING")}
+                          className={cn(
+                            "flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-all",
+                            draft.recurrenceMode === "SLIDING"
+                              ? "border-[var(--sky-500)] bg-[var(--sky-500)]/10 text-[var(--sky-600)]"
+                              : "border-[var(--line)] bg-[var(--glass-bg)] text-[var(--ink-600)]"
+                          )}
+                        >
+                          <TimerReset className="size-4" />
+                          <span className="text-[11px] font-bold">Glissant</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateDraft("recurrenceMode", "FIXED")}
+                          className={cn(
+                            "flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-all",
+                            draft.recurrenceMode === "FIXED"
+                              ? "border-[var(--sky-500)] bg-[var(--sky-500)]/10 text-[var(--sky-600)]"
+                              : "border-[var(--line)] bg-[var(--glass-bg)] text-[var(--ink-600)]"
+                          )}
+                        >
+                          <Calendar className="size-4" />
+                          <span className="text-[11px] font-bold">Fixe</span>
+                        </button>
+                      </div>
+                      <p className="mt-2 px-1 text-[10px] text-[var(--ink-500)] leading-tight">
+                        {draft.recurrenceMode === "SLIDING" 
+                          ? "Recommandé pour l'entretien (aspirateur, serpillère...) : la tâche se décale si vous êtes en retard."
+                          : "Recommandé pour l'administratif ou poubelles : la tâche reste ancrée à des jours précis."}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -517,6 +556,7 @@ export function TaskCreationWizard({ members, compact = false }: TaskCreationWiz
                     color: draft.color,
                     startsOn: draft.startsOn,
                     recurrenceType: draft.recurrenceType,
+                    recurrenceMode: draft.recurrenceMode,
                     interval: draft.interval,
                     assignmentMode: isSingleTask ? "fixed" : draft.assignmentMode,
                     eligibleMemberIds: draft.eligibleMemberIds.join(","),

@@ -54,8 +54,14 @@ export function describeRecurrence(rule: RecurrenceRuleInput) {
   }
 }
 
-export function generateRecurrenceDates(rule: RecurrenceRuleInput, rangeStart: Date, rangeEnd: Date) {
-  const anchor = normalize(rule.anchorDate);
+export function generateRecurrenceDates(
+  rule: RecurrenceRuleInput,
+  rangeStart: Date,
+  rangeEnd: Date,
+  options?: { baseDate?: Date; baseIndex?: number },
+) {
+  const isSliding = rule.mode === "SLIDING";
+  const anchor = normalize(options?.baseDate ?? rule.anchorDate);
   const start = normalize(rangeStart);
   const end = normalize(rangeEnd);
   const dates: Date[] = [];
@@ -67,6 +73,13 @@ export function generateRecurrenceDates(rule: RecurrenceRuleInput, rangeStart: D
   if (rule.type === "daily" || rule.type === "every_x_days") {
     const interval = Math.max(1, rule.interval || 1);
     let cursor = anchor;
+
+    // For sliding tasks, if the anchor (base) is already what we want to generate from,
+    // we start from the NEXT interval if the anchor itself is in the past or already handled.
+    // But usually generateRecurrenceDates is expected to include the anchor if it's in range.
+    if (isSliding && options?.baseDate) {
+      cursor = addDays(anchor, interval);
+    }
 
     while (isBefore(cursor, start)) {
       cursor = addDays(cursor, interval);
@@ -86,7 +99,10 @@ export function generateRecurrenceDates(rule: RecurrenceRuleInput, rangeStart: D
 
     while (!isAfter(cursor, end)) {
       if (!isBefore(cursor, anchor) && weekdays.includes(getDay(cursor))) {
-        dates.push(cursor);
+        // In sliding mode, we might want to skip the base day itself
+        if (!(isSliding && options?.baseDate && sameDay(cursor, anchor))) {
+          dates.push(cursor);
+        }
       }
 
       cursor = addDays(cursor, 1);
@@ -99,6 +115,10 @@ export function generateRecurrenceDates(rule: RecurrenceRuleInput, rangeStart: D
     const weekday = getDay(anchor);
     const interval = Math.max(1, rule.interval || 1);
     let cursor = anchor;
+
+    if (isSliding && options?.baseDate) {
+      cursor = addWeeks(anchor, interval);
+    }
 
     while (isBefore(cursor, start)) {
       cursor = addWeeks(cursor, interval);
@@ -114,19 +134,29 @@ export function generateRecurrenceDates(rule: RecurrenceRuleInput, rangeStart: D
     return dates;
   }
 
+  // monthly_simple
   const interval = Math.max(1, rule.interval || 1);
   const targetDay = rule.dayOfMonth ?? getDate(anchor);
   let cursor = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+
+  if (isSliding && options?.baseDate) {
+    cursor = addMonths(cursor, interval);
+  }
 
   while (isBefore(endOfDay(cursor), start)) {
     cursor = new Date(cursor.getFullYear(), cursor.getMonth() + interval, 1);
   }
 
   while (!isAfter(cursor, end)) {
-    const candidate = setDate(new Date(cursor), Math.min(targetDay, new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate()));
+    const candidate = setDate(
+      new Date(cursor),
+      Math.min(targetDay, new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate()),
+    );
 
     if (!isBefore(candidate, anchor) && !isBefore(candidate, start) && !isAfter(candidate, end)) {
-      dates.push(startOfDay(candidate));
+      if (!(isSliding && options?.baseDate && sameDay(candidate, anchor))) {
+        dates.push(startOfDay(candidate));
+      }
     }
 
     cursor = new Date(cursor.getFullYear(), cursor.getMonth() + interval, 1);
@@ -139,7 +169,15 @@ export function computeDueDate(scheduledDate: Date, offsetDays = 0) {
   return endOfDay(addDays(startOfDay(scheduledDate), offsetDays));
 }
 
-export function buildGenerationKey(taskTemplateId: string, date: Date) {
+export function buildGenerationKey(
+  taskTemplateId: string,
+  date: Date,
+  mode: "FIXED" | "SLIDING" = "FIXED",
+  index?: number,
+) {
+  if (mode === "SLIDING" && index !== undefined) {
+    return `${taskTemplateId}:sliding:${index}`;
+  }
   return `${taskTemplateId}:${format(date, "yyyy-MM-dd")}`;
 }
 
@@ -148,25 +186,30 @@ export function buildGenerationKey(taskTemplateId: string, date: Date) {
  * This ensures that strict alternation and rotation remain consistent even
  * as the generation window slides forward.
  */
-export function getStableSequenceIndex(rule: RecurrenceRuleInput, targetDate: Date): number {
+export function getStableSequenceIndex(
+  rule: RecurrenceRuleInput,
+  targetDate: Date,
+  options?: { baseDate?: Date; baseIndex?: number },
+): number {
   const target = normalize(targetDate);
-  const anchor = normalize(rule.anchorDate);
+  const anchor = normalize(options?.baseDate ?? rule.anchorDate);
+  const baseIndex = options?.baseIndex ?? 0;
   const interval = Math.max(1, rule.interval || 1);
 
   if (isBefore(target, anchor)) {
-    return 0; // Should not happen for valid occurrences
+    return baseIndex;
   }
 
   if (rule.type === "daily" || rule.type === "every_x_days") {
     const diffMs = target.getTime() - anchor.getTime();
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-    return Math.floor(diffDays / interval);
+    return baseIndex + Math.floor(diffDays / interval);
   }
 
   if (rule.type === "every_x_weeks") {
     const diffMs = target.getTime() - anchor.getTime();
     const diffWeeks = Math.round(diffMs / (1000 * 60 * 60 * 24 * 7));
-    return Math.floor(diffWeeks / interval);
+    return baseIndex + Math.floor(diffWeeks / interval);
   }
 
   if (rule.type === "weekly") {
@@ -180,17 +223,17 @@ export function getStableSequenceIndex(rule: RecurrenceRuleInput, targetDate: Da
       }
       cursor = addDays(cursor, 1);
     }
-    return count;
+    return baseIndex + count;
   }
 
   if (rule.type === "monthly_simple") {
     const targetMonthCount = target.getFullYear() * 12 + target.getMonth();
     const anchorMonthCount = anchor.getFullYear() * 12 + anchor.getMonth();
     const diffMonths = targetMonthCount - anchorMonthCount;
-    return Math.floor(diffMonths / interval);
+    return baseIndex + Math.floor(diffMonths / interval);
   }
 
-  return 0;
+  return baseIndex;
 }
 
 export function isLogicalOccurrenceDate(rule: RecurrenceRuleInput, date: Date) {

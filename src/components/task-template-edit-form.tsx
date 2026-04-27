@@ -21,6 +21,7 @@ export type TaskTemplateEditable = {
     interval: number;
     weekdays: unknown;
     dayOfMonth: number | null;
+    mode: "FIXED" | "SLIDING";
     anchorDate: Date | string;
     dueOffsetDays: number;
     config?: unknown;
@@ -239,6 +240,17 @@ export function TaskTemplateEditForm({ task, householdId, onCancel, onSuccess }:
               />
             </label>
           )}
+          <label className="field-label">
+            <span>Mode</span>
+            <select
+              className="field"
+              name="recurrenceMode"
+              defaultValue={task.recurrenceRule.mode}
+            >
+              <option value="SLIDING">Glissant (Auto-décalage)</option>
+              <option value="FIXED">Fixe (Ancré au calendrier)</option>
+            </select>
+          </label>
           <label className="field-label">
             <span>Attribution</span>
             <select className="field" name="assignmentMode" defaultValue={task.assignmentRule.mode}>

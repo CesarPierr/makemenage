@@ -87,6 +87,7 @@ export const POST = withHousehold<{ taskId: string }>(
       endsOn: singleRun ? startsOnRaw : formData.get("endsOn") || undefined,
       recurrence: {
         type: normalizedRecurrenceType,
+        mode: (formData.get("recurrenceMode") as "FIXED" | "SLIDING") || "SLIDING",
         interval: formData.get("interval"),
         anchorDate: startsOnRaw,
         dueOffsetDays: 0,
@@ -118,6 +119,7 @@ export const POST = withHousehold<{ taskId: string }>(
       where: { id: task.recurrenceRuleId },
       data: {
         type: parsedTask.data.recurrence.type,
+        mode: parsedTask.data.recurrence.mode,
         interval: singleRun ? 1 : parsedTask.data.recurrence.interval,
         anchorDate: parsedTask.data.recurrence.anchorDate,
         config: singleRun ? { singleRun: true } : undefined,

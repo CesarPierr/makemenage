@@ -27,6 +27,11 @@ enum RecurrenceType {
   monthly_simple
 }
 
+enum RecurrenceMode {
+  FIXED
+  SLIDING
+}
+
 enum AssignmentMode {
   fixed
   manual
@@ -204,6 +209,7 @@ model MemberAvailability {
 model RecurrenceRule {
   id                 String         @id @default(cuid())
   type               RecurrenceType
+  mode               RecurrenceMode @default(SLIDING)
   interval           Int            @default(1)
   weekdays           Json?
   dayOfMonth         Int?
@@ -250,6 +256,7 @@ model TaskTemplate {
   isCollective     Boolean         @default(false)
   startsOn         DateTime
   endsOn           DateTime?
+  lastCompletedAt  DateTime?
   recurrenceRuleId String          @unique
   assignmentRuleId String          @unique
   createdByMemberId String?

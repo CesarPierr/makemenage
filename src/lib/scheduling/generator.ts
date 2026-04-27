@@ -20,9 +20,48 @@ export function generateOccurrences(params: {
   rangeEnd: Date;
 }) {
   const { template, members, absences, existingOccurrences, rangeStart, rangeEnd } = params;
+  const isSliding = template.recurrence.mode === "SLIDING";
   const today = startOfDay(new Date());
-  const recurrenceDates = generateRecurrenceDates(template.recurrence, rangeStart, rangeEnd).filter(
-    (date) => date >= startOfDay(template.startsOn) && (!template.endsOn || date <= startOfDay(template.endsOn)),
+
+  // For sliding tasks, find the most recent "realized" or "locked" occurrence
+  // that serves as the base for the next generation.
+  let baseDate = startOfDay(template.startsOn);
+  let baseIndex = 0;
+
+  if (isSliding) {
+    // We look at ALL existing occurrences to find the latest one that is "locked"
+    // (completed, skipped, rescheduled, or manually modified)
+    const lockedOccurrences = existingOccurrences
+      .filter(
+        (o) =>
+          o.isManuallyModified || ["completed", "skipped", "rescheduled"].includes(o.status),
+      )
+      .sort((a, b) => b.scheduledDate.getTime() - a.scheduledDate.getTime());
+
+    if (lockedOccurrences.length > 0) {
+      const latest = lockedOccurrences[0];
+      baseDate = startOfDay(latest.scheduledDate);
+      // Extract index from key if possible: "id:sliding:4" -> 4
+      const parts = latest.sourceGenerationKey.split(":sliding:");
+      if (parts.length === 2) {
+        baseIndex = parseInt(parts[1], 10);
+      }
+    } else {
+      // No locked occurrences, use the template anchor or startsOn as base index 0
+      baseDate = startOfDay(template.recurrence.anchorDate);
+      baseIndex = 0;
+    }
+  }
+
+  const recurrenceDates = generateRecurrenceDates(
+    template.recurrence,
+    rangeStart,
+    rangeEnd,
+    isSliding ? { baseDate, baseIndex } : undefined,
+  ).filter(
+    (date) =>
+      date >= startOfDay(template.startsOn) &&
+      (!template.endsOn || date <= startOfDay(template.endsOn)),
   );
 
   const generated: GeneratedOccurrence[] = [];
@@ -33,18 +72,32 @@ export function generateOccurrences(params: {
       startOfDay(occurrence.scheduledDate) < today,
   );
 
-  recurrenceDates.forEach((scheduledDate, sequenceIndex) => {
-    const sourceGenerationKey = buildGenerationKey(template.id, scheduledDate);
+  recurrenceDates.forEach((scheduledDate) => {
+    const sequenceIndex = getStableSequenceIndex(
+      template.recurrence,
+      scheduledDate,
+      isSliding ? { baseDate, baseIndex } : undefined,
+    );
+    const sourceGenerationKey = buildGenerationKey(
+      template.id,
+      scheduledDate,
+      template.recurrence.mode,
+      sequenceIndex,
+    );
     const existing = existingOccurrences.find(
       (occurrence) => occurrence.sourceGenerationKey === sourceGenerationKey,
     );
 
-    if (existing && (existing.isManuallyModified || ["completed", "skipped", "rescheduled"].includes(existing.status))) {
+    if (
+      existing &&
+      (existing.isManuallyModified ||
+        ["completed", "skipped", "rescheduled"].includes(existing.status))
+    ) {
       return;
     }
 
     const assignedMemberId = pickAssignee({
-      sequenceIndex: getStableSequenceIndex(template.recurrence, scheduledDate),
+      sequenceIndex,
       rule: template.assignment,
       members,
       scheduledDate,

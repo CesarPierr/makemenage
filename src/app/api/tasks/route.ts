@@ -78,6 +78,7 @@ export async function POST(request: Request) {
     endsOn: singleRun ? startsOnRaw : formData.get("endsOn") || undefined,
     recurrence: {
       type: normalizedRecurrenceType,
+      mode: formData.get("recurrenceMode") || "SLIDING",
       interval: formData.get("interval"),
       anchorDate: startsOnRaw,
       dueOffsetDays: 0,
@@ -115,6 +116,7 @@ export async function POST(request: Request) {
         | "weekly"
         | "every_x_weeks"
         | "monthly_simple",
+      mode: (formData.get("recurrenceMode") as "FIXED" | "SLIDING") || "SLIDING",
       interval: singleRun ? 1 : Number(formData.get("interval") ?? 1),
       anchorDate: parseDateInput(startsOnRaw),
       dueOffsetDays: 0,

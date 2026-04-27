@@ -19,6 +19,7 @@ type Task = {
   endsOn?: Date | string | null;
   recurrenceRule: {
     type: "daily" | "every_x_days" | "weekly" | "every_x_weeks" | "monthly_simple";
+    mode: "FIXED" | "SLIDING";
     interval: number;
     weekdays: unknown;
     dayOfMonth: number | null;
@@ -154,6 +155,7 @@ export function TaskSettingsList({
               <p className="text-sm text-[var(--ink-700)] mt-1">
                 {describeRecurrence({
                   type: task.recurrenceRule.type,
+                  mode: task.recurrenceRule.mode,
                   interval: task.recurrenceRule.interval,
                   weekdays: Array.isArray(task.recurrenceRule.weekdays)
                     ? task.recurrenceRule.weekdays.map(Number)
