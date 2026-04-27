@@ -88,6 +88,31 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
     mobileSections.find((item) => isActivePath(pathname, item.href)) ?? mobileSections[0];
   const activeMeta = sectionMeta[activeSection.href as keyof typeof sectionMeta];
 
+  const [navVisible, setNavVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show if scrolling up or at top
+      if (currentScrollY < lastScrollY || currentScrollY < 50) {
+        setNavVisible(true);
+      } 
+      // Hide if scrolling down and past threshold
+      else if (currentScrollY > lastScrollY && currentScrollY > 80) {
+        setNavVisible(false);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
   useEffect(() => {
     if (searchParams.get("tour") === "1") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -188,7 +213,7 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
 
       {/* Main Content Area */}
       <div className="flex flex-1 min-w-0 flex-col px-3 pb-[8rem] pt-3 sm:px-5 lg:px-0 lg:pb-0 lg:pt-0">
-        {pathname !== "/app" && (
+        {!["/app", "/app/planifier"].includes(pathname) && (
           <header className="app-surface glow-card sticky top-3 z-20 mb-4 rounded-[1.8rem] px-4 py-3 sm:py-4 sm:px-5 lg:static lg:top-0 lg:mb-6">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
@@ -235,7 +260,10 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
 
         {/* Mobile Navigation — 3 main tabs */}
         <nav
-          className="app-surface fixed inset-x-3 bottom-3 z-30 rounded-2xl px-1.5 py-1.5 lg:hidden"
+          className={cn(
+            "app-surface fixed inset-x-3 bottom-3 z-30 rounded-2xl px-1.5 py-1.5 transition-all duration-300 lg:hidden",
+            !navVisible && "translate-y-24 opacity-0 pointer-events-none"
+          )}
           style={{ paddingBottom: "calc(0.375rem + env(safe-area-inset-bottom, 0px))" }}
         >
           <div className="grid grid-cols-3 gap-1">

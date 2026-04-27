@@ -1,17 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CalendarClock, Check, ChevronLeft, ChevronRight, Plus, TimerReset } from "lucide-react";
+import { useState, useMemo } from "react";
+import { 
+  CalendarClock, 
+  Check, 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  TimerReset,
+  Calendar,
+  User,
+  Users,
+  Clock,
+  LayoutGrid,
+  Hash
+} from "lucide-react";
 
 import { useFormAction } from "@/lib/use-form-action";
 import { roomSuggestions, taskPalette } from "@/lib/constants";
-import { AVAILABLE_ICONS, getRoomIcon, type IconName } from "@/lib/room-icons";
+import { AVAILABLE_ICONS, type IconName } from "@/lib/room-icons";
 import { isoDateKey } from "@/lib/time";
-import { cn, formatMinutes } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 
 type TaskCreationWizardProps = {
   householdId: string;
   members: { id: string; displayName: string; color?: string }[];
+  compact?: boolean;
 };
 
 type DraftTask = {
@@ -31,20 +46,20 @@ type DraftTask = {
 };
 
 const recurrenceOptions = [
-  { value: "daily", label: "Tous les jours", icon: CalendarClock },
+  { value: "daily", label: "Quotidien", icon: CalendarClock },
   { value: "weekly", label: "Chaque semaine", icon: CalendarClock },
   { value: "monthly_simple", label: "Chaque mois", icon: CalendarClock },
   { value: "every_x_days", label: "Tous les X jours", icon: TimerReset },
-  { value: "every_x_weeks", label: "Toutes les X semaines", icon: TimerReset },
+  { value: "every_x_weeks", label: "Toutes les X sem.", icon: TimerReset },
 ];
 
 const assignmentOptions = [
-  { value: "strict_alternation", label: "Alternance", hint: "Chacun son tour" },
-  { value: "least_assigned_count", label: "Équité", hint: "Moins de tâches" },
-  { value: "least_assigned_minutes", label: "Équité temps", hint: "Moins de minutes" },
-  { value: "round_robin", label: "Rotation", hint: "Distribution circulaire" },
-  { value: "fixed", label: "Fixe", hint: "Toujours la même personne" },
-  { value: "manual", label: "Manuelle", hint: "Choix au cas par cas" },
+  { value: "strict_alternation", label: "Alternance", icon: Users, description: "Chaque membre s'occupe de la tâche à tour de rôle de manière équitable." },
+  { value: "fixed", label: "Fixe", icon: User, description: "Une seule personne s'occupe toujours de cette tâche." },
+  { value: "least_assigned_count", label: "Équité", icon: Hash, description: "Le système choisit la personne qui a le moins de tâches assignées au total." },
+  { value: "least_assigned_minutes", label: "Équité temps", icon: Clock, description: "Le système choisit la personne qui a le moins de minutes de travail cumulées." },
+  { value: "round_robin", label: "Rotation", icon: TimerReset, description: "Distribution circulaire simple entre les membres éligibles." },
+  { value: "manual", label: "Manuelle", icon: Check, description: "La tâche apparaît sans personne assignée, vous choisissez au moment de faire." },
 ];
 
 function buildInitialDraft(memberIds: string[]): DraftTask {
@@ -65,11 +80,12 @@ function buildInitialDraft(memberIds: string[]): DraftTask {
   };
 }
 
-export function TaskCreationWizard({ householdId, members }: TaskCreationWizardProps) {
+export function TaskCreationWizard({ members, compact = false }: TaskCreationWizardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1);
-  const [isStep3Armed, setIsStep3Armed] = useState(false);
-  const [draft, setDraft] = useState<DraftTask>(() => buildInitialDraft(members.map((member) => member.id)));
+  const [draft, setDraft] = useState<DraftTask>(() => buildInitialDraft(members.map((m) => m.id)));
+  const [showIconGrid, setShowIconGrid] = useState(false);
+  
   const { submit, isSubmitting } = useFormAction({
     action: "/api/tasks",
     successMessage: "Tâche créée.",
@@ -79,591 +95,446 @@ export function TaskCreationWizard({ householdId, members }: TaskCreationWizardP
   });
 
   const isSingleTask = draft.kind === "single";
-  const everyXMode = draft.recurrenceType === "every_x_days" || draft.recurrenceType === "every_x_weeks";
-  const selectedMembers = members.filter((member) => draft.eligibleMemberIds.includes(member.id));
-  const recurrenceLabel = isSingleTask
-    ? "Une seule fois"
-    : recurrenceOptions.find((option) => option.value === draft.recurrenceType)?.label ?? "Récurrente";
-  const selectedAssignmentLabel = isSingleTask
-    ? "Fixe"
-    : assignmentOptions.find((option) => option.value === draft.assignmentMode)?.label ?? "Attribution";
+  const canGoNext = useMemo(() => {
+    if (step === 1) return draft.title.trim().length > 0;
+    if (step === 2) return true;
+    if (step === 3) return true;
+    if (step === 4) return draft.eligibleMemberIds.length > 0;
+    return true;
+  }, [step, draft]);
 
-  useEffect(() => {
-    if (step !== 3) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => setIsStep3Armed(true), 120);
-    return () => window.clearTimeout(timeout);
-  }, [step]);
+  function resetWizard() {
+    setIsOpen(false);
+    setStep(1);
+    setShowIconGrid(false);
+    setDraft(buildInitialDraft(members.map((m) => m.id)));
+  }
 
   function updateDraft<K extends keyof DraftTask>(key: K, value: DraftTask[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
   function toggleMember(memberId: string) {
-    if (draft.kind === "single" || draft.assignmentMode === "fixed") {
-      setDraft((current) => ({
-        ...current,
-        eligibleMemberIds: [memberId],
-      }));
-      return;
-    }
-
+    const isSingleOrFixed = draft.kind === "single" || draft.assignmentMode === "fixed";
     setDraft((current) => ({
       ...current,
-      eligibleMemberIds: current.eligibleMemberIds.includes(memberId)
-        ? current.eligibleMemberIds.filter((id) => id !== memberId)
-        : [...current.eligibleMemberIds, memberId],
+      eligibleMemberIds: isSingleOrFixed
+        ? [memberId]
+        : current.eligibleMemberIds.includes(memberId)
+          ? current.eligibleMemberIds.filter(id => id !== memberId)
+          : [...current.eligibleMemberIds, memberId]
     }));
   }
 
-  function resetWizard() {
-    setIsOpen(false);
-    setStep(1);
-    setIsStep3Armed(false);
-    setDraft(buildInitialDraft(members.map((member) => member.id)));
-  }
+  const handleNext = () => setStep(s => Math.min(4, s + 1));
+  const handleBack = () => setStep(s => Math.max(1, s - 1));
+
+  const trigger = compact ? (
+    <button
+      className="flex size-11 items-center justify-center rounded-full bg-[var(--coral-500)] text-white shadow-lg transition-all active:scale-95 hover:bg-[var(--coral-600)]"
+      onClick={() => setIsOpen(true)}
+      type="button"
+      title="Nouvelle tâche"
+    >
+      <Plus className="size-6" />
+    </button>
+  ) : (
+    <button
+      className="app-surface flex w-full items-center gap-4 rounded-[2rem] p-5 text-left sm:p-6"
+      onClick={() => setIsOpen(true)}
+      type="button"
+    >
+      <span className="flex size-12 items-center justify-center rounded-full bg-[rgba(47,109,136,0.12)] text-[var(--sky-600)]">
+        <Plus className="size-6" />
+      </span>
+      <div>
+        <p className="section-kicker">Nouvelle tâche</p>
+        <h3 className="display-title mt-1 text-2xl">Créer une nouvelle tâche</h3>
+        <p className="mt-1 text-sm text-[var(--ink-700)]">Simple une fois ou récurrente, sans configuration lourde.</p>
+      </div>
+    </button>
+  );
+
+  const SelectedIcon = draft.icon ? AVAILABLE_ICONS[draft.icon as IconName] : null;
 
   return (
-    <section className="page-enter">
-      {!isOpen ? (
-        <button
-          className="app-surface flex w-full items-center gap-4 rounded-[2rem] p-5 text-left sm:p-6"
-          onClick={() => setIsOpen(true)}
-          type="button"
-        >
-          <span className="flex size-12 items-center justify-center rounded-full bg-[rgba(47,109,136,0.12)] text-[var(--sky-600)]">
-            <Plus className="size-6" />
-          </span>
-          <div>
-            <p className="section-kicker">Nouvelle tâche</p>
-            <h3 className="display-title mt-1 text-2xl">Créer une nouvelle tâche</h3>
-            <p className="mt-1 text-sm text-[var(--ink-700)]">Simple une fois ou récurrente, sans configuration lourde.</p>
-          </div>
-        </button>
-      ) : (
-        <div className="app-surface rounded-[2rem] p-5 sm:p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="section-kicker">Étape {step} / 3</p>
-              <h3 className="display-title mt-1 text-2xl">
-                {step === 1 ? "La tâche" : step === 2 ? (isSingleTask ? "La date" : "Le rythme") : "L’attribution"}
-              </h3>
-            </div>
-            <button className="btn-quiet px-4 py-2 text-sm font-semibold" onClick={resetWizard} type="button">
-              Fermer
-            </button>
-          </div>
+    <>
+      {trigger}
 
-          <div className="mt-5 flex flex-wrap gap-2">
-            {[
-              { index: 1, label: "La tâche" },
-              { index: 2, label: isSingleTask ? "La date" : "Le rythme" },
-              { index: 3, label: "L’attribution" },
-            ].map((item) => {
-              const active = step === item.index;
-              const completed = step > item.index;
-
-              return (
-                <div
-                  key={`${item.index}-${item.label}`}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em]",
-                    active
-                      ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] text-[var(--sky-700)]"
-                      : completed
-                        ? "border-[rgba(56,115,93,0.18)] bg-[rgba(56,115,93,0.1)] text-[var(--leaf-600)]"
-                        : "border-[var(--line)] bg-white/70 text-[var(--ink-500)]",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-5 items-center justify-center rounded-full text-[0.68rem]",
-                      active
-                        ? "bg-[var(--sky-500)] text-white"
-                        : completed
-                          ? "bg-[var(--leaf-500)] text-white"
-                          : "bg-[var(--line)] text-[var(--ink-700)]",
-                    )}
-                  >
-                    {completed ? <Check className="size-3" /> : item.index}
-                  </span>
-                  {item.label}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-5 h-2 overflow-hidden rounded-full bg-black/5">
-            <div
-              className="h-full rounded-full bg-[var(--sky-500)] transition-all duration-200"
-              style={{ width: `${(step / 3) * 100}%` }}
-            />
-          </div>
-
-          <form
-            action="/api/tasks"
-            className="mt-6 compact-form-grid"
-            method="post"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              if (step < 3 || !draft.title.trim() || draft.eligibleMemberIds.length === 0 || isSubmitting) {
-                return;
-              }
-              const formData = new FormData(event.currentTarget);
-              await submit(formData);
-            }}
-          >
-            <input name="householdId" type="hidden" value={householdId} />
-            <input name="title" type="hidden" value={draft.title} />
-            <input name="estimatedMinutes" type="hidden" value={draft.estimatedMinutes || "1"} />
-            <input name="category" type="hidden" value={draft.category} />
-            <input name="room" type="hidden" value={draft.room} />
-            <input name="icon" type="hidden" value={draft.icon} />
-            <input name="color" type="hidden" value={draft.color} />
-            <input name="isCollective" type="hidden" value={draft.isCollective ? "on" : ""} />
-            <input name="startsOn" type="hidden" value={draft.startsOn} />
-            <input name="endsOn" type="hidden" value={isSingleTask ? draft.startsOn : ""} />
-            <input name="singleRun" type="hidden" value={isSingleTask ? "on" : ""} />
-            <input name="recurrenceType" type="hidden" value={isSingleTask ? "single" : draft.recurrenceType} />
-            <input name="interval" type="hidden" value={isSingleTask ? "1" : draft.interval || "1"} />
-            <input name="assignmentMode" type="hidden" value={isSingleTask ? "fixed" : draft.assignmentMode} />
-            {draft.eligibleMemberIds.map((memberId) => (
-              <input key={memberId} name="eligibleMemberIds" type="hidden" value={memberId} />
+      <BottomSheet 
+        isOpen={isOpen} 
+        onClose={resetWizard}
+        title={step === 1 ? "Nouvelle tâche" : draft.title || "Nouvelle tâche"}
+      >
+        <div className="flex flex-col min-h-[460px]">
+          {/* Progress bar */}
+          <div className="mb-6 flex gap-1.5 px-1">
+            {[1, 2, 3, 4].map((i) => (
+              <div 
+                key={i} 
+                className={cn(
+                  "h-1 flex-1 rounded-full transition-all duration-300",
+                  step >= i ? "bg-[var(--coral-500)]" : "bg-[var(--line)]"
+                )} 
+              />
             ))}
+          </div>
 
-            <div className="rounded-[1.5rem] border border-[var(--line)] bg-white/72 px-4 py-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="section-kicker">Aperçu</p>
-                  <h4 className="mt-2 text-lg font-semibold text-[var(--ink-950)]">
-                    {draft.title.trim() || "Votre nouvelle tâche"}
-                  </h4>
-                  <p className="mt-2 text-sm leading-6 text-[var(--ink-700)]">
-                    {recurrenceLabel} · {draft.estimatedMinutes ? formatMinutes(Number(draft.estimatedMinutes) || 0) : "Durée à définir"} · {selectedAssignmentLabel}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <span className="stat-pill px-3 py-1 text-xs font-semibold">
-                    {draft.room.trim() || "Pièce libre"}
-                  </span>
-                  {(() => {
-                    const PreviewIcon = getRoomIcon(draft.room, draft.icon);
-                    return <PreviewIcon className="size-5 opacity-40" />;
-                  })()}
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span className="stat-pill inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold">
-                  <span className="size-2.5 rounded-full" style={{ backgroundColor: draft.color }} />
-                  {draft.category.trim() || "Sans catégorie"}
-                </span>
-                <span className="stat-pill px-3 py-1 text-xs font-semibold">
-                  {selectedMembers.length || 0} membre{selectedMembers.length > 1 ? "s" : ""}
-                </span>
-                <span className="stat-pill px-3 py-1 text-xs font-semibold">
-                  {draft.startsOn || "Date à définir"}
-                </span>
-              </div>
-            </div>
-
-            {step === 1 ? (
-              <div className="compact-stack">
-                <div className="field-label">
-                  <span>Format</span>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <button
-                      aria-pressed={isSingleTask}
-                      className={cn(
-                        "soft-panel group relative overflow-hidden px-4 py-3 text-left transition-all",
-                        isSingleTask
-                          ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] shadow-sm"
-                          : "hover:bg-white/50",
-                      )}
-                      onClick={() =>
-                        setDraft((current) => ({
-                          ...current,
-                          kind: "single",
-                          assignmentMode: "fixed",
-                          eligibleMemberIds: current.eligibleMemberIds[0]
-                            ? [current.eligibleMemberIds[0]]
-                            : members[0]
-                              ? [members[0].id]
-                              : [],
-                        }))
-                      }
-                      type="button"
-                    >
-                      {isSingleTask && (
-                        <div className="absolute right-3 top-3 flex size-5 items-center justify-center rounded-full bg-[var(--sky-500)] text-white shadow-sm">
-                          <Check className="size-3" />
-                        </div>
-                      )}
-                      <p className={cn("font-semibold transition-colors", isSingleTask && "text-[var(--sky-700)]")}>
-                        Tâche simple
-                      </p>
-                      <p className="text-sm text-[var(--ink-700)]">Une seule date, une seule personne.</p>
-                    </button>
-                    <button
-                      aria-pressed={!isSingleTask}
-                      className={cn(
-                        "soft-panel group relative overflow-hidden px-4 py-3 text-left transition-all",
-                        !isSingleTask
-                          ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] shadow-sm"
-                          : "hover:bg-white/50",
-                      )}
-                      onClick={() =>
-                        setDraft((current) => ({
-                          ...current,
-                          kind: "recurring",
-                          assignmentMode:
-                            current.assignmentMode === "fixed" && current.eligibleMemberIds.length <= 1
-                              ? "strict_alternation"
-                              : current.assignmentMode,
-                          eligibleMemberIds:
-                            current.eligibleMemberIds.length > 1
-                              ? current.eligibleMemberIds
-                              : members.map((member) => member.id),
-                        }))
-                      }
-                      type="button"
-                    >
-                      {!isSingleTask && (
-                        <div className="absolute right-3 top-3 flex size-5 items-center justify-center rounded-full bg-[var(--sky-500)] text-white shadow-sm">
-                          <Check className="size-3" />
-                        </div>
-                      )}
-                      <p className={cn("font-semibold transition-colors", !isSingleTask && "text-[var(--sky-700)]")}>
-                        Tâche récurrente
-                      </p>
-                      <p className="text-sm text-[var(--ink-700)]">Revient automatiquement selon un rythme.</p>
-                    </button>
-                  </div>
-                </div>
-                <label className="field-label">
-                  <span>Nom</span>
-                  <input
-                    autoFocus
-                    className="field"
-                    onChange={(event) => updateDraft("title", event.currentTarget.value)}
-                    placeholder="Ex: Sortir les poubelles"
-                    required
-                    type="text"
-                    value={draft.title}
-                  />
-                </label>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="field-label">
-                    <span>Durée estimée</span>
+          <div className="flex-1 overflow-y-auto px-1 pb-4">
+            {step === 1 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                <div className="flex gap-4">
+                  <label className="field-label flex-1">
+                    <span>C&apos;est quoi ?</span>
                     <input
-                      className="field"
-                      inputMode="numeric"
-                      min="1"
-                      name="estimatedMinutesVisible"
-                      onChange={(event) => updateDraft("estimatedMinutes", event.currentTarget.value)}
-                      onFocus={(event) => event.currentTarget.select()}
-                      placeholder="Minutes"
-                      required
-                      type="number"
-                      value={draft.estimatedMinutes}
+                      autoFocus
+                      className="field h-14 text-lg font-semibold"
+                      onChange={(e) => updateDraft("title", e.target.value)}
+                      placeholder="Ex: Passer l'aspirateur"
+                      value={draft.title}
                     />
                   </label>
-                  <label className="field-label">
-                    <span>Pièce</span>
-                    <input
-                      className="field"
-                      list="room-suggestions"
-                      onChange={(event) => updateDraft("room", event.currentTarget.value)}
-                      placeholder="Ex: Cuisine"
-                      type="text"
-                      value={draft.room}
-                    />
-                  </label>
-                </div>
-                <datalist id="room-suggestions">
-                  {roomSuggestions.map((room) => (
-                    <option key={room} value={room} />
-                  ))}
-                </datalist>
-                <label className="field-label">
-                  <span>Catégorie</span>
-                  <input
-                    className="field"
-                    onChange={(event) => updateDraft("category", event.currentTarget.value)}
-                    placeholder="Ex: Nettoyage"
-                    type="text"
-                    value={draft.category}
-                  />
-                </label>
-
-                <div className="field-label">
-                  <span>Icône (optionnel)</span>
-                  <div className="flex flex-wrap gap-2 overflow-y-auto max-h-40 rounded-2xl border border-[var(--line)] bg-white/50 p-3">
+                  <div className="space-y-2">
+                    <span className="field-label">Icône</span>
                     <button
-                      className={cn(
-                        "flex size-10 items-center justify-center rounded-lg border-2 transition-all",
-                        draft.icon === "" ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)]" : "border-transparent hover:bg-black/5"
-                      )}
-                      onClick={() => updateDraft("icon", "")}
-                      title="Utiliser l'icône par défaut de la pièce"
                       type="button"
+                      onClick={() => setShowIconGrid(!showIconGrid)}
+                      className={cn(
+                        "flex size-14 items-center justify-center rounded-2xl border-2 transition-all bg-white text-2xl",
+                        showIconGrid ? "border-[var(--sky-500)]" : "border-[var(--line)]"
+                      )}
                     >
-                      <Plus className="size-5 opacity-40" />
+                      {SelectedIcon ? <SelectedIcon className="size-6" /> : <LayoutGrid className="size-6 opacity-40" />}
                     </button>
-                    {Object.entries(AVAILABLE_ICONS).map(([name, IconComponent]) => (
-                      <button
-                        key={name}
-                        className={cn(
-                          "flex size-10 items-center justify-center rounded-lg border-2 transition-all",
-                          draft.icon === name ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)]" : "border-transparent hover:bg-black/5"
-                        )}
-                        onClick={() => updateDraft("icon", name)}
-                        title={name}
-                        type="button"
-                      >
-                        <IconComponent className="size-5" />
-                      </button>
-                    ))}
                   </div>
                 </div>
 
-                <label className="field-label cursor-pointer flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={draft.isCollective}
-                    onChange={(event) => updateDraft("isCollective", event.target.checked)}
-                    className="size-5 accent-[var(--sky-500)]"
-                  />
-                  <span>Tâche collective (se fait à plusieurs)</span>
-                </label>
-                <div className="field-label">
-                  <span>Couleur</span>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <input
-                      className="field h-[3.2rem] w-[4.5rem] px-2"
-                      onChange={(event) => updateDraft("color", event.currentTarget.value)}
-                      type="color"
-                      value={draft.color}
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      {taskPalette.slice(0, 8).map((color) => (
-                        <button
-                          aria-label={`Choisir la couleur ${color}`}
-                          className={cn(
-                            "size-7 rounded-full border-2 transition-transform",
-                            draft.color === color ? "scale-110 border-[var(--ink-950)]" : "border-black/10",
-                          )}
-                          key={color}
-                          onClick={() => updateDraft("color", color)}
-                          style={{ backgroundColor: color }}
-                          type="button"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            {step === 2 ? (
-              <div className="compact-stack">
-                <label className="field-label">
-                  <span>{isSingleTask ? "Date" : "Première date"}</span>
-                  <input
-                    className="field"
-                    onChange={(event) => updateDraft("startsOn", event.currentTarget.value)}
-                    required
-                    type="date"
-                    value={draft.startsOn}
-                  />
-                </label>
-                {isSingleTask ? (
-                  <div className="soft-panel px-4 py-4 text-sm leading-6 text-[var(--ink-700)]">
-                    Une seule occurrence sera créée à cette date, puis la tâche disparaîtra naturellement du planning futur.
-                  </div>
-                ) : (
-                  <>
-                    <div className="field-label">
-                      <span>Répétition</span>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {recurrenceOptions.map((option) => {
-                          const Icon = option.icon;
-                          const active = draft.recurrenceType === option.value;
-                          return (
-                            <button
-                              aria-pressed={active}
-                              className={cn(
-                                "soft-panel group relative flex items-center gap-3 overflow-hidden px-4 py-3 text-left transition-all",
-                                active ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] shadow-sm" : "hover:bg-white/50",
-                              )}
-                              key={option.value}
-                              onClick={() => updateDraft("recurrenceType", option.value)}
-                              type="button"
-                            >
-                              <span
-                                className={cn(
-                                  "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors",
-                                  active ? "bg-[var(--sky-500)] text-white shadow-sm" : "bg-[rgba(47,109,136,0.12)] text-[var(--sky-600)]",
-                                )}
-                              >
-                                <Icon className="size-4" />
-                              </span>
-                              <span className={cn("font-semibold transition-colors", active && "text-[var(--sky-700)]")}>
-                                {option.label}
-                              </span>
-                              {active && (
-                                <div className="absolute right-2 top-2">
-                                  <Check className="size-3 text-[var(--sky-500)]" />
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    {everyXMode ? (
-                      <label className="field-label">
-                        <span>Valeur de X</span>
-                        <input
-                          className="field"
-                          inputMode="numeric"
-                          min="1"
-                          onChange={(event) => updateDraft("interval", event.currentTarget.value)}
-                          onFocus={(event) => event.currentTarget.select()}
-                          required
-                          type="number"
-                          value={draft.interval}
-                        />
-                      </label>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            ) : null}
-
-            {step === 3 ? (
-              <div className="compact-stack">
-                <div className="field-label">
-                  <span>{isSingleTask ? "Personne assignée" : "Membres concernés"}</span>
-                  <div className="flex flex-wrap gap-2">
-                    {members.map((member) => {
-                      const active = draft.eligibleMemberIds.includes(member.id);
-
+                {showIconGrid && (
+                  <div className="mx-auto max-w-[320px] grid grid-cols-6 gap-2 rounded-2xl bg-[var(--ink-50)] p-3 animate-in zoom-in-95 duration-200">
+                    {(Object.keys(AVAILABLE_ICONS) as IconName[]).map((name) => {
+                      const IconComp = AVAILABLE_ICONS[name];
                       return (
                         <button
-                          aria-pressed={active}
+                          key={name}
+                          onClick={() => {
+                            updateDraft("icon", name);
+                            setShowIconGrid(false);
+                          }}
                           className={cn(
-                            "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all",
-                            active
-                              ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.16)] text-[var(--sky-700)] shadow-[0_12px_24px_rgba(47,109,136,0.12)]"
-                              : "border-[var(--line)] bg-white/70 text-[var(--ink-700)] hover:-translate-y-0.5 hover:border-[rgba(47,109,136,0.18)] hover:bg-white",
+                            "flex aspect-square items-center justify-center rounded-xl transition-all",
+                            draft.icon === name ? "bg-[var(--coral-500)] text-white" : "bg-white hover:bg-[var(--coral-50)]"
                           )}
-                          key={member.id}
-                          onClick={() => toggleMember(member.id)}
-                          type="button"
                         >
-                          <span
-                            className="size-2.5 rounded-full"
-                            style={{ backgroundColor: member.color ?? "rgba(30,31,34,0.2)" }}
-                          />
-                          {member.displayName}
-                          {active ? <Check className="size-4" /> : null}
+                          <IconComp className="size-5" />
                         </button>
                       );
                     })}
                   </div>
-                  {draft.eligibleMemberIds.length === 0 ? (
-                    <span className="field-help">
-                      {isSingleTask ? "Choisissez la personne qui doit faire cette tâche." : "Choisissez au moins une personne."}
-                    </span>
-                  ) : null}
+                )}
+                
+                <div className="space-y-2">
+                  <span className="field-label px-1">Dans quelle pièce ?</span>
+                  <div className="flex flex-wrap gap-2">
+                    {roomSuggestions.map((room) => (
+                      <button
+                        key={room}
+                        className={cn(
+                          "rounded-xl border px-4 py-2 text-sm font-semibold transition-all",
+                          draft.room === room 
+                            ? "border-[var(--sky-500)] bg-[var(--sky-50)] text-[var(--sky-700)]" 
+                            : "border-[var(--line)] bg-white/50 text-[var(--ink-600)]"
+                        )}
+                        onClick={() => updateDraft("room", room)}
+                        type="button"
+                      >
+                        {room}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                <p className="field-label px-1 text-lg">Quel est le rythme ?</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    className={cn(
+                      "flex flex-col items-center gap-4 rounded-3xl border-2 p-6 transition-all text-center",
+                      draft.kind === "single"
+                        ? "border-[var(--coral-500)] bg-[var(--coral-50)]/30"
+                        : "border-[var(--line)] bg-white/50 grayscale opacity-60"
+                    )}
+                    onClick={() => updateDraft("kind", "single")}
+                    type="button"
+                  >
+                    <div className="flex size-14 items-center justify-center rounded-2xl bg-white shadow-sm">
+                      <Calendar className="size-7 text-[var(--coral-500)]" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-[var(--ink-950)] text-lg">Une seule fois</p>
+                      <p className="mt-1 text-xs text-[var(--ink-600)]">Tâche ponctuelle</p>
+                    </div>
+                  </button>
+                  <button
+                    className={cn(
+                      "flex flex-col items-center gap-4 rounded-3xl border-2 p-6 transition-all text-center",
+                      draft.kind === "recurring"
+                        ? "border-[var(--coral-500)] bg-[var(--coral-50)]/30"
+                        : "border-[var(--line)] bg-white/50 grayscale opacity-60"
+                    )}
+                    onClick={() => updateDraft("kind", "recurring")}
+                    type="button"
+                  >
+                    <div className="flex size-14 items-center justify-center rounded-2xl bg-white shadow-sm">
+                      <CalendarClock className="size-7 text-[var(--coral-500)]" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-[var(--ink-950)] text-lg">Récurrente</p>
+                      <p className="mt-1 text-xs text-[var(--ink-600)]">Se répète dans le temps</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                 {isSingleTask ? (
-                  <div className="soft-panel px-4 py-4 text-sm leading-6 text-[var(--ink-700)]">
-                    Attribution fixe automatique pour cette unique occurrence.
+                  <div className="space-y-4">
+                    <p className="field-label px-1 text-lg">C&apos;est pour quand ?</p>
+                    <input
+                      className="field h-14 text-lg text-center"
+                      onChange={(e) => updateDraft("startsOn", e.target.value)}
+                      type="date"
+                      value={draft.startsOn}
+                    />
                   </div>
                 ) : (
-                  <div className="field-label">
-                    <span>Qui s&apos;en occupe</span>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {assignmentOptions.map((option) => {
-                        const active = draft.assignmentMode === option.value;
-                        return (
-                          <button
-                            aria-pressed={active}
-                            className={cn(
-                              "soft-panel group relative overflow-hidden px-4 py-3 text-left transition-all",
-                              active ? "border-[var(--sky-500)] bg-[rgba(47,109,136,0.12)] shadow-sm" : "hover:bg-white/50",
-                            )}
-                            key={option.value}
-                            onClick={() => updateDraft("assignmentMode", option.value)}
-                            type="button"
-                          >
-                            <p className={cn("font-semibold transition-colors", active && "text-[var(--sky-700)]")}>
-                              {option.label}
-                            </p>
-                            <p className="text-sm text-[var(--ink-700)]">{option.hint}</p>
-                            {active && (
-                              <div className="absolute right-3 top-3 flex size-4 items-center justify-center rounded-full bg-[var(--sky-500)] text-white">
-                                <Check className="size-2.5" />
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
+                  <div className="space-y-4">
+                    <p className="field-label px-1 text-lg">À quelle fréquence ?</p>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {recurrenceOptions.map((opt) => (
+                        <button
+                          key={opt.value}
+                          className={cn(
+                            "flex flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all",
+                            draft.recurrenceType === opt.value
+                              ? "border-[var(--sky-500)] bg-[var(--sky-50)] text-[var(--sky-700)]"
+                              : "border-[var(--line)] bg-white/50 text-[var(--ink-600)]"
+                          )}
+                          onClick={() => updateDraft("recurrenceType", opt.value)}
+                          type="button"
+                        >
+                          <opt.icon className="size-5 shrink-0" />
+                          <span className="text-xs font-bold">{opt.label}</span>
+                        </button>
+                      ))}
                     </div>
+                    {(draft.recurrenceType === "every_x_days" || draft.recurrenceType === "every_x_weeks") && (
+                      <div className="flex items-center gap-3 pt-2">
+                        <span className="text-sm font-medium">Tous les</span>
+                        <input
+                          className="field w-20 text-center"
+                          min="1"
+                          onChange={(e) => updateDraft("interval", e.target.value)}
+                          type="number"
+                          value={draft.interval}
+                        />
+                        <span className="text-sm font-medium">
+                          {draft.recurrenceType === "every_x_days" ? "jours" : "semaines"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            ) : null}
+            )}
 
-            <div
-              className="sticky bottom-2 mt-2 flex flex-col gap-3 rounded-[1.4rem] border border-[var(--line)] bg-white/90 px-3 py-3 shadow-[var(--shadow-soft)] sm:static sm:flex-row sm:items-center sm:justify-between sm:border-none sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none"
-              style={{ marginBottom: "env(safe-area-inset-bottom, 0px)" }}
-            >
-              <p className="text-xs font-medium text-[var(--ink-500)] sm:hidden">
-                {step < 3 ? "Continuez pour finaliser la tâche." : "Vérifiez puis créez la tâche."}
-              </p>
+            {step === 4 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                <div className="space-y-6">
+                  {!isSingleTask && (
+                    <div className="space-y-3">
+                      <p className="field-label px-1">Qui s&apos;en occupe ?</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {assignmentOptions.map((opt) => (
+                          <button
+                            key={opt.value}
+                            className={cn(
+                              "flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition-all",
+                              draft.assignmentMode === opt.value
+                                ? "border-[var(--sky-500)] bg-[var(--sky-50)]"
+                                : "border-[var(--line)] bg-white/50 opacity-60"
+                            )}
+                            onClick={() => {
+                              updateDraft("assignmentMode", opt.value);
+                              if (opt.value === "fixed") {
+                                updateDraft("eligibleMemberIds", [members[0]?.id]);
+                              }
+                            }}
+                            type="button"
+                          >
+                            <opt.icon className="size-5" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider leading-tight">{opt.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-2 rounded-xl bg-[var(--ink-50)] p-3 text-[11px] leading-relaxed text-[var(--ink-600)] animate-in fade-in slide-in-from-top-1">
+                        {assignmentOptions.find(o => o.value === draft.assignmentMode)?.description}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="field-label px-1">Personnes éligibles</p>
+                      <label className="flex cursor-pointer items-center gap-2 rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ink-600)] transition-all hover:bg-black/[0.02]">
+                        <input
+                          type="checkbox"
+                          checked={draft.isCollective}
+                          onChange={(e) => updateDraft("isCollective", e.target.checked)}
+                          className="size-3.5 rounded border-[var(--line)] text-[var(--coral-500)] focus:ring-[var(--coral-500)]"
+                        />
+                        <span>Tâche collective</span>
+                      </label>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {members.map((m) => (
+                        <button
+                          key={m.id}
+                          className={cn(
+                            "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all",
+                            draft.eligibleMemberIds.includes(m.id)
+                              ? "border-current bg-current/10"
+                              : "border-[var(--line)] bg-white/50 text-[var(--ink-500)] grayscale"
+                          )}
+                          onClick={() => toggleMember(m.id)}
+                          style={{ color: draft.eligibleMemberIds.includes(m.id) ? m.color : undefined }}
+                          type="button"
+                        >
+                          <div className="size-2 rounded-full" style={{ backgroundColor: m.color }} />
+                          {m.displayName}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2 pt-2">
+                    <label className="field-label">
+                      <span>Temps estimé (min)</span>
+                      <div className="flex flex-wrap gap-2">
+                        {["5", "15", "30", "45", "60"].map(m => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => updateDraft("estimatedMinutes", m)}
+                            className={cn(
+                              "flex-1 min-w-[48px] rounded-xl border py-2.5 text-sm font-bold transition-all",
+                              draft.estimatedMinutes === m ? "bg-[var(--ink-950)] text-white border-[var(--ink-950)]" : "bg-white border-[var(--line)]"
+                            )}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                        <div className="relative flex-1 min-w-[80px]">
+                          <input
+                            className="field h-full w-full text-center text-sm font-bold px-2"
+                            onChange={(e) => updateDraft("estimatedMinutes", e.target.value)}
+                            placeholder="Autre..."
+                            type="number"
+                            value={["5", "15", "30", "45", "60"].includes(draft.estimatedMinutes) ? "" : draft.estimatedMinutes}
+                          />
+                        </div>
+                      </div>
+                    </label>
+
+                    <div className="space-y-2">
+                      <span className="field-label">Couleur</span>
+                      <div className="flex flex-wrap gap-2">
+                        {taskPalette.map((c) => (
+                          <button
+                            key={c}
+                            className={cn(
+                              "size-8 rounded-full border-2 transition-all",
+                              draft.color === c ? "border-black/20 scale-110 shadow-md" : "border-transparent"
+                            )}
+                            onClick={() => updateDraft("color", c)}
+                            style={{ backgroundColor: c }}
+                            type="button"
+                          />
+                        ))}
+                        <div className="relative size-8 rounded-full border-2 border-dashed border-[var(--line)] flex items-center justify-center overflow-hidden hover:border-[var(--ink-400)] transition-all">
+                          <input
+                            type="color"
+                            className="absolute inset-0 size-full scale-150 cursor-pointer opacity-0"
+                            onChange={(e) => updateDraft("color", e.target.value)}
+                            value={taskPalette.includes(draft.color) ? "#000000" : draft.color}
+                          />
+                          {!taskPalette.includes(draft.color) ? (
+                            <div className="size-full" style={{ backgroundColor: draft.color }} />
+                          ) : (
+                            <Plus className="size-4 text-[var(--ink-400)]" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer actions */}
+          <div className="mt-auto pt-6 flex items-center justify-center gap-4 w-full max-w-sm mx-auto">
+            {step > 1 && (
               <button
-                className="btn-quiet inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold"
-                disabled={step === 1 || isSubmitting}
-                onClick={() => {
-                  setIsStep3Armed(false);
-                  setStep((current) => Math.max(1, current - 1));
-                }}
+                className="btn-quiet flex size-14 items-center justify-center rounded-full shrink-0 border border-[var(--line)]"
+                onClick={handleBack}
                 type="button"
+                title="Retour"
               >
-                <ChevronLeft className="size-4" />
-                Retour
+                <ChevronLeft className="size-6" />
               </button>
-
-              {step < 3 ? (
-                <button
-                  className="btn-primary inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold"
-                  disabled={(step === 1 && !draft.title.trim()) || isSubmitting}
-                  onClick={() => {
-                    setIsStep3Armed(false);
-                    setStep((current) => Math.min(3, current + 1));
-                  }}
-                  type="button"
-                >
-                  Continuer
-                  <ChevronRight className="size-4" />
-                </button>
-              ) : (
-                <button
-                  className="btn-primary inline-flex items-center justify-center px-5 py-3 text-sm font-semibold disabled:opacity-50"
-                  disabled={!isStep3Armed || !draft.title.trim() || draft.eligibleMemberIds.length === 0 || isSubmitting}
-                  type="submit"
-                >
-                  {isSingleTask ? "Créer la tâche simple" : "Créer la tâche"}
-                </button>
+            )}
+            
+            <button
+              className={cn(
+                "btn-primary flex-1 h-14 text-lg font-bold shadow-lg shadow-coral-200/50 rounded-2xl flex items-center justify-center",
+                !canGoNext || isSubmitting ? "opacity-50 cursor-not-allowed" : ""
               )}
-            </div>
-          </form>
+              disabled={!canGoNext || (step === 4 && isSubmitting)}
+              onClick={() => {
+                if (step < 4) {
+                  handleNext();
+                } else {
+                  const body: Record<string, string> = {
+                    title: draft.title,
+                    estimatedMinutes: draft.estimatedMinutes,
+                    category: draft.category,
+                    room: draft.room,
+                    color: draft.color,
+                    startsOn: draft.startsOn,
+                    recurrenceType: draft.recurrenceType,
+                    interval: draft.interval,
+                    assignmentMode: isSingleTask ? "fixed" : draft.assignmentMode,
+                    eligibleMemberIds: draft.eligibleMemberIds.join(","),
+                    isCollective: draft.isCollective ? "on" : "off",
+                    icon: draft.icon,
+                    kind: draft.kind,
+                  };
+                  submit(body);
+                }
+              }}
+              type="button"
+            >
+              <span>{step < 4 ? "Continuer" : (isSubmitting ? "Création..." : "Créer la tâche")}</span>
+              {step < 4 && <ChevronRight className="size-5 ml-2" />}
+            </button>
+          </div>
         </div>
-      )}
-    </section>
+      </BottomSheet>
+    </>
   );
 }

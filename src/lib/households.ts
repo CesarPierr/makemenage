@@ -97,25 +97,8 @@ export async function getCurrentHouseholdContext(
         status: { not: "cancelled" },
       },
       include: {
-        taskTemplate: {
-          select: {
-            id: true,
-            title: true,
-            color: true,
-            estimatedMinutes: true,
-            room: true,
-            category: true,
-            icon: true,
-            isCollective: true,
-          },
-        },
-        assignedMember: {
-          select: {
-            id: true,
-            displayName: true,
-            color: true,
-          },
-        },
+        taskTemplate: true,
+        assignedMember: true,
         completedByMember: true,
       },
       orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],
@@ -167,14 +150,12 @@ export async function requireHouseholdContext(
   options?: HouseholdContextOptions,
 ) {
   const context = await getCurrentHouseholdContext(userId, householdId, options);
-
   if (!context) {
-    redirect("/app?onboarding=1");
+    redirect("/app");
   }
-
   return context;
 }
 
-export function canManageHousehold(role: "owner" | "admin" | "member") {
-  return role === "owner" || role === "admin";
+export function canManageHousehold(role: string) {
+  return role === "admin" || role === "owner";
 }

@@ -12,14 +12,14 @@ import {
 import { fr } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Clock, ListTodo } from "lucide-react";
+import { Clock, ListTodo, Wrench } from "lucide-react";
 
 import { TaskDetailSheet } from "@/components/task-detail-sheet";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { useToast } from "@/components/ui/toast";
 import { hexToRgba } from "@/lib/colors";
 
-type CalendarOccurrence = {
+export type CalendarOccurrence = {
   id: string;
   scheduledDate: Date;
   status: string;
@@ -328,11 +328,16 @@ export function CalendarMonth({
                             <div
                               aria-label={`${occurrence.taskTemplate.title} · ${occurrence.assignedMember?.displayName ?? "À attribuer"}`}
                               key={occurrence.id}
-                              className={`rounded-[1.1rem] px-3 py-2 text-sm ${className}`}
+                              className={`rounded-[1.1rem] px-3 py-2 text-sm relative group ${className}`}
                               role="group"
                               style={style}
                             >
-                              <p className="font-semibold leading-5 truncate">{occurrence.taskTemplate.title}</p>
+                              <div className="flex items-center justify-between gap-2 min-w-0">
+                                <p className="font-semibold leading-5 truncate">{occurrence.taskTemplate.title}</p>
+                                {occurrence.isManuallyModified && (
+                                  <Wrench className="size-3 shrink-0 text-[var(--coral-500)]" />
+                                )}
+                              </div>
                               <div className="mt-0.5 inline-flex items-center gap-2 text-[10px] opacity-80">
                                 {occurrence.assignedMember ? (
                                   <span
@@ -422,7 +427,7 @@ export function CalendarMonth({
                   <div className="w-full max-w-[14px] bg-[var(--ink-100)]/50 rounded-full relative flex items-end justify-center group" style={{ height: "200px" }}>
                     {totalMinutes > 0 && (
                       <div 
-                        className={`w-full rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-1000 ease-out ${isToday ? "bg-[var(--coral-500)]" : "bg-[var(--sky-500)]"}`}
+                        className={`w-full rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-1000 ease-out ${isToday ? "bg-[var(--coral-50)]/30" : "bg-[var(--sky-500)]"}`}
                         style={{ height: `${heightPercent}%` }}
                       >
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -494,7 +499,7 @@ export function CalendarMonth({
                             <div
                               aria-label={`${o.taskTemplate.title} · ${o.assignedMember?.displayName ?? "À attribuer"}`}
                               key={o.id}
-                              className={`rounded-lg px-2 py-1 text-[9px] font-bold transition-all hover:brightness-95 ${className}`}
+                              className={`rounded-lg px-2 py-1 text-[9px] font-bold transition-all hover:brightness-95 flex items-center justify-between gap-1 ${className}`}
                               role="group"
                               style={style}
                               onClick={(e) => {
@@ -502,10 +507,13 @@ export function CalendarMonth({
                                 setSelectedOccurrenceId(o.id);
                               }}
                             >
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="size-1.5 rounded-full shadow-inner shrink-0" style={{ backgroundColor: o.taskTemplate.color ?? "#D8643D" }} />
                                 <p className="truncate">{o.taskTemplate.title}</p>
                               </div>
+                              {o.isManuallyModified && (
+                                <Wrench className="size-2 shrink-0 text-[var(--coral-600)]" />
+                              )}
                             </div>
                           );
                         })}
@@ -552,6 +560,12 @@ export function CalendarMonth({
                           <span className="rounded-full bg-black/5 px-2 py-0.5">{o.taskTemplate.room}</span>
                         )}
                         <span>{o.assignedMember?.displayName ?? "À attribuer"}</span>
+                        {o.isManuallyModified && (
+                          <span className="flex items-center gap-1 text-[var(--coral-600)] font-black">
+                            <Wrench className="size-3" />
+                            MODIFIÉE
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="text-right shrink-0">
@@ -595,7 +609,7 @@ export function CalendarMonth({
         <TaskDetailSheet
           isOpen={Boolean(selectedOccurrenceId)}
           onClose={() => setSelectedOccurrenceId(null)}
-          occurrence={selectedOccurrence as any}
+          occurrence={selectedOccurrence}
           members={members}
           currentMemberId={currentMemberId}
           householdId={householdId}

@@ -1,7 +1,7 @@
 import { addDays, format, startOfToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
-import { Activity, CalendarDays, ClipboardList, Clock3, Plus, RefreshCcw, ShieldAlert, Users } from "lucide-react";
+import { Activity, CalendarDays, ChevronRight, ClipboardList, Clock3, Plus, RefreshCcw, ShieldAlert, Users, Wrench } from "lucide-react";
 
 import { PlanifierHubCard } from "@/components/planifier-hub-card";
 import { requireUser } from "@/lib/auth";
@@ -100,53 +100,31 @@ export default async function PlanifierPage({ searchParams }: PlanifierPageProps
       ];
 
   return (
-    <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="section-kicker">Planifier</p>
-            <h2 className="display-title mt-2 text-4xl leading-tight sm:text-5xl">Tout ce qui aide à garder le cap</h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--ink-700)] sm:text-[0.98rem]">
-              Le quotidien reste dans <strong>Aujourd&apos;hui</strong>. Ici, vous regardez plus loin, ajustez les routines
-              et vérifiez ce qui peut faire bouger le planning.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <span className="accent-pill">
-              <span className="accent-pill-dot" style={{ backgroundColor: "var(--sky-500)" }} />
-              {upcomingOccurrences.length} tâche{upcomingOccurrences.length > 1 ? "s" : ""} sur 14 jours
-            </span>
-            <span className="accent-pill">
-              <span className="accent-pill-dot" style={{ backgroundColor: "var(--leaf-500)" }} />
-              {context.tasks.length} routine{context.tasks.length > 1 ? "s" : ""}
-            </span>
-          </div>
+    <section className="relative space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Page Header - Clean & Integrated */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-1">
+        <div>
+          <h2 className="display-title text-3xl leading-tight sm:text-4xl">Garder le cap</h2>
+          <p className="mt-1 text-sm font-medium text-[var(--ink-500)]">
+            Calendrier, routines et organisation du foyer
+          </p>
         </div>
 
-        <div className="mt-6 summary-strip sm:grid-cols-2 xl:grid-cols-4">
-          <article className="metric-card interactive-surface px-4 py-4">
-            <p className="text-sm text-[var(--ink-700)]">Deux prochaines semaines</p>
-            <p className="mt-2 text-3xl font-semibold">{upcomingOccurrences.length}</p>
-            <p className="text-sm text-[var(--ink-500)]">
-              du {format(today, "d MMM", { locale: fr })} au {format(nextTwoWeeks, "d MMM", { locale: fr })}
-            </p>
-          </article>
-          <article className="metric-card interactive-surface px-4 py-4">
-            <p className="text-sm text-[var(--ink-700)]">Absences à venir</p>
-            <p className="mt-2 text-3xl font-semibold">{absences.length}</p>
-            <p className="text-sm text-[var(--ink-500)]">à prendre en compte</p>
-          </article>
-          <article className="metric-card interactive-surface px-4 py-4">
-            <p className="text-sm text-[var(--ink-700)]">Modifs à surveiller</p>
-            <p className="mt-2 text-3xl font-semibold">{activeOverrides.length}</p>
-            <p className="text-sm text-[var(--ink-500)]">changements manuels actifs</p>
-          </article>
-          <article className="metric-card interactive-surface px-4 py-4">
-            <p className="text-sm text-[var(--ink-700)]">Activité récente</p>
-            <p className="mt-2 text-3xl font-semibold">{recentActions.length}</p>
-            <p className="text-sm text-[var(--ink-500)]">actions à relire si besoin</p>
-          </article>
+        <div className="flex flex-wrap gap-2">
+          <Link 
+            href={`/app/calendar${householdParam}`}
+            className="accent-pill hover:scale-105 active:scale-95 transition-all shadow-sm bg-white"
+          >
+            <span className="accent-pill-dot" style={{ backgroundColor: "var(--sky-500)" }} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">{upcomingOccurrences.length} à venir</span>
+          </Link>
+          <Link 
+            href={`/app/my-tasks?household=${context.household.id}&tab=templates`}
+            className="accent-pill hover:scale-105 active:scale-95 transition-all shadow-sm bg-white"
+          >
+            <span className="accent-pill-dot" style={{ backgroundColor: "var(--leaf-500)" }} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">{context.tasks.length} routines</span>
+          </Link>
         </div>
       </div>
 
@@ -234,33 +212,42 @@ export default async function PlanifierPage({ searchParams }: PlanifierPageProps
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="section-kicker">À surveiller</p>
-              <h3 className="display-title mt-2 text-3xl">Le prochain point d&apos;attention</h3>
+              <h3 className="display-title mt-2 text-3xl">Monitoring du foyer</h3>
             </div>
             <Clock3 className="size-5 text-[var(--coral-600)]" />
           </div>
 
           <div className="mt-5 space-y-3">
             {absences[0] ? (
-              <div className="soft-panel px-4 py-4">
+              <Link 
+                href={`/app/settings/planning${householdParam}`}
+                className="soft-panel interactive-surface block px-4 py-4 transition-all hover:shadow-md"
+              >
                 <p className="text-sm font-semibold text-[var(--ink-950)]">Absence la plus proche</p>
-                <p className="mt-2 text-lg font-semibold">{absences[0].member.displayName}</p>
+                <p className="mt-2 text-lg font-semibold text-[var(--leaf-600)]">{absences[0].member.displayName}</p>
                 <p className="mt-1 text-sm text-[var(--ink-700)]">
                   Du {format(absences[0].startDate, "d MMM", { locale: fr })} au {format(absences[0].endDate, "d MMM", { locale: fr })}
                 </p>
                 {absences[0].notes ? (
-                  <p className="mt-2 text-sm text-[var(--ink-700)]">{absences[0].notes}</p>
+                  <p className="mt-2 text-sm text-[var(--ink-700)] italic">{absences[0].notes}</p>
                 ) : null}
-              </div>
+              </Link>
             ) : null}
 
             {activeOverrides.length ? (
-              <div className="soft-panel px-4 py-4">
-                <p className="text-sm font-semibold text-[var(--ink-950)]">Changements manuels actifs</p>
-                <p className="mt-2 text-lg font-semibold">{activeOverrides.length} occurrence{activeOverrides.length > 1 ? "s" : ""}</p>
-                <p className="mt-1 text-sm text-[var(--ink-700)]">
-                  Pensez à vérifier ces décalages avant un gros recalcul.
-                </p>
-              </div>
+              <Link 
+                href={`/app/calendar${householdParam}&modified=1`}
+                className="soft-panel interactive-surface flex items-center gap-4 px-4 py-4 transition-all hover:shadow-md border-l-4 border-[var(--coral-500)]"
+              >
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--coral-50)] text-[var(--coral-600)]">
+                  <Wrench className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[var(--ink-950)]">Changements manuels actifs</p>
+                  <p className="mt-1 text-lg font-semibold text-[var(--coral-600)]">{activeOverrides.length} occurrence{activeOverrides.length > 1 ? "s" : ""}</p>
+                </div>
+                <ChevronRight className="size-5 text-[var(--ink-300)]" />
+              </Link>
             ) : null}
 
             {!absences[0] && activeOverrides.length === 0 ? (

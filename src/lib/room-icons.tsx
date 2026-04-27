@@ -1,3 +1,4 @@
+import React from "react";
 import {
   Bed,
   Box,
@@ -80,7 +81,7 @@ export const AVAILABLE_ICONS = {
 
 export type IconName = keyof typeof AVAILABLE_ICONS;
 
-export const ROOM_ICON_MAP: Record<string, any> = {
+export const ROOM_ICON_MAP: Record<string, React.ElementType> = {
   "Tout l'appartement": Home,
   "Cuisine": Soup,
   "Salon": Sofa,

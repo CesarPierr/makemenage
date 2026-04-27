@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 
 import { useToast } from "@/components/ui/toast";
 import { roomSuggestions, taskPalette } from "@/lib/constants";
-import { AVAILABLE_ICONS, getRoomIcon } from "@/lib/room-icons";
+import { AVAILABLE_ICONS } from "@/lib/room-icons";
 import { cn } from "@/lib/utils";
 
 export type TaskTemplateEditable = {

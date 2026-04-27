@@ -3,8 +3,6 @@ import { startOfDay } from "date-fns";
 
 import { ClientForm } from "@/components/client-form";
 import { HomeHeader } from "@/components/home-header";
-import { RecentActivityFeed } from "@/components/recent-activity-feed";
-import { StatsDrawer } from "@/components/stats-drawer";
 import { TaskWorkspaceClient } from "@/components/task-workspace-client";
 import { UxEventTracker } from "@/components/ux-event-tracker";
 import { WeekKanban } from "@/components/week-kanban";

@@ -4,11 +4,12 @@ import { fr } from "date-fns/locale";
 
 import { CalendarMonth } from "@/components/calendar-month";
 import { requireUser } from "@/lib/auth";
-import { buildCalendarOverview } from "@/lib/experience";
+
 import { requireHouseholdContext } from "@/lib/households";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Wrench } from "lucide-react";
 import Link from "next/link";
 import { CalendarSidebar } from "@/components/calendar-sidebar";
+import { cn } from "@/lib/utils";
 
 type CalendarPageProps = {
   searchParams: Promise<{
@@ -16,6 +17,7 @@ type CalendarPageProps = {
     monthOffset?: string;
     dayOffset?: string;
     member?: string;
+    modified?: string;
   }>;
 };
 
@@ -35,6 +37,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   const monthOffset = parseOffset(params.monthOffset, { min: -24, max: 24 });
   const dayOffset = parseOffset(params.dayOffset, { min: -30, max: 30 });
   const memberFilter = params.member ?? null;
+  const isModifiedFilter = params.modified === "1";
   const today = startOfToday();
   const currentMonth = addDays(today, monthOffset * 30);
   const currentDayBase = addDays(today, dayOffset);
@@ -56,9 +59,9 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   const members = context.household.members.map((m) => ({ id: m.id, displayName: m.displayName, color: m.color }));
   const activeMember = memberFilter ? members.find((m) => m.id === memberFilter) ?? null : null;
 
-  const filteredOccurrences = activeMember
+  const filteredOccurrences = (activeMember
     ? context.monthOccurrences.filter((o) => o.assignedMemberId === activeMember.id)
-    : context.monthOccurrences;
+    : context.monthOccurrences).filter((o) => !isModifiedFilter || o.isManuallyModified);
 
   const absences = context.household.members.flatMap((member) =>
     member.availabilities
@@ -74,10 +77,10 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         },
       })),
   );
-  const overview = buildCalendarOverview(filteredOccurrences, absences);
+
 
   const baseHref = (extra?: string) =>
-    `/app/calendar?household=${context.household.id}${memberFilter ? `&member=${memberFilter}` : ""}${extra ?? ""}`;
+    `/app/calendar?household=${context.household.id}${memberFilter ? `&member=${memberFilter}` : ""}${isModifiedFilter ? "&modified=1" : ""}${extra ?? ""}`;
 
   const prevMonthHref = baseHref(`&monthOffset=${monthOffset - 1}&dayOffset=0`);
   const nextMonthHref = baseHref(`&monthOffset=${monthOffset + 1}&dayOffset=0`);
@@ -96,13 +99,26 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
               <h2 className="display-title mt-2 truncate text-3xl leading-tight sm:text-4xl">
                 {format(startDate, "d MMM", { locale: fr })} — {format(endDate, "d MMM yyyy", { locale: fr })}
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-700)]">
-                Regardez les prochains jours, repérez les périodes chargées et ajustez le planning sans encombrer le quotidien.
-              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <p className="text-sm leading-6 text-[var(--ink-700)]">
+                  Prochains jours et organisation.
+                </p>
+                <Link
+                  href={`/app/calendar?household=${context.household.id}&monthOffset=${monthOffset}&dayOffset=${dayOffset}${memberFilter ? `&member=${memberFilter}` : ""}${!isModifiedFilter ? "&modified=1" : ""}`}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all",
+                    isModifiedFilter 
+                      ? "bg-[var(--coral-500)] text-white shadow-md shadow-coral-100" 
+                      : "bg-[var(--ink-100)] text-[var(--ink-600)] hover:bg-[var(--ink-200)]"
+                  )}
+                >
+                  <Wrench className={cn("size-3", isModifiedFilter ? "animate-pulse" : "")} />
+                  <span>{isModifiedFilter ? "Exceptions actives" : "Voir exceptions"}</span>
+                </Link>
+              </div>
             </div>
             
             <div className="flex flex-wrap items-center gap-2">
-              {/* Desktop Month Nav */}
               <div className="hidden items-center gap-2 sm:flex">
                 <Link
                   href={prevMonthHref}
@@ -112,7 +128,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                   <ChevronLeft className="size-5" />
                 </Link>
                 <Link href={todayHref} className="btn-secondary px-4 py-2 text-sm font-bold">
-                  Aujourd&apos;hui
+                  Auj.
                 </Link>
                 <Link
                   href={nextMonthHref}
@@ -123,7 +139,6 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                 </Link>
               </div>
 
-              {/* Mobile Day Nav (Windowed) */}
               <div className="flex w-full items-center justify-between gap-2 sm:hidden">
                 <Link
                   href={prevDaysHref}
@@ -146,37 +161,6 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
             </div>
           </div>
 
-          <div className="mt-6 summary-strip sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              {
-                label: "Occurrences",
-                value: overview.taskCount,
-                detail: "sur le mois affiché",
-              },
-              {
-                label: "Jours actifs",
-                value: overview.busyDays,
-                detail: "avec au moins une tâche",
-              },
-              {
-                label: "Absences",
-                value: overview.absenceCount,
-                detail: `${overview.absenceDays} jour${overview.absenceDays > 1 ? "s" : ""} couverts`,
-              },
-              {
-                label: "Vue mobile",
-                value: 7,
-                detail: "jours visibles à la fois",
-              },
-            ].map((item) => (
-              <article key={item.label} className="metric-card interactive-surface px-4 py-4">
-                <p className="text-sm text-[var(--ink-700)]">{item.label}</p>
-                <p className="mt-2 text-3xl font-semibold">{item.value}</p>
-                <p className="text-sm text-[var(--ink-500)]">{item.detail}</p>
-              </article>
-            ))}
-          </div>
-
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <span className="accent-pill">
               <span className="accent-pill-dot" style={{ backgroundColor: "var(--coral-500)" }} />
@@ -192,35 +176,33 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
             </span>
           </div>
 
-          {members.length > 1 ? (
-            <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filtrer par membre">
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--line)] pt-4" role="group" aria-label="Filtrer">
+            <Link
+              href={`/app/calendar?household=${context.household.id}&monthOffset=${monthOffset}&dayOffset=${dayOffset}${isModifiedFilter ? "&modified=1" : ""}`}
+              className={`accent-pill transition-all ${!activeMember ? "ring-2 ring-[var(--sky-500)] ring-offset-1 font-semibold" : "opacity-60 hover:opacity-100"}`}
+              aria-current={!activeMember ? "true" : undefined}
+            >
+              Tous les membres
+            </Link>
+            {members.map((m) => (
               <Link
-                href={`/app/calendar?household=${context.household.id}&monthOffset=${monthOffset}&dayOffset=${dayOffset}`}
-                className={`accent-pill transition-all ${!activeMember ? "ring-2 ring-[var(--sky-500)] ring-offset-1 font-semibold" : "opacity-60 hover:opacity-100"}`}
-                aria-current={!activeMember ? "true" : undefined}
+                key={m.id}
+                href={`/app/calendar?household=${context.household.id}&monthOffset=${monthOffset}&dayOffset=${dayOffset}&member=${m.id}${isModifiedFilter ? "&modified=1" : ""}`}
+                className={`accent-pill transition-all ${activeMember?.id === m.id ? "ring-2 ring-offset-1 font-semibold" : "opacity-60 hover:opacity-100"}`}
+                style={activeMember?.id === m.id ? ({ "--tw-ring-color": m.color } as React.CSSProperties) : undefined}
+                aria-current={activeMember?.id === m.id ? "true" : undefined}
               >
-                Tous
+                <span className="accent-pill-dot" style={{ backgroundColor: m.color }} />
+                {m.displayName}
               </Link>
-              {members.map((m) => (
-                <Link
-                  key={m.id}
-                  href={`/app/calendar?household=${context.household.id}&monthOffset=${monthOffset}&dayOffset=${dayOffset}&member=${m.id}`}
-                  className={`accent-pill transition-all ${activeMember?.id === m.id ? "ring-2 ring-offset-1 font-semibold" : "opacity-60 hover:opacity-100"}`}
-                  style={activeMember?.id === m.id ? ({ "--tw-ring-color": m.color } as React.CSSProperties) : undefined}
-                  aria-current={activeMember?.id === m.id ? "true" : undefined}
-                >
-                  <span className="accent-pill-dot" style={{ backgroundColor: m.color }} />
-                  {m.displayName}
-                </Link>
-              ))}
-            </div>
-          ) : null}
+            ))}
+          </div>
         </div>
 
         <div className="deferred-section animate-in fade-in slide-in-from-bottom-4 duration-500">
           <CalendarMonth
             month={currentMonth}
-            occurrences={filteredOccurrences as any}
+            occurrences={filteredOccurrences}
             absences={absences}
             mobileDayBase={currentDayBase}
             householdId={context.household.id}

@@ -3,12 +3,11 @@
 import { addDays, isSameDay, startOfDay } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Play, Rocket, Search } from "lucide-react";
+import { AlertCircle, Rocket } from "lucide-react";
 
-import { CollapsibleList } from "@/components/collapsible-list";
 import { FocusSession } from "@/components/focus-session";
 import { OccurrenceCard } from "@/components/occurrence-card";
-import { QuickAddBar } from "@/components/quick-add-bar";
+import { TaskCreationWizard } from "@/components/task-creation-wizard";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { useToast } from "@/components/ui/toast";
 import { groupOccurrencesByRoom } from "@/lib/experience";
@@ -20,7 +19,7 @@ import {
   sanitizeRunningSession,
   type RunningSession,
 } from "@/lib/running-session";
-import { cn, formatMinutes } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type WorkspaceOccurrence = {
   id: string;
@@ -81,9 +80,9 @@ export function TaskWorkspaceClient({
 
     return parseStoredRunningSession(window.localStorage.getItem(sessionStorageKey));
   });
+  const [horizon, setHorizon] = useState<3 | 7 | 30>(3);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clock, setClock] = useState(0);
-  const [visibleAllCount, setVisibleAllCount] = useState(12);
   const [sessionDoneCount, setSessionDoneCount] = useState(0);
   const [sessionSkippedCount, setSessionSkippedCount] = useState(0);
   const dashboardPath = `/app?household=${householdId}`;
@@ -175,6 +174,11 @@ export function TaskWorkspaceClient({
     sortedDays.forEach(key => {
       const date = new Date(key);
       const occurrences = dayMap.get(key)!;
+      
+      // Filter by horizon
+      const diffDays = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays >= horizon && filterType === "active" && !search) return;
+
       let label = "";
       
       if (isSameDay(date, today)) label = "Aujourd'hui";
@@ -182,7 +186,7 @@ export function TaskWorkspaceClient({
       else if (date < addDays(today, 7)) {
         label = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric" }).format(date);
       } else {
-        label = "Plus tard";
+        label = new Intl.DateTimeFormat("fr-FR", { month: "long", day: "numeric" }).format(date);
       }
 
       const existing = groups.find(g => g.label === label);
@@ -194,7 +198,7 @@ export function TaskWorkspaceClient({
     });
 
     return groups;
-  }, [sortedFiltered, today]);
+  }, [sortedFiltered, today, horizon, filterType, search]);
 
   const busiestNowRoom = useMemo(() => {
     const now = sortedFiltered.filter(o => startOfDay(o.scheduledDate).getTime() <= today.getTime() && ACTIVE_STATUSES.has(o.status));
@@ -500,13 +504,10 @@ export function TaskWorkspaceClient({
       ) : null}
 
       <section className="app-surface flex flex-col gap-4 rounded-[2rem] p-4 sm:p-5">
-        {manageable ? <QuickAddBar householdId={householdId} manageable={manageable} /> : null}
-
         <div className="relative">
           <input
             className="field h-11 w-full px-4 text-sm"
             onChange={(event) => {
-              setVisibleAllCount(12);
               setSearch(event.currentTarget.value);
             }}
             placeholder="Rechercher une tâche, pièce..."
@@ -520,7 +521,6 @@ export function TaskWorkspaceClient({
           <select
             className="field h-11 min-w-[140px] flex-1 px-3 text-sm font-semibold sm:flex-none"
             onChange={(event) => {
-              setVisibleAllCount(12);
               setRoomFilter(event.currentTarget.value);
             }}
             value={roomFilter}
@@ -537,7 +537,6 @@ export function TaskWorkspaceClient({
             <select
               className="field h-11 min-w-[140px] flex-1 px-3 text-sm font-semibold sm:flex-none"
               onChange={(event) => {
-                setVisibleAllCount(12);
                 setAssigneeFilter(event.currentTarget.value);
               }}
               value={assigneeFilter}
@@ -558,7 +557,6 @@ export function TaskWorkspaceClient({
                 setAssigneeFilter("all");
                 setSearch("");
                 setOverdueOnly(false);
-                setVisibleAllCount(12);
               }}
               className="ml-auto text-[0.65rem] font-bold uppercase tracking-wider text-[var(--coral-600)] hover:underline"
             >
@@ -570,10 +568,14 @@ export function TaskWorkspaceClient({
 
       <section className="app-surface rounded-[2rem] p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div className="flex items-center gap-3">
             <h3 className="display-title text-3xl">
-              {search ? "Tâches correspondantes" : "Votre semaine"}
+              {search ? "Tâches correspondantes" : "Tâches à venir"}
             </h3>
+            <div aria-live="polite" className="mt-1 flex items-center gap-1.5 rounded-full bg-[var(--ink-50)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-500)]">
+              <span className="size-1.5 rounded-full bg-[var(--coral-500)]" />
+              {filteredActiveOccurrences.length}
+            </div>
           </div>
           
           <div className="flex flex-wrap items-center gap-2">
@@ -605,7 +607,6 @@ export function TaskWorkspaceClient({
                   : "btn-quiet text-[var(--ink-500)]"
               )}
               onClick={() => {
-                setVisibleAllCount(12);
                 setOverdueOnly((prev) => !prev);
               }}
               type="button"
@@ -613,21 +614,23 @@ export function TaskWorkspaceClient({
               <AlertCircle className="size-3.5" />
               Retards
             </button>
-
-            <span aria-live="polite" className="accent-pill">
-              <span className="accent-pill-dot" style={{ backgroundColor: "var(--coral-500)" }} />
-              {filteredActiveOccurrences.length} tâche{filteredActiveOccurrences.length > 1 ? "s" : ""}
-            </span>
             
             {!activeRunningSession && (
-              <button
-                className="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
-                onClick={() => setShowOptimizedPicker(true)}
-                type="button"
-              >
-                <Rocket className="size-4" />
-                Session optimisée
-              </button>
+              <>
+                <button
+                  className="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
+                  onClick={() => setShowOptimizedPicker(true)}
+                  type="button"
+                >
+                  <Rocket className="size-4" />
+                  Optimiser
+                </button>
+                <TaskCreationWizard 
+                  compact 
+                  householdId={householdId} 
+                  members={members} 
+                />
+              </>
             )}
           </div>
         </div>
@@ -676,6 +679,37 @@ export function TaskWorkspaceClient({
             </div>
           )}
         </div>
+
+        {filterType === "active" && !search && (
+          <div className="mt-8 flex flex-col items-center gap-3 border-t border-[var(--line)] pt-8">
+            <div className="flex gap-2">
+              {horizon === 3 && (
+                <button
+                  onClick={() => setHorizon(7)}
+                  className="rounded-full bg-[var(--ink-50)] px-6 py-2.5 text-xs font-bold text-[var(--ink-700)] transition-all hover:bg-[var(--ink-100)] hover:scale-105 active:scale-95 shadow-sm"
+                >
+                  Étendre à la semaine
+                </button>
+              )}
+              {horizon === 7 && (
+                <button
+                  onClick={() => setHorizon(30)}
+                  className="rounded-full bg-[var(--ink-50)] px-6 py-2.5 text-xs font-bold text-[var(--ink-700)] transition-all hover:bg-[var(--ink-100)] hover:scale-105 active:scale-95 shadow-sm"
+                >
+                  Étendre au mois
+                </button>
+              )}
+              {horizon > 3 && (
+                <button
+                  onClick={() => setHorizon(3)}
+                  className="rounded-full bg-[var(--ink-50)] px-6 py-2.5 text-xs font-bold text-[var(--ink-400)] transition-all hover:bg-[var(--ink-100)] hover:text-[var(--ink-600)]"
+                >
+                  Réduire
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       <BottomSheet
@@ -689,25 +723,25 @@ export function TaskWorkspaceClient({
             À chaque tâche terminée, le calendrier des occurrences suivantes est recalculé à partir de
             la date de réalisation.
           </p>
-          {[1, 2, 3].map((horizon) => {
-            const cutoff = addDays(today, horizon);
+          {[1, 2, 3].map((h) => {
+            const cutoff = addDays(today, h);
             const count = filteredActiveOccurrences.filter(
               (o) => startOfDay(o.scheduledDate).getTime() < cutoff.getTime(),
             ).length;
             const label =
-              horizon === 1 ? "Aujourd'hui" : horizon === 2 ? "Aujourd'hui + demain" : "Aujourd'hui + 2 jours";
+              h === 1 ? "Aujourd'hui" : h === 2 ? "Aujourd'hui + demain" : "Aujourd'hui + 2 jours";
             return (
               <button
-                key={horizon}
+                key={h}
                 className="flex w-full items-center justify-between rounded-2xl border border-[var(--line)] bg-white/70 px-4 py-3 text-left transition-all hover:bg-black/[0.04] active:scale-[0.98] disabled:opacity-40"
                 disabled={count === 0}
-                onClick={(event) => startOptimizedSession(horizon, getEventTimeMs(event.timeStamp))}
+                onClick={(event) => startOptimizedSession(h, getEventTimeMs(event.timeStamp))}
                 type="button"
               >
                 <div>
                   <p className="text-sm font-semibold text-[var(--ink-950)]">{label}</p>
                   <p className="mt-0.5 text-xs text-[var(--ink-500)]">
-                    {horizon} jour{horizon > 1 ? "s" : ""} de planning
+                    {h} jour{h > 1 ? "s" : ""} de planning
                   </p>
                 </div>
                 <span className="stat-pill px-3 py-1 text-xs font-semibold">
