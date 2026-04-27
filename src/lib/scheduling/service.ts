@@ -3,7 +3,7 @@ import type { AssignmentMode, RecurrenceType } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { generateOccurrences } from "@/lib/scheduling/generator";
-import { computeNextAnchorAfter } from "@/lib/scheduling/recurrence";
+import { buildGenerationKey, computeNextAnchorAfter, generateRecurrenceDates } from "@/lib/scheduling/recurrence";
 import type {
   AbsenceInput,
   AssignmentRuleInput,
@@ -238,7 +238,7 @@ export async function syncHouseholdOccurrences(
         continue;
       }
 
-      const isPastOrDone = ["completed", "skipped", "cancelled"].includes(existing.status);
+      const isPastOrDone = ["completed", "skipped"].includes(existing.status);
       const isRescheduled = existing.status === "rescheduled";
       const isProtected = (existing.isManuallyModified || isRescheduled) && !options?.forceOverwriteManual;
 
@@ -265,26 +265,19 @@ export async function syncHouseholdOccurrences(
       }
     }
 
-    for (const existing of task.occurrences) {
-      const isPastOrDone = ["completed", "skipped", "cancelled"].includes(existing.status);
-      const isRescheduled = existing.status === "rescheduled";
-      const isProtected = (existing.isManuallyModified || isRescheduled) && !options?.forceOverwriteManual;
-
-      if (
-        existing.scheduledDate >= startOfDay(new Date()) &&
-        !isProtected &&
-        !generatedKeys.has(existing.sourceGenerationKey) &&
-        !isPastOrDone
-      ) {
-        await db.taskOccurrence.update({
-          where: { id: existing.id },
-          data: {
-            status: "cancelled",
-            ...(options?.forceOverwriteManual ? { isManuallyModified: false } : {}),
-          },
-        });
-      }
-    }
+    // NEW: Orphan cancellation - cancel planned/due/overdue occurrences that are no longer generated
+    // and haven't been manually modified or completed.
+    const generatedKeysArray = Array.from(generatedKeys);
+    await db.taskOccurrence.updateMany({
+      where: {
+        taskTemplateId: task.id,
+        status: { in: ["planned", "due", "overdue"] },
+        sourceGenerationKey: { notIn: generatedKeysArray },
+        isManuallyModified: false,
+        scheduledDate: { gte: start, lte: end },
+      },
+      data: { status: "cancelled" },
+    });
   }
 }
 
@@ -568,6 +561,13 @@ export async function rescheduleOccurrence(params: {
     where: {
       id: params.occurrenceId,
     },
+    include: {
+      taskTemplate: {
+        include: {
+          recurrenceRule: true,
+        },
+      },
+    },
   });
 
   if (!existing) {
@@ -604,6 +604,55 @@ export async function rescheduleOccurrence(params: {
       },
     },
   });
+
+  if (existing.taskTemplate) {
+    const ruleRecord = await db.recurrenceRule.findUnique({
+      where: { id: existing.taskTemplate.recurrenceRuleId },
+    });
+
+    if (ruleRecord) {
+      const nextAnchor = computeNextAnchorAfter(
+        {
+          type: ruleRecord.type,
+          interval: ruleRecord.interval,
+          weekdays: parseNumberArray(ruleRecord.weekdays),
+          dayOfMonth: ruleRecord.dayOfMonth,
+          anchorDate: ruleRecord.anchorDate,
+          dueOffsetDays: ruleRecord.dueOffsetDays,
+          config: ruleRecord.config,
+        },
+        params.scheduledDate,
+      );
+
+      await db.recurrenceRule.update({
+        where: { id: existing.taskTemplate.recurrenceRuleId },
+        data: { anchorDate: params.scheduledDate },
+      });
+
+      // Update the key of the current occurrence to match the new anchor
+      const newKey = buildGenerationKey(existing.taskTemplate.id, params.scheduledDate);
+      await db.taskOccurrence.update({
+        where: { id: params.occurrenceId },
+        data: { sourceGenerationKey: newKey },
+      });
+
+      // Cancel future occurrences that no longer match the new anchor
+      // syncHouseholdOccurrences will also do its part but we preempt it here
+      await db.taskOccurrence.updateMany({
+        where: {
+          taskTemplateId: existing.taskTemplate.id,
+          status: { in: ["planned", "due", "overdue"] },
+          scheduledDate: { gt: params.scheduledDate },
+        },
+        data: { status: "cancelled" },
+      });
+
+      await syncHouseholdOccurrences(existing.householdId, {
+        taskId: existing.taskTemplate.id,
+        forceOverwriteManual: false,
+      });
+    }
+  }
 }
 
 export async function reassignOccurrence(params: {

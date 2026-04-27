@@ -69,7 +69,7 @@ export function FocusSession({
         </span>
       </div>
 
-      <div className="mt-4 rounded-[1.4rem] border border-[var(--line)] bg-white/80 p-4">
+      <div className="mt-4 rounded-[1.4rem] border border-[var(--line)] bg-[var(--glass-bg)] p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div aria-live="polite" className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-500)]">

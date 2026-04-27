@@ -364,7 +364,7 @@ export function TaskWorkspaceClient({
             <h3 className="display-title text-3xl">
               {search ? "Tâches correspondantes" : "Tâches à venir"}
             </h3>
-            <div aria-live="polite" className="mt-1 flex items-center gap-1.5 rounded-full bg-[var(--ink-50)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-500)]">
+            <div aria-live="polite" className="mt-1 flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--glass-bg)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-500)]">
               <span className="size-1.5 rounded-full bg-[var(--coral-500)]" />
               {filteredActiveOccurrences.length}
             </div>
@@ -395,7 +395,7 @@ export function TaskWorkspaceClient({
               className={cn(
                 "flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition-all",
                 overdueOnly
-                  ? "border-[rgba(127,29,29,0.2)] bg-[rgba(127,29,29,0.08)] text-[#7f1d1d]"
+                  ? "border-[var(--status-overdue-border)] bg-[var(--status-overdue-surface)] text-[var(--status-overdue-accent)] shadow-sm"
                   : "btn-quiet text-[var(--ink-500)]"
               )}
               onClick={() => {
@@ -456,7 +456,7 @@ export function TaskWorkspaceClient({
               </div>
             ))
           ) : (
-            <div className="rounded-[1.6rem] border border-[var(--line)] bg-white/75 p-8 text-center text-sm text-[var(--ink-700)]">
+            <div className="rounded-[1.6rem] border border-[var(--line)] bg-[var(--glass-bg)] p-8 text-center text-sm text-[var(--ink-700)]">
               {search 
                 ? "Aucune tâche ne correspond à votre recherche."
                 : "Rien de prévu pour le moment. Profitez-en !"}
@@ -478,7 +478,7 @@ export function TaskWorkspaceClient({
               {horizon === 3 && (
                 <button
                   onClick={() => setHorizon(7)}
-                  className="rounded-full bg-[var(--ink-50)] px-6 py-2.5 text-xs font-bold text-[var(--ink-700)] transition-all hover:bg-[var(--ink-100)] hover:scale-105 active:scale-95 shadow-sm"
+                  className="rounded-full bg-[var(--glass-bg)] border border-[var(--line)] px-6 py-2.5 text-xs font-bold text-[var(--ink-700)] transition-all hover:bg-[var(--sand-100)] hover:scale-105 active:scale-95 shadow-sm"
                 >
                   Étendre à la semaine
                 </button>
@@ -525,7 +525,7 @@ export function TaskWorkspaceClient({
             return (
               <button
                 key={h}
-                className="flex w-full items-center justify-between rounded-2xl border border-[var(--line)] bg-white/70 px-4 py-3 text-left transition-all hover:bg-black/[0.04] active:scale-[0.98] disabled:opacity-40"
+                className="flex w-full items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--glass-bg)] px-4 py-3 text-left transition-all hover:bg-black/[0.04] active:scale-[0.98] disabled:opacity-40"
                 disabled={count === 0}
                 onClick={(event) => startOptimizedSession(h, getEventTimeMs(event.timeStamp))}
                 type="button"

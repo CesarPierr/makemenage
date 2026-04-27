@@ -63,13 +63,34 @@ type StatusMeta = {
 
 function getStatusMeta(status: string, scheduledDate: Date): StatusMeta {
   if (status === "completed") {
-    return { label: "Terminée", hint: "Déjà faite", icon: CheckCircle2, accent: "#064e3b", surface: "rgba(6, 78, 59, 0.08)", border: "rgba(6, 78, 59, 0.2)" };
+    return { 
+      label: "Terminée", 
+      hint: "Déjà faite", 
+      icon: CheckCircle2, 
+      accent: "var(--status-completed-accent)", 
+      surface: "var(--status-completed-surface)", 
+      border: "var(--status-completed-border)" 
+    };
   }
   if (status === "skipped") {
-    return { label: "Sautée", hint: "Mise de côté", icon: SkipForward, accent: "#374151", surface: "rgba(55, 65, 81, 0.06)", border: "rgba(55, 65, 81, 0.16)" };
+    return { 
+      label: "Sautée", 
+      hint: "Mise de côté", 
+      icon: SkipForward, 
+      accent: "var(--status-skipped-accent)", 
+      surface: "var(--status-skipped-surface)", 
+      border: "var(--status-skipped-border)" 
+    };
   }
   if (status === "rescheduled") {
-    return { label: "Reportée", hint: "Nouvelle date", icon: RotateCcw, accent: "#0c4a6e", surface: "rgba(12, 74, 110, 0.08)", border: "rgba(12, 74, 110, 0.2)" };
+    return { 
+      label: "Reportée", 
+      hint: "Nouvelle date", 
+      icon: RotateCcw, 
+      accent: "var(--status-rescheduled-accent)", 
+      surface: "var(--status-rescheduled-surface)", 
+      border: "var(--status-rescheduled-border)" 
+    };
   }
   if (status === "overdue") {
     const cls = classifyRelative(scheduledDate);
@@ -78,36 +99,39 @@ function getStatusMeta(status: string, scheduledDate: Date): StatusMeta {
         label: `${cls.daysLate} j de retard`,
         hint: "À rattraper en priorité",
         icon: AlertCircle,
-        accent: "#7f1d1d",
-        surface: "rgba(127, 29, 29, 0.16)",
-        border: "rgba(127, 29, 29, 0.45)",
+        accent: "var(--status-overdue-accent)",
+        surface: "var(--status-overdue-surface)",
+        border: "var(--status-overdue-border)",
         pulse: true,
       };
     }
-    if (cls.kind === "late") {
-      return {
-        label: `${cls.daysLate} j de retard`,
-        hint: "À rattraper",
-        icon: AlertCircle,
-        accent: "#991b1b",
-        surface: "rgba(153, 27, 27, 0.1)",
-        border: "rgba(153, 27, 27, 0.3)",
-      };
-    }
-    // slightly-late
     return {
-      label: cls.kind === "slightly-late" ? `${cls.daysLate} j de retard` : "En retard",
+      label: cls.daysLate ? `${cls.daysLate} j de retard` : "En retard",
       hint: "À rattraper",
       icon: AlertCircle,
-      accent: "#b45309",
-      surface: "rgba(180, 83, 9, 0.1)",
-      border: "rgba(180, 83, 9, 0.25)",
+      accent: "var(--status-overdue-accent)",
+      surface: "var(--status-overdue-surface)",
+      border: "var(--status-overdue-border)",
     };
   }
   if (status === "due") {
-    return { label: "Aujourd'hui", hint: "À faire maintenant", icon: Clock3, accent: "#78350f", surface: "rgba(120, 53, 15, 0.08)", border: "rgba(120, 53, 15, 0.2)" };
+    return { 
+      label: "Aujourd'hui", 
+      hint: "À faire maintenant", 
+      icon: Clock3, 
+      accent: "var(--status-due-accent)", 
+      surface: "var(--status-due-surface)", 
+      border: "var(--status-due-border)" 
+    };
   }
-  return { label: "À faire", hint: "Prévue à venir", icon: CircleDashed, accent: "var(--ink-700)", surface: "rgba(30,31,34,0.04)", border: "rgba(30,31,34,0.1)" };
+  return { 
+    label: "À faire", 
+    hint: "Prévue à venir", 
+    icon: CircleDashed, 
+    accent: "var(--status-planned-accent)", 
+    surface: "var(--status-planned-surface)", 
+    border: "var(--status-planned-border)" 
+  };
 }
 
 export function OccurrenceCard({
@@ -246,22 +270,22 @@ export function OccurrenceCard({
                   {occurrence.taskTemplate.room ? (() => {
                     const RoomIcon = getRoomIcon(occurrence.taskTemplate.room, occurrence.taskTemplate.icon);
                     return (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-[var(--line)] px-2 py-0.5 font-medium">
-                        <RoomIcon className="size-3 opacity-60" />
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--glass-bg)] border border-[var(--line)] px-2 py-0.5 font-medium">
+                        <RoomIcon className="size-3 opacity-85" />
                         {occurrence.taskTemplate.room}
                       </span>
                     );
                   })() : null}
-                  <span className="rounded-full bg-white/80 border border-[var(--line)] px-2 py-0.5 font-medium">
+                  <span className="rounded-full bg-[var(--glass-bg)] border border-[var(--line)] px-2 py-0.5 font-medium">
                     {formatMinutes(occurrence.taskTemplate.estimatedMinutes)}
                   </span>
                   {occurrence.actualMinutes !== null ? (
-                    <span className="rounded-full bg-white/80 border border-[var(--line)] px-2 py-0.5 font-medium">
+                    <span className="rounded-full bg-[var(--glass-bg)] border border-[var(--line)] px-2 py-0.5 font-medium">
                       Réel {formatMinutes(occurrence.actualMinutes)}
                     </span>
                   ) : null}
                   {occurrence.assignedMember ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/80 border border-[var(--line)] px-2 py-0.5 font-medium">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--glass-bg)] border border-[var(--line)] px-2 py-0.5 font-medium">
                       <span className="size-2 rounded-full" style={{ backgroundColor: occurrence.assignedMember.color }} />
                       {occurrence.assignedMember.displayName}
                     </span>
@@ -283,7 +307,7 @@ export function OccurrenceCard({
               </div>
 
               <span
-                className="shrink-0 rounded-lg bg-white/80 border border-[var(--line)] px-2 py-1 text-[0.65rem] font-bold uppercase tracking-wider"
+                className="shrink-0 rounded-lg bg-[var(--glass-bg)] border border-[var(--line)] px-2 py-1 text-[0.65rem] font-bold uppercase tracking-wider"
                 style={{ color: meta.accent }}
                 title={scheduledDate.toLocaleDateString("fr-FR")}
               >
@@ -296,7 +320,7 @@ export function OccurrenceCard({
             ) : null}
 
             {occurrence.isManuallyModified && !compact ? (
-              <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-[rgba(216,100,61,0.08)] px-2 py-1 text-[0.65rem] font-semibold text-[var(--coral-600)]">
+              <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-[var(--status-overdue-border)] bg-[var(--status-overdue-surface)] px-2 py-1 text-[0.65rem] font-semibold text-[var(--status-overdue-accent)]">
                 <AlertCircle className="size-3" />
                 Date déplacée manuellement
               </div>
@@ -310,7 +334,7 @@ export function OccurrenceCard({
               Reporter à :
             </span>
             <button
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--ink-700)] transition-all hover:bg-white active:scale-95 disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--glass-bg)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--ink-700)] transition-all hover:bg-white active:scale-95 disabled:opacity-40"
               disabled={isSubmitting}
               onClick={(event) => {
                 stopEvent(event);
@@ -333,7 +357,7 @@ export function OccurrenceCard({
               Après-demain
             </button>
             <button
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--ink-700)] transition-all hover:bg-white active:scale-95 disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--glass-bg)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--ink-700)] transition-all hover:bg-[var(--sand-100)] active:scale-95 disabled:opacity-40"
               disabled={isSubmitting}
               onClick={(event) => {
                 stopEvent(event);
@@ -351,7 +375,7 @@ export function OccurrenceCard({
           <div className="mt-3 flex items-center gap-2 pt-1">
             <button
               aria-label={`Marquer "${occurrence.taskTemplate.title}" comme terminée`}
-              className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[rgba(56,115,93,0.16)] bg-[rgba(56,115,93,0.1)] px-3 py-3 text-xs font-bold text-[var(--leaf-600)] transition-all active:scale-[0.97] disabled:opacity-40 sm:text-sm"
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--status-completed-border)] bg-[var(--status-completed-surface)] px-3 py-3 text-xs font-bold text-[var(--status-completed-accent)] transition-all active:scale-[0.97] disabled:opacity-40 sm:text-sm"
               aria-busy={isSubmitting}
               disabled={isSubmitting}
               onClick={(event) => {
@@ -366,7 +390,7 @@ export function OccurrenceCard({
 
             <button
               aria-label={`Passer "${occurrence.taskTemplate.title}"`}
-              className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--line)] bg-white/50 px-3 py-3 text-xs font-bold text-[var(--ink-700)] transition-all active:scale-[0.97] disabled:opacity-40 sm:text-sm"
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--glass-bg)] px-3 py-3 text-xs font-bold text-[var(--ink-700)] transition-all active:scale-[0.97] disabled:opacity-40 sm:text-sm"
               aria-busy={isSubmitting}
               disabled={isSubmitting}
               onClick={(event) => {
@@ -381,7 +405,7 @@ export function OccurrenceCard({
 
             <button
               aria-label={`Plus d'actions pour ${occurrence.taskTemplate.title}`}
-              className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-white/50 text-[var(--ink-500)] transition-all active:scale-90"
+              className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--glass-bg)] text-[var(--ink-500)] transition-all active:scale-90"
               onClick={(event) => {
                 stopEvent(event);
                 setShowSheet(true);
@@ -396,7 +420,7 @@ export function OccurrenceCard({
         {!compact && canEditOccurrence && archived ? (
           <div className="mt-3 flex items-center gap-2 pt-1">
             <button
-              className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[rgba(47,109,136,0.16)] bg-[rgba(47,109,136,0.08)] px-3 py-3 text-xs font-bold text-[var(--sky-600)] transition-all active:scale-[0.97] disabled:opacity-40 sm:text-sm"
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[rgba(47,109,136,0.16)] bg-[var(--glass-bg)] px-3 py-3 text-xs font-bold text-[var(--sky-600)] transition-all active:scale-[0.97] disabled:opacity-40 sm:text-sm"
               disabled={isSubmitting}
               onClick={(event) => {
                 stopEvent(event);
@@ -409,7 +433,7 @@ export function OccurrenceCard({
             </button>
             <button
               aria-label={`Plus d'actions pour ${occurrence.taskTemplate.title}`}
-              className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-white/50 text-[var(--ink-500)] transition-all active:scale-90"
+              className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--glass-bg)] text-[var(--ink-500)] transition-all active:scale-90"
               onClick={(event) => {
                 stopEvent(event);
                 setShowSheet(true);

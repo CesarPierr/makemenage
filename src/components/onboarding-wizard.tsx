@@ -231,7 +231,7 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
             {PACKS.map((pack) => (
               <button
                 key={pack.id}
-                className="flex items-center gap-4 rounded-2xl border border-[var(--line)] bg-white/60 p-4 text-left transition-all hover:border-[var(--coral-400)] hover:bg-[rgba(216,100,61,0.04)] hover:shadow-sm active:scale-[0.98]"
+                className="flex items-center gap-4 rounded-2xl border border-[var(--line)] bg-[var(--glass-bg)] p-4 text-left transition-all hover:border-[var(--coral-400)] hover:bg-[var(--sand-100)] hover:shadow-sm active:scale-[0.98]"
                 onClick={() => selectPack(pack)}
                 type="button"
               >
@@ -268,8 +268,8 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
                   key={task.title}
                   className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-all ${
                     selected
-                      ? "border-[var(--coral-500)] bg-[rgba(216,100,61,0.08)] text-[var(--ink-950)]"
-                      : "border-[var(--line)] bg-white/60 text-[var(--ink-700)] hover:border-[var(--ink-300)] hover:bg-white"
+                      ? "border-[var(--coral-500)] bg-[var(--coral-500)]/10 text-[var(--ink-950)]"
+                      : "border-[var(--line)] bg-[var(--glass-bg)] text-[var(--ink-700)] hover:border-[var(--ink-300)] hover:bg-[var(--sand-100)]"
                   }`}
                   onClick={() => toggleTask(i)}
                   type="button"

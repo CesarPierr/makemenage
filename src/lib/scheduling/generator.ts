@@ -1,7 +1,7 @@
 import { startOfDay } from "date-fns";
 
 import { pickAssignee } from "@/lib/scheduling/assignment";
-import { buildGenerationKey, computeDueDate, generateRecurrenceDates } from "@/lib/scheduling/recurrence";
+import { buildGenerationKey, computeDueDate, generateRecurrenceDates, getStableSequenceIndex } from "@/lib/scheduling/recurrence";
 import type {
   AbsenceInput,
   ExistingOccurrenceInput,
@@ -44,7 +44,7 @@ export function generateOccurrences(params: {
     }
 
     const assignedMemberId = pickAssignee({
-      sequenceIndex,
+      sequenceIndex: getStableSequenceIndex(template.recurrence, scheduledDate),
       rule: template.assignment,
       members,
       scheduledDate,

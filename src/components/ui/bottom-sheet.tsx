@@ -162,7 +162,7 @@ export function BottomSheet({ isOpen, onClose, title, children, maxHeight = 85 }
         <div
           ref={contentRef}
           className={cn(
-            "w-full rounded-t-3xl bg-white shadow-[0_-20px_60px_rgba(0,0,0,0.15)] overflow-hidden",
+            "w-full rounded-t-3xl bg-[var(--card)] shadow-[0_-20px_60px_rgba(0,0,0,0.15)] overflow-hidden",
             isOpen ? "animate-slide-up" : "",
           )}
           style={{

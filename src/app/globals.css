@@ -28,6 +28,32 @@
   --motion-slow: 260ms;
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-snappy: cubic-bezier(0.16, 1, 0.3, 1);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+
+  /* Status Colors (Light) */
+  --status-completed-accent: #065f46;
+  --status-completed-surface: rgba(6, 95, 70, 0.08);
+  --status-completed-border: rgba(6, 95, 70, 0.2);
+
+  --status-skipped-accent: #4b5563;
+  --status-skipped-surface: rgba(75, 85, 99, 0.06);
+  --status-skipped-border: rgba(75, 85, 99, 0.16);
+
+  --status-rescheduled-accent: #075985;
+  --status-rescheduled-surface: rgba(7, 89, 133, 0.08);
+  --status-rescheduled-border: rgba(7, 89, 133, 0.2);
+
+  --status-overdue-accent: #991b1b;
+  --status-overdue-surface: rgba(153, 27, 27, 0.08);
+  --status-overdue-border: rgba(153, 27, 27, 0.3);
+
+  --status-due-accent: #92400e;
+  --status-due-surface: rgba(146, 64, 14, 0.08);
+  --status-due-border: rgba(146, 64, 14, 0.2);
+
+  --status-planned-accent: var(--ink-700);
+  --status-planned-surface: rgba(30, 31, 34, 0.04);
+  --status-planned-border: rgba(30, 31, 34, 0.1);
 }
 
 @theme inline {
@@ -54,7 +80,11 @@ body {
   color: var(--ink-950);
   font-family: var(--font-sans), sans-serif;
   min-height: 100vh;
-  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+  /* optimizeLegibility can cause issues on iOS (flicker/missing text) */
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   accent-color: var(--coral-500);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -108,9 +138,9 @@ textarea {
 
 @media (max-width: 768px) {
   .app-surface {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    background: #ffffff;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: var(--card); 
     box-shadow: 0 8px 32px rgba(70, 48, 20, 0.08);
   }
 }
@@ -186,7 +216,7 @@ textarea {
   overflow: hidden;
   border-radius: 999px;
   background: var(--coral-500);
-  color: white;
+  color: var(--sand-50);
   box-shadow: 0 14px 28px rgba(216, 100, 61, 0.22);
   transition:
     transform var(--motion-fast) var(--ease-snappy),
@@ -707,9 +737,9 @@ button:not(:disabled),
   --sand-200: #2e3038;
   --sand-300: #363840;
   --ink-950: #edeef2;
-  --ink-700: #9aa3b2;
-  --ink-500: #626b7a;
-  --ink-400: #4b5563;
+  --ink-700: #d1d5db;
+  --ink-500: #9ca3af;
+  --ink-400: #6b7280;
   --leaf-500: #4d9e7e;
   --leaf-600: #6ab89a;
   --coral-500: #e8704f;
@@ -723,6 +753,32 @@ button:not(:disabled),
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
   --shadow-soft: 0 12px 28px rgba(0, 0, 0, 0.32);
   --shadow-strong: 0 22px 54px rgba(0, 0, 0, 0.55);
+
+  /* Status Colors (Dark) */
+  --status-completed-accent: #10b981;
+  --status-completed-surface: rgba(16, 185, 129, 0.15);
+  --status-completed-border: rgba(16, 185, 129, 0.3);
+
+  --status-skipped-accent: #9ca3af;
+  --status-skipped-surface: rgba(156, 163, 175, 0.1);
+  --status-skipped-border: rgba(156, 163, 175, 0.2);
+
+  --status-rescheduled-accent: #7dd3fc;
+  --status-rescheduled-surface: rgba(125, 211, 252, 0.12);
+  --status-rescheduled-border: rgba(125, 211, 252, 0.25);
+
+  --status-overdue-accent: #f87171;
+  --status-overdue-surface: rgba(248, 113, 113, 0.14);
+  --status-overdue-border: rgba(248, 113, 113, 0.35);
+
+  --status-due-accent: #fbbf24;
+  --status-due-surface: rgba(251, 191, 36, 0.12);
+  --status-due-border: rgba(251, 191, 36, 0.25);
+
+  --status-planned-accent: var(--ink-700);
+  --status-planned-surface: rgba(255, 255, 255, 0.06);
+  --status-planned-border: rgba(255, 255, 255, 0.15);
+  --glass-bg: rgba(255, 255, 255, 0.05);
 }
 
 [data-theme="dark"] body {
@@ -826,9 +882,9 @@ button:not(:disabled),
     --sand-200: #2e3038;
     --sand-300: #363840;
     --ink-950: #edeef2;
-    --ink-700: #9aa3b2;
-    --ink-500: #626b7a;
-    --ink-400: #4b5563;
+    --ink-700: #d1d5db;
+    --ink-500: #9ca3af;
+    --ink-400: #6b7280;
     --leaf-500: #4d9e7e;
     --leaf-600: #6ab89a;
     --coral-500: #e8704f;

@@ -200,7 +200,7 @@ export function TaskCreationWizard({ members, compact = false }: TaskCreationWiz
                       type="button"
                       onClick={() => setShowIconGrid(!showIconGrid)}
                       className={cn(
-                        "flex size-14 items-center justify-center rounded-2xl border-2 transition-all bg-white text-2xl",
+                        "flex size-14 items-center justify-center rounded-2xl border-2 transition-all bg-[var(--glass-bg)] text-2xl",
                         showIconGrid ? "border-[var(--sky-500)]" : "border-[var(--line)]"
                       )}
                     >
@@ -210,7 +210,7 @@ export function TaskCreationWizard({ members, compact = false }: TaskCreationWiz
                 </div>
 
                 {showIconGrid && (
-                  <div className="mx-auto max-w-[320px] grid grid-cols-6 gap-2 rounded-2xl bg-[var(--ink-50)] p-3 animate-in zoom-in-95 duration-200">
+                  <div className="mx-auto max-w-[320px] grid grid-cols-6 gap-2 rounded-2xl bg-[var(--sand-100)] border border-[var(--line)] p-3 animate-in zoom-in-95 duration-200">
                     {(Object.keys(AVAILABLE_ICONS) as IconName[]).map((name) => {
                       const IconComp = AVAILABLE_ICONS[name];
                       return (
@@ -222,7 +222,7 @@ export function TaskCreationWizard({ members, compact = false }: TaskCreationWiz
                           }}
                           className={cn(
                             "flex aspect-square items-center justify-center rounded-xl transition-all",
-                            draft.icon === name ? "bg-[var(--coral-500)] text-white" : "bg-white hover:bg-[var(--coral-50)]"
+                            draft.icon === name ? "bg-[var(--coral-500)] text-white" : "bg-[var(--glass-bg)] hover:bg-[var(--sand-200)]"
                           )}
                         >
                           <IconComp className="size-5" />
@@ -241,8 +241,8 @@ export function TaskCreationWizard({ members, compact = false }: TaskCreationWiz
                         className={cn(
                           "rounded-xl border px-4 py-2 text-sm font-semibold transition-all",
                           draft.room === room 
-                            ? "border-[var(--sky-500)] bg-[var(--sky-50)] text-[var(--sky-700)]" 
-                            : "border-[var(--line)] bg-white/50 text-[var(--ink-600)]"
+                            ? "border-[var(--sky-500)] bg-[var(--sky-500)]/10 text-[var(--sky-600)]" 
+                            : "border-[var(--line)] bg-[var(--glass-bg)] text-[var(--ink-600)]"
                         )}
                         onClick={() => updateDraft("room", room)}
                         type="button"
@@ -281,8 +281,8 @@ export function TaskCreationWizard({ members, compact = false }: TaskCreationWiz
                     className={cn(
                       "flex flex-col items-center gap-4 rounded-3xl border-2 p-6 transition-all text-center",
                       draft.kind === "recurring"
-                        ? "border-[var(--coral-500)] bg-[var(--coral-50)]/30"
-                        : "border-[var(--line)] bg-white/50 grayscale opacity-60"
+                        ? "border-[var(--coral-500)] bg-[var(--coral-500)]/10"
+                        : "border-[var(--line)] bg-[var(--glass-bg)] grayscale opacity-60"
                     )}
                     onClick={() => updateDraft("kind", "recurring")}
                     type="button"
@@ -321,8 +321,8 @@ export function TaskCreationWizard({ members, compact = false }: TaskCreationWiz
                           className={cn(
                             "flex flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all",
                             draft.recurrenceType === opt.value
-                              ? "border-[var(--sky-500)] bg-[var(--sky-50)] text-[var(--sky-700)]"
-                              : "border-[var(--line)] bg-white/50 text-[var(--ink-600)]"
+                              ? "border-[var(--sky-500)] bg-[var(--sky-500)]/10 text-[var(--sky-600)]"
+                              : "border-[var(--line)] bg-[var(--glass-bg)] text-[var(--ink-600)]"
                           )}
                           onClick={() => updateDraft("recurrenceType", opt.value)}
                           type="button"
@@ -365,8 +365,8 @@ export function TaskCreationWizard({ members, compact = false }: TaskCreationWiz
                             className={cn(
                               "flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition-all",
                               draft.assignmentMode === opt.value
-                                ? "border-[var(--sky-500)] bg-[var(--sky-50)]"
-                                : "border-[var(--line)] bg-white/50 opacity-60"
+                                ? "border-[var(--sky-500)] bg-[var(--sky-500)]/10"
+                                : "border-[var(--line)] bg-[var(--glass-bg)] opacity-60"
                             )}
                             onClick={() => {
                               updateDraft("assignmentMode", opt.value);
@@ -408,7 +408,7 @@ export function TaskCreationWizard({ members, compact = false }: TaskCreationWiz
                             "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all",
                             draft.eligibleMemberIds.includes(m.id)
                               ? "border-current bg-current/10"
-                              : "border-[var(--line)] bg-white/50 text-[var(--ink-500)] grayscale"
+                              : "border-[var(--line)] bg-[var(--glass-bg)] text-[var(--ink-500)] grayscale"
                           )}
                           onClick={() => toggleMember(m.id)}
                           style={{ color: draft.eligibleMemberIds.includes(m.id) ? m.color : undefined }}

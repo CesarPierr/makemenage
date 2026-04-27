@@ -143,6 +143,56 @@ export function buildGenerationKey(taskTemplateId: string, date: Date) {
   return `${taskTemplateId}:${format(date, "yyyy-MM-dd")}`;
 }
 
+/**
+ * Calculates a stable sequence index for a given date relative to the anchor.
+ * This ensures that strict alternation and rotation remain consistent even
+ * as the generation window slides forward.
+ */
+export function getStableSequenceIndex(rule: RecurrenceRuleInput, targetDate: Date): number {
+  const target = normalize(targetDate);
+  const anchor = normalize(rule.anchorDate);
+  const interval = Math.max(1, rule.interval || 1);
+
+  if (isBefore(target, anchor)) {
+    return 0; // Should not happen for valid occurrences
+  }
+
+  if (rule.type === "daily" || rule.type === "every_x_days") {
+    const diffMs = target.getTime() - anchor.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    return Math.floor(diffDays / interval);
+  }
+
+  if (rule.type === "every_x_weeks") {
+    const diffMs = target.getTime() - anchor.getTime();
+    const diffWeeks = Math.round(diffMs / (1000 * 60 * 60 * 24 * 7));
+    return Math.floor(diffWeeks / interval);
+  }
+
+  if (rule.type === "weekly") {
+    const weekdays = (rule.weekdays?.length ? rule.weekdays : [getDay(anchor)]).sort();
+    let count = 0;
+    let cursor = anchor;
+    // Count valid weekdays between anchor and target
+    while (isBefore(cursor, target)) {
+      if (weekdays.includes(getDay(cursor))) {
+        count++;
+      }
+      cursor = addDays(cursor, 1);
+    }
+    return count;
+  }
+
+  if (rule.type === "monthly_simple") {
+    const targetMonthCount = target.getFullYear() * 12 + target.getMonth();
+    const anchorMonthCount = anchor.getFullYear() * 12 + anchor.getMonth();
+    const diffMonths = targetMonthCount - anchorMonthCount;
+    return Math.floor(diffMonths / interval);
+  }
+
+  return 0;
+}
+
 export function isLogicalOccurrenceDate(rule: RecurrenceRuleInput, date: Date) {
   return generateRecurrenceDates(rule, date, date).some((candidate) => sameDay(candidate, date));
 }

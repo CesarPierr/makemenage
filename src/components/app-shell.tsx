@@ -167,8 +167,8 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
                   className={cn(
                     "interactive-surface flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition-all",
                     active
-                      ? "bg-[var(--coral-500)] text-white shadow-[0_14px_28px_rgba(216,100,61,0.18)] scale-[1.02]"
-                      : "text-[var(--ink-700)] hover:bg-white hover:text-[var(--ink-950)] hover:shadow-sm"
+                      ? "bg-[var(--coral-500)] text-[var(--sand-50)] shadow-[0_14px_28px_rgba(216,100,61,0.18)] scale-[1.02]"
+                      : "text-[var(--ink-700)] hover:bg-[var(--sand-100)] hover:text-[var(--ink-950)] hover:shadow-sm"
                   )}
                 >
                   <Icon className="size-5 shrink-0" />

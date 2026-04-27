@@ -184,12 +184,12 @@ export function CalendarMonth({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 rounded-[1.5rem] border border-[var(--line)] bg-white/60 p-1.5">
+        <div className="mt-4 grid grid-cols-2 gap-2 rounded-[1.5rem] border border-[var(--line)] bg-[var(--glass-bg)] p-1.5">
           <button
             aria-pressed={viewType === "tasks"}
             className={`rounded-[1.1rem] px-3 py-2.5 text-sm font-semibold transition-all ${
               viewType === "tasks"
-                ? "bg-[var(--ink-950)] text-white shadow-sm"
+                ? "bg-[var(--ink-950)] text-[var(--sand-50)] shadow-sm"
                 : "text-[var(--ink-700)]"
             }`}
             onClick={() => setViewType("tasks")}
@@ -204,7 +204,7 @@ export function CalendarMonth({
             aria-pressed={viewType === "minutes"}
             className={`rounded-[1.1rem] px-3 py-2.5 text-sm font-semibold transition-all ${
               viewType === "minutes"
-                ? "bg-[var(--ink-950)] text-white shadow-sm"
+                ? "bg-[var(--ink-950)] text-[var(--sand-50)] shadow-sm"
                 : "text-[var(--ink-700)]"
             }`}
             onClick={() => setViewType("minutes")}
@@ -220,7 +220,7 @@ export function CalendarMonth({
         {viewType === "minutes" ? (
           <div
             aria-label="Charge prévue sur 7 jours"
-            className="mt-4 rounded-[1.6rem] border border-[var(--line)] bg-white/70 p-4"
+            className="mt-4 rounded-[1.6rem] border border-[var(--line)] bg-[var(--glass-bg)] p-4"
             role="region"
           >
             <div className="grid h-48 grid-cols-7 items-end gap-2">
@@ -284,7 +284,7 @@ export function CalendarMonth({
                     className={`rounded-[1.6rem] border p-4 ${
                       isToday
                         ? "border-[rgba(216,100,61,0.24)] bg-[rgba(216,100,61,0.08)]"
-                        : "border-[var(--line)] bg-white/75"
+                        : "border-[var(--line)] bg-[var(--glass-bg)]"
                     }`}
                     onClick={() => setSelectedDay(day)}
                     role="button"
@@ -377,7 +377,7 @@ export function CalendarMonth({
         <div className="absolute top-4 right-6 z-10">
           <button
             onClick={() => setViewType(viewType === "tasks" ? "minutes" : "tasks")}
-            className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-white/90 backdrop-blur-md px-4 py-2 text-xs font-bold text-[var(--ink-800)] hover:bg-white transition-all shadow-md active:scale-95"
+            className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--glass-bg)] backdrop-blur-md px-4 py-2 text-xs font-bold text-[var(--ink-700)] hover:bg-[var(--sand-100)] transition-all shadow-md active:scale-95"
           >
             {viewType === "tasks" ? (
               <>
@@ -394,7 +394,7 @@ export function CalendarMonth({
         </div>
 
         {viewType === "minutes" ? (
-          <div className="flex h-[30rem] items-end gap-1.5 px-8 pb-12 pt-24 overflow-x-hidden bg-gradient-to-b from-white to-[var(--ink-50)]/30">
+          <div className="flex h-[30rem] items-end gap-1.5 px-8 pb-12 pt-24 overflow-x-hidden bg-gradient-to-b from-[var(--card)] to-transparent">
             {minutesDays.map((day, idx) => {
               const isToday = format(day, "yyyy-MM-dd") === format(startOfToday(), "yyyy-MM-dd");
               const isPast = day < startOfToday() && !isToday;
@@ -438,7 +438,7 @@ export function CalendarMonth({
                     <span className={`text-[9px] font-black uppercase tracking-widest ${isToday ? "text-[var(--coral-600)]" : "text-[var(--ink-400)]"}`}>
                       {format(day, "EEE", { locale: fr }).substring(0, 3)}
                     </span>
-                    <span className={`flex size-7 items-center justify-center rounded-full text-xs font-black transition-all ${isToday ? "bg-[var(--coral-500)] text-white shadow-lg shadow-coral-200" : "text-[var(--ink-800)]"}`}>
+                    <span className={`flex size-7 items-center justify-center rounded-full text-xs font-black transition-all ${isToday ? "bg-[var(--coral-500)] text-[var(--sand-50)] shadow-lg shadow-coral-200" : "text-[var(--ink-800)]"}`}>
                       {format(day, "d")}
                     </span>
                   </div>
@@ -448,7 +448,7 @@ export function CalendarMonth({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-7 border-b border-[var(--line)] bg-white/50 pt-12">
+            <div className="grid grid-cols-7 border-b border-[var(--line)] bg-[var(--glass-bg)] pt-12">
               {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((dName) => (
                 <div key={dName} className="px-3 py-4 text-center text-[10px] font-black uppercase tracking-[0.25em] text-[var(--ink-400)]">
                   {dName}
