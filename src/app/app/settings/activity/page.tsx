@@ -7,16 +7,14 @@ import { CollapsibleList } from "@/components/collapsible-list";
 import { ReopenButton } from "@/components/reopen-button";
 import { requireUser } from "@/lib/auth";
 import {
-  filterHistoryLogs,
   getHistoryActionDescription,
   getHistoryActionLabel,
   type HistoryFilter,
   summarizeHistoryLogs,
 } from "@/lib/history";
+import { loadHistoryFeed } from "@/lib/history-feed";
 import { requireHouseholdContext } from "@/lib/households";
 import { formatMinutes } from "@/lib/utils";
-
-const PAGE_SIZE = 30;
 
 type ActivityPageProps = {
   searchParams: Promise<{ household?: string; filter?: HistoryFilter; cursor?: string }>;
@@ -28,6 +26,19 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
   const context = await requireHouseholdContext(user.id, params.household);
   const currentMemberId = context.currentMember?.id;
 
+  const activeFilter: HistoryFilter =
+    params.filter === "completed" ||
+    params.filter === "skipped" ||
+    params.filter === "rescheduled" ||
+    params.filter === "edited"
+      ? params.filter
+      : "all";
+
+  const { items: feedLogs, nextCursor } = await loadHistoryFeed(context.household.id, {
+    cursor: params.cursor ?? null,
+    filter: activeFilter,
+  });
+
   // Past completed/skipped occurrences (last 30 days) — for the recoverable section
   const pastOccurrences = context.occurrences
     .filter((o) => o.status === "completed" || o.status === "skipped")
@@ -38,25 +49,31 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
     })
     .slice(0, 20);
 
-  const visibleLogs = context.actionLogs.filter((log) => log.actionType !== "created");
-  const activeFilter: HistoryFilter =
-    params.filter === "completed" ||
-    params.filter === "skipped" ||
-    params.filter === "rescheduled" ||
-    params.filter === "edited"
-      ? params.filter
-      : "all";
-  const filteredLogs = filterHistoryLogs(visibleLogs, activeFilter);
-  const historySummary = summarizeHistoryLogs(visibleLogs);
-  const todayLogs = filteredLogs.filter((log) => isToday(log.createdAt));
-  const allEarlierLogs = filteredLogs.filter((log) => !isToday(log.createdAt));
-  const earlierLogs = allEarlierLogs.slice(0, PAGE_SIZE);
-  const hasMore = allEarlierLogs.length > PAGE_SIZE;
+  // Summary cards still show the recent-activity sample (last 40 logs, all
+  // action types) loaded by requireHouseholdContext — paginated feed below
+  // can range over much older history depending on cursor.
+  const summarySource = context.actionLogs.filter((log) => log.actionType !== "created");
+  const historySummary = summarizeHistoryLogs(summarySource);
+
+  // Today/earlier split is only meaningful on the first page; once the user
+  // paginates back, every entry is "earlier" by definition.
+  const isFirstPage = !params.cursor;
+  const todayLogs = isFirstPage ? feedLogs.filter((log) => isToday(log.createdAt)) : [];
+  const earlierLogs = isFirstPage ? feedLogs.filter((log) => !isToday(log.createdAt)) : feedLogs;
+  const hasMore = Boolean(nextCursor);
 
   const buildFilterHref = (filter: HistoryFilter) => {
     const search = new URLSearchParams();
     if (params.household) search.set("household", params.household);
     if (filter !== "all") search.set("filter", filter);
+    return `/app/settings/activity?${search.toString()}`;
+  };
+
+  const buildLoadMoreHref = () => {
+    const search = new URLSearchParams();
+    if (params.household) search.set("household", params.household);
+    if (activeFilter !== "all") search.set("filter", activeFilter);
+    if (nextCursor) search.set("cursor", nextCursor);
     return `/app/settings/activity?${search.toString()}`;
   };
 
@@ -295,18 +312,14 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
           <div className="text-center">
             <Link
               className="btn-secondary inline-flex px-5 py-2.5 text-sm font-semibold"
-              href={`/app/settings/activity?${new URLSearchParams({
-                ...(params.household ? { household: params.household } : {}),
-                ...(activeFilter !== "all" ? { filter: activeFilter } : {}),
-                cursor: earlierLogs[earlierLogs.length - 1]?.id ?? "",
-              }).toString()}`}
+              href={buildLoadMoreHref()}
             >
               Voir plus d&apos;historique
             </Link>
           </div>
         )}
 
-        {!filteredLogs.length && (
+        {!feedLogs.length && (
           <div className="app-surface rounded-[1.8rem] p-5 text-sm leading-6 text-[var(--ink-700)]">
             Rien de marquant pour ce filtre. Les validations, sauts, reports et corrections utiles apparaîtront ici.
           </div>

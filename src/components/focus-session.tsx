@@ -63,7 +63,7 @@ export function FocusSession({
           <p className="section-kicker">Session en cours</p>
           <h3 className="display-title mt-1 truncate text-xl sm:text-2xl">{room}</h3>
         </div>
-        <span className="accent-pill shrink-0">
+        <span aria-live="polite" className="accent-pill shrink-0">
           <span className="accent-pill-dot" style={{ backgroundColor: "var(--sky-500)" }} />
           {status === "running" ? "En cours" : "En pause"}
         </span>
@@ -71,7 +71,7 @@ export function FocusSession({
 
       <div className="mt-4 rounded-[1.4rem] border border-[var(--line)] bg-white/80 p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
+          <div aria-live="polite" className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-500)]">
               Tâche {currentIndex + 1} / {totalCount}
             </p>

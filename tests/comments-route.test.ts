@@ -16,6 +16,7 @@ const mockOccurrence = { id: "occ-1", householdId: "h-1" };
 beforeEach(() => {
   vi.mocked(requireUser).mockResolvedValue(mockUser as never);
   vi.mocked(db.taskOccurrence.findFirst).mockResolvedValue(mockOccurrence as never);
+  vi.mocked(db.householdMember.findFirst).mockResolvedValue({ id: "m-1", userId: "user-1", householdId: "h-1" } as never);
 });
 
 describe("GET /api/occurrences/[id]/comments", () => {

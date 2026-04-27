@@ -1,7 +1,6 @@
 "use client";
 
 import { addDays, isSameDay, startOfDay } from "date-fns";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Rocket } from "lucide-react";
 
@@ -11,14 +10,8 @@ import { TaskCreationWizard } from "@/components/task-creation-wizard";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { useToast } from "@/components/ui/toast";
 import { groupOccurrencesByRoom } from "@/lib/experience";
-import {
-  getEventTimeMs,
-  getRunningSessionStorageKey,
-  parseStoredRunningSession,
-  RUNNING_SESSION_ACTIVE_STATUSES as ACTIVE_STATUSES,
-  sanitizeRunningSession,
-  type RunningSession,
-} from "@/lib/running-session";
+import { getEventTimeMs, RUNNING_SESSION_ACTIVE_STATUSES as ACTIVE_STATUSES } from "@/lib/running-session";
+import { useRunningSession } from "@/lib/use-running-session";
 import { cn } from "@/lib/utils";
 
 type WorkspaceOccurrence = {
@@ -63,7 +56,6 @@ export function TaskWorkspaceClient({
   occurrences,
   autoStartSession,
 }: TaskWorkspaceClientProps) {
-  const router = useRouter();
   const { success, error: showError } = useToast();
   const [scope, setScope] = useState<"mine" | "household">(currentMemberId ? "mine" : "household");
   const [search, setSearch] = useState("");
@@ -72,19 +64,7 @@ export function TaskWorkspaceClient({
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [filterType, setFilterType] = useState<"active" | "history">("active");
   const [showOptimizedPicker, setShowOptimizedPicker] = useState(false);
-  const sessionStorageKey = getRunningSessionStorageKey(householdId, currentMemberId);
-  const [runningSession, setRunningSession] = useState<RunningSession | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    return parseStoredRunningSession(window.localStorage.getItem(sessionStorageKey));
-  });
   const [horizon, setHorizon] = useState<3 | 7 | 30>(3);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [clock, setClock] = useState(0);
-  const [sessionDoneCount, setSessionDoneCount] = useState(0);
-  const [sessionSkippedCount, setSessionSkippedCount] = useState(0);
   const dashboardPath = `/app?household=${householdId}`;
 
   const normalizedOccurrences = useMemo(
@@ -229,80 +209,31 @@ export function TaskWorkspaceClient({
     [normalizedOccurrences],
   );
 
-  const activeRunningSession = sanitizeRunningSession(runningSession, occurrenceById);
-
-  useEffect(() => {
-    if (!activeRunningSession) {
-      window.localStorage.removeItem(sessionStorageKey);
-      return;
-    }
-
-    window.localStorage.setItem(sessionStorageKey, JSON.stringify(activeRunningSession));
-  }, [activeRunningSession, sessionStorageKey]);
-
-  const currentRunningOccurrence = activeRunningSession
-    ? occurrenceById[activeRunningSession.occurrenceIds[activeRunningSession.currentIndex]] ?? null
-    : null;
-
-  const effectiveElapsedMs =
-    activeRunningSession
-      ? activeRunningSession.elapsedMs +
-        (activeRunningSession.status === "running" && activeRunningSession.startedAt
-          ? Math.max(0, clock - activeRunningSession.startedAt)
-          : 0)
-      : 0;
-
-  useEffect(() => {
-    if (!activeRunningSession || activeRunningSession.status !== "running") {
-      return;
-    }
-
-    const interval = window.setInterval(() => setClock(Date.now()), 1000);
-    return () => window.clearInterval(interval);
-  }, [activeRunningSession]);
-
-  useEffect(() => {
-    function syncSession(event: StorageEvent) {
-      if (event.key !== sessionStorageKey) {
-        return;
-      }
-
-      setRunningSession(parseStoredRunningSession(event.newValue));
-    }
-
-    window.addEventListener("storage", syncSession);
-    return () => window.removeEventListener("storage", syncSession);
-  }, [sessionStorageKey]);
-
-  const autoStartedRef = useRef(false);
-  useEffect(() => {
-    if (!autoStartSession || autoStartedRef.current || activeRunningSession || !busiestNowRoom) {
-      return;
-    }
-    autoStartedRef.current = true;
-    startRoomSession(busiestNowRoom.room, busiestNowRoom.occurrences, Date.now());
-    // Strip the ?start param from the URL so reload doesn't re-trigger
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("start");
-      window.history.replaceState(null, "", url.toString());
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoStartSession, activeRunningSession, busiestNowRoom]);
+  const {
+    activeRunningSession,
+    currentRunningOccurrence,
+    sessionNextOccurrence,
+    effectiveElapsedMs,
+    isSubmitting,
+    startSession,
+    stopSession,
+    pauseOrResumeSession,
+    finishCurrentRunningTask,
+    skipCurrentRunningTask,
+  } = useRunningSession({
+    householdId,
+    currentMemberId,
+    occurrenceById,
+    dashboardPath,
+  });
 
   function startRoomSession(room: string, roomOccurrences: WorkspaceOccurrence[], startedAt: number) {
-    setRunningSession({
+    startSession({
       room,
       occurrenceIds: roomOccurrences.map((occurrence) => occurrence.id),
-      currentIndex: 0,
-      status: "running",
       startedAt,
-      elapsedMs: 0,
       mode: "room",
     });
-    setClock(startedAt);
-    setSessionDoneCount(0);
-    setSessionSkippedCount(0);
     success(`Session lancée pour ${room}.`);
   }
 
@@ -317,172 +248,33 @@ export function TaskWorkspaceClient({
       return;
     }
 
-    setRunningSession({
+    startSession({
       room: `Plan optimisé · ${horizonDays} jour${horizonDays > 1 ? "s" : ""}`,
       occurrenceIds: occs.map((o) => o.id),
-      currentIndex: 0,
-      status: "running",
       startedAt,
-      elapsedMs: 0,
       mode: "optimized",
       horizonDays,
     });
-    setClock(startedAt);
-    setSessionDoneCount(0);
-    setSessionSkippedCount(0);
     setShowOptimizedPicker(false);
     success(
       `Mode optimisé · ${occs.length} tâche${occs.length > 1 ? "s" : ""} sur ${horizonDays} jour${horizonDays > 1 ? "s" : ""}.`,
     );
   }
 
-  function stopSession() {
-    if (sessionDoneCount > 0 || sessionSkippedCount > 0) {
-      const done = sessionDoneCount;
-      const skipped = sessionSkippedCount;
-      const parts: string[] = [];
-      if (done > 0) parts.push(`${done} tâche${done > 1 ? "s" : ""} faite${done > 1 ? "s" : ""}`);
-      if (skipped > 0) parts.push(`${skipped} passée${skipped > 1 ? "s" : ""}`);
-      success(`Session arrêtée. ${parts.join(", ")}.`);
-    }
-    clearSession();
-  }
-
-  function pauseOrResumeSession(eventTimeMs: number) {
-    if (!activeRunningSession) return;
-
-    if (activeRunningSession.status === "running" && activeRunningSession.startedAt) {
-      setRunningSession({
-        ...activeRunningSession,
-        status: "paused",
-        elapsedMs: activeRunningSession.elapsedMs + Math.max(0, eventTimeMs - activeRunningSession.startedAt),
-        startedAt: null,
-      });
-      setClock(eventTimeMs);
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (!autoStartSession || autoStartedRef.current || activeRunningSession || !busiestNowRoom) {
       return;
     }
-
-    setRunningSession({
-      ...activeRunningSession,
-      status: "running",
-      startedAt: eventTimeMs,
-    });
-    setClock(eventTimeMs);
-  }
-
-  function clearSession() {
-    setRunningSession(null);
-  }
-
-  function advanceSession(startedAt: number) {
-    setRunningSession((current) => {
-      if (!current) return null;
-      if (current.currentIndex >= current.occurrenceIds.length - 1) {
-        return null;
-      }
-
-      return {
-        ...current,
-        currentIndex: current.currentIndex + 1,
-        status: "running",
-        startedAt,
-        elapsedMs: 0,
-      };
-    });
-    setClock(startedAt);
-  }
-
-  async function postTimerAction(url: string, body: Record<string, string>) {
-    const formData = new FormData();
-    Object.entries(body).forEach(([key, value]) => formData.set(key, value));
-    if (currentMemberId) formData.set("memberId", currentMemberId);
-    formData.set("nextPath", dashboardPath);
-
-    const csrfToken = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/)?.[1] ?? "";
-    const response = await fetch(url, {
-      method: "POST",
-      body: formData,
-      headers: {
-        Accept: "application/json",
-        "x-requested-with": "fetch",
-        ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    autoStartedRef.current = true;
+    startRoomSession(busiestNowRoom.room, busiestNowRoom.occurrences, Date.now());
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("start");
+      window.history.replaceState(null, "", url.toString());
     }
-  }
-
-  async function finishCurrentRunningTask() {
-    if (!activeRunningSession || !currentRunningOccurrence || isSubmitting) return;
-
-    const isLast = activeRunningSession.currentIndex >= activeRunningSession.occurrenceIds.length - 1;
-    const newDoneCount = sessionDoneCount + 1;
-
-    setIsSubmitting(true);
-    try {
-      const elapsedMinutes = Math.max(1, Math.round(effectiveElapsedMs / 60000));
-      await postTimerAction(`/api/occurrences/${currentRunningOccurrence.id}/complete`, {
-        actualMinutes: String(elapsedMinutes),
-      });
-
-      if (isLast) {
-        const parts: string[] = [];
-        if (newDoneCount > 0) parts.push(`${newDoneCount} tâche${newDoneCount > 1 ? "s" : ""} faite${newDoneCount > 1 ? "s" : ""}`);
-        if (sessionSkippedCount > 0) parts.push(`${sessionSkippedCount} passée${sessionSkippedCount > 1 ? "s" : ""}`);
-        success(`Session terminée ! ${parts.join(", ")}.`);
-        clearSession();
-      } else {
-        setSessionDoneCount(newDoneCount);
-        success(`${currentRunningOccurrence.taskTemplate.title} terminée.`);
-        advanceSession(clock);
-      }
-      router.refresh();
-    } catch {
-      showError("Impossible de terminer cette tâche depuis le suivi.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function skipCurrentRunningTask() {
-    if (!activeRunningSession || !currentRunningOccurrence || isSubmitting) return;
-
-    const isLast = activeRunningSession.currentIndex >= activeRunningSession.occurrenceIds.length - 1;
-    const newSkippedCount = sessionSkippedCount + 1;
-
-    setIsSubmitting(true);
-    try {
-      await postTimerAction(`/api/occurrences/${currentRunningOccurrence.id}/skip`, {});
-
-      if (isLast) {
-        const parts: string[] = [];
-        if (sessionDoneCount > 0) parts.push(`${sessionDoneCount} tâche${sessionDoneCount > 1 ? "s" : ""} faite${sessionDoneCount > 1 ? "s" : ""}`);
-        if (newSkippedCount > 0) parts.push(`${newSkippedCount} passée${newSkippedCount > 1 ? "s" : ""}`);
-        success(`Session terminée. ${parts.join(", ")}.`);
-        clearSession();
-      } else {
-        setSessionSkippedCount(newSkippedCount);
-        success(`${currentRunningOccurrence.taskTemplate.title} passée.`);
-        advanceSession(clock);
-      }
-      router.refresh();
-    } catch {
-      showError("Impossible de passer cette tâche depuis le suivi.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  const sessionNextOccurrence = activeRunningSession
-    ? (() => {
-        const nextIdx = activeRunningSession.currentIndex + 1;
-        return nextIdx < activeRunningSession.occurrenceIds.length
-          ? occurrenceById[activeRunningSession.occurrenceIds[nextIdx]] ?? null
-          : null;
-      })()
-    : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStartSession, activeRunningSession, busiestNowRoom]);
 
   return (
     <div className="space-y-4">

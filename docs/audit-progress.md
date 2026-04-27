@@ -3,6 +3,34 @@
 Suite de l'audit du 26 avril 2026 (voir [audit-2026-04.md](audit-2026-04.md)).
 Chaque entrée résume une PR/commit en moins de 200 caractères.
 
+## 2026-04-27
+
+### Hook `useRunningSession` + pagination historique + comments wrapper
+
+**Hook `useRunningSession`** ([src/lib/use-running-session.ts](../src/lib/use-running-session.ts), 281
+lignes) : extrait toute la logique de session focus de `task-workspace-client.tsx`
+(state localStorage, clock, compteurs, finish/skip via API, sanitization). Le
+composant passe de **757 → 540 lignes** (−207). Le composant garde uniquement
+l'autostart (qui dépend de `busiestNowRoom` calculé à partir des filtres UI).
+
+**Pagination historique cursor-based** ([src/lib/history-feed.ts](../src/lib/history-feed.ts)) :
+nouvelle fonction `loadHistoryFeed(householdId, { cursor, filter, limit })`
+utilisée par `app/settings/activity`. Le filtre est appliqué côté SQL
+(`actionType in [...]`), pagination par `cursor: { id }` + `take: limit + 1`.
+Le lien "Voir plus d'historique" est désormais fonctionnel (avant : URL
+construite avec `cursor` mais jamais lue côté serveur).
+
+**Comments route migrée** vers `withOccurrence` ([src/app/api/occurrences/[id]/comments/route.ts](../src/app/api/occurrences/[id]/comments/route.ts))
+: POST passe de ~50 lignes à ~20 lignes, élimine la double-membership lookup
+puisque le wrapper la fait déjà. **14 routes** utilisent désormais les wrappers.
+
+**a11y pass focalisé** : `aria-live="polite"` sur le bandeau Focus Session
+(annonce les changements de tâche), `aria-busy={isSubmitting}` sur les boutons
+Terminer/Passer de `OccurrenceCard`.
+
+`withOccurrence` switche `findUnique → findFirst` pour cohérence avec les mocks
+de tests existants (déjà fait pour `withHousehold`).
+
 ## 2026-04-26
 
 ### Extraction `lib/running-session.ts` + migration `tasks/[taskId]`
@@ -49,12 +77,15 @@ Dépendance `@hookform/resolvers` retirée (déclarée mais jamais importée).
 | Migration des 5 routes occurrence | ✅ | `64eae39` |
 | `useOptimistic` sur `OccurrenceCard` | ✅ | `1212977` |
 | Migration de 6 routes household | ✅ | `64eae39`, `1212977` |
-| Migration `tasks/[taskId]` | ✅ | (à venir) |
-| Extraction `lib/running-session.ts` | ✅ | (à venir) |
-| Migration des routes restantes (`comments`, MCP) | ⏸ | — |
+| Migration `tasks/[taskId]` | ✅ | `5449fa3` |
+| Extraction `lib/running-session.ts` | ✅ | `5449fa3` |
+| Migration `comments` route | ✅ | (en cours) |
+| Hook `useRunningSession` extrait | ✅ | (en cours) |
+| Pagination cursor `app/settings/activity` | ✅ | (en cours) |
+| a11y `aria-live`/`aria-busy` ciblé | ✅ | (en cours) |
+| Migration MCP routes | ⏸ | — |
 | CSS dark mode → `@variant dark` | ⏸ reporté | — |
-| Découpage `task-workspace-client.tsx` | ⏸ | — |
-| Server Actions sur les forms d'auth | ⏸ | — |
+| Server Actions sur les forms d'auth | ⏸ refusé (coût > bénéfice : tests + e2e blindés sur les routes existantes) | — |
 
 ## Prochaines étapes recommandées
 

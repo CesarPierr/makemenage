@@ -352,6 +352,7 @@ export function OccurrenceCard({
             <button
               aria-label={`Marquer "${occurrence.taskTemplate.title}" comme terminée`}
               className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[rgba(56,115,93,0.16)] bg-[rgba(56,115,93,0.1)] px-3 py-3 text-xs font-bold text-[var(--leaf-600)] transition-all active:scale-[0.97] disabled:opacity-40 sm:text-sm"
+              aria-busy={isSubmitting}
               disabled={isSubmitting}
               onClick={(event) => {
                 stopEvent(event);
@@ -366,6 +367,7 @@ export function OccurrenceCard({
             <button
               aria-label={`Passer "${occurrence.taskTemplate.title}"`}
               className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--line)] bg-white/50 px-3 py-3 text-xs font-bold text-[var(--ink-700)] transition-all active:scale-[0.97] disabled:opacity-40 sm:text-sm"
+              aria-busy={isSubmitting}
               disabled={isSubmitting}
               onClick={(event) => {
                 stopEvent(event);

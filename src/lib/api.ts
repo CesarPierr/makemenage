@@ -69,7 +69,7 @@ export function withOccurrence<P extends { id: string }>(handler: OccurrenceHand
     const user = await requireUser();
     const params = await ctx.params;
 
-    const occurrence = await db.taskOccurrence.findUnique({
+    const occurrence = await db.taskOccurrence.findFirst({
       where: { id: params.id },
     });
 
