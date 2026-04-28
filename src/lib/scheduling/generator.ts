@@ -9,7 +9,7 @@ import type {
   MemberInput,
   TaskTemplateInput,
 } from "@/lib/scheduling/types";
-import { isPastDay } from "@/lib/time";
+import { isPastDay, isToday } from "@/lib/time";
 
 export function generateOccurrences(params: {
   template: TaskTemplateInput;
@@ -106,12 +106,18 @@ export function generateOccurrences(params: {
       existingOccurrences: mergedExisting,
     });
 
+    const status = (() => {
+      if (isPastDay(scheduledDate)) return "overdue";
+      if (isToday(scheduledDate)) return "due";
+      return "planned";
+    })() as "planned" | "due" | "overdue";
+
     const occurrence = {
       sourceGenerationKey,
       scheduledDate,
       dueDate: computeDueDate(scheduledDate, template.recurrence.dueOffsetDays ?? 0),
       assignedMemberId,
-      status: (isPastDay(scheduledDate) ? "overdue" : "planned") as "planned" | "due" | "overdue",
+      status,
     };
 
     generated.push(occurrence);

@@ -202,6 +202,51 @@ describe("Hybrid Scheduling (Fixed vs Sliding)", () => {
     expect(occ2?.assignedMemberId).toBe("A"); // Then A again
   });
 
+  it("SLIDING: early completion shifts the NEXT occurrence relative to completedAt", () => {
+    const startsOn = new Date("2026-05-01"); // Friday
+    
+    // Scenario: Every 7 days. Scheduled for May 8th.
+    // BUT completed early on May 5th (Tuesday).
+    // The next one should be May 12th (Tuesday).
+    
+    const generated = generateOccurrences({
+      template: {
+        id: "task-early",
+        householdId: "h1",
+        title: "Early Sliding",
+        estimatedMinutes: 30,
+        startsOn,
+        recurrence: {
+          type: "every_x_days",
+          mode: "SLIDING",
+          interval: 7,
+          anchorDate: startsOn,
+        },
+        assignment: {
+          mode: "strict_alternation",
+          eligibleMemberIds: ["A", "B"],
+          rotationOrder: ["A", "B"],
+        },
+      },
+      members,
+      absences: [],
+      existingOccurrences: [
+        {
+          sourceGenerationKey: "task-early:sliding:0",
+          scheduledDate: new Date("2026-05-05"), // Aligned with completedAt by our new service logic
+          dueDate: new Date("2026-05-05"),
+          assignedMemberId: "A",
+          status: "completed",
+        },
+      ],
+      rangeStart: new Date("2026-05-01"),
+      rangeEnd: new Date("2026-05-31"),
+    });
+
+    const occ1 = generated.find(o => o.sourceGenerationKey === "task-early:sliding:1");
+    expect(isoDate(occ1!.scheduledDate)).toBe("2026-05-12"); // 5th + 7 = 12th
+  });
+
   it("SLIDING: rebalances correctly with 'least_assigned_minutes' when dates shift", () => {
     const startsOn = new Date("2026-05-01");
     

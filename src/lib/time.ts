@@ -18,3 +18,16 @@ export function isoDateKey(date: Date) {
 export function isPastDay(date: Date) {
   return isBefore(endOfDay(date), new Date());
 }
+
+export function isToday(date: Date) {
+  const now = new Date();
+  return (
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+  );
+}
+
+export function isFutureDay(date: Date) {
+  return isBefore(new Date(), startOfDay(date));
+}

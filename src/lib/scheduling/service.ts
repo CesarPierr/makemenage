@@ -3,7 +3,7 @@ import type { AssignmentMode, RecurrenceType } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { generateOccurrences } from "@/lib/scheduling/generator";
-import { buildGenerationKey, computeNextAnchorAfter, generateRecurrenceDates } from "@/lib/scheduling/recurrence";
+import { buildGenerationKey, computeDueDate, computeNextAnchorAfter, generateRecurrenceDates } from "@/lib/scheduling/recurrence";
 import type {
   AbsenceInput,
   AssignmentRuleInput,
@@ -12,7 +12,7 @@ import type {
   RecurrenceRuleInput,
   TaskTemplateInput,
 } from "@/lib/scheduling/types";
-import { getGenerationWindow } from "@/lib/time";
+import { getGenerationWindow, isPastDay, isToday } from "@/lib/time";
 
 function parseStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
@@ -164,7 +164,7 @@ export async function syncHouseholdOccurrences(
             where: {
               scheduledDate: {
                 gte: addDays(startOfDay(new Date()), -45),
-                lte: addDays(endOfDay(new Date()), 90),
+                lte: addDays(endOfDay(new Date()), 60),
               },
             },
           },
@@ -245,14 +245,34 @@ export async function syncHouseholdOccurrences(
       const isRescheduled = existing.status === "rescheduled";
       const isProtected = (existing.isManuallyModified || isRescheduled) && !options?.forceOverwriteManual;
 
-      if (isPastOrDone || isProtected) {
+      if (isPastOrDone) {
+        continue;
+      }
+
+      const statusChanged = existing.status !== occurrence.status;
+      const otherFieldsChanged = 
+        existing.assignedMemberId !== occurrence.assignedMemberId ||
+        existing.scheduledDate.getTime() !== occurrence.scheduledDate.getTime();
+
+      if (isProtected) {
+        // Even for protected (manual) occurrences, we MUST allow the status to transition
+        // to 'due' or 'overdue' as time passes. We just don't touch dates or assignees.
+        const shouldUpdateStatus = 
+          (occurrence.status === "overdue" && existing.status !== "overdue") ||
+          (occurrence.status === "due" && existing.status === "planned");
+
+        if (shouldUpdateStatus) {
+          await db.taskOccurrence.update({
+            where: { id: existing.id },
+            data: { status: occurrence.status },
+          });
+        }
         continue;
       }
 
       if (
-        existing.assignedMemberId !== occurrence.assignedMemberId ||
-        existing.scheduledDate.getTime() !== occurrence.scheduledDate.getTime() ||
-        existing.status !== occurrence.status ||
+        otherFieldsChanged ||
+        statusChanged ||
         (existing.isManuallyModified && options?.forceOverwriteManual)
       ) {
         await db.taskOccurrence.update({
@@ -428,18 +448,30 @@ export async function completeOccurrence(params: {
     return;
   }
 
+  const isSliding = existing.taskTemplate?.recurrenceRule?.mode === "SLIDING";
+  const completedAt = existing.completedAt ?? new Date();
+
   const occurrence = await db.taskOccurrence.update({
     where: {
       id: params.occurrenceId,
     },
     data: {
       status: "completed",
-      completedAt: existing.completedAt ?? new Date(),
+      completedAt,
       completedByMemberId: params.actorMemberId ?? existing.completedByMemberId ?? undefined,
       actualMinutes: params.actualMinutes ?? existing.actualMinutes,
       notes: params.notes ?? existing.notes,
       wasCompletedAlone: params.wasCompletedAlone ?? existing.wasCompletedAlone,
       isManuallyModified: true,
+      ...(isSliding
+        ? {
+            scheduledDate: completedAt,
+            dueDate: computeDueDate(
+              completedAt,
+              existing.taskTemplate?.recurrenceRule?.dueOffsetDays ?? 0,
+            ),
+          }
+        : {}),
     },
   });
 
@@ -499,7 +531,6 @@ export async function completeOccurrence(params: {
           data: { anchorDate: nextAnchor },
         });
 
-        // Cancel future ones for FIXED tasks specifically
         await db.taskOccurrence.updateMany({
           where: {
             taskTemplateId: existing.taskTemplate.id,
@@ -527,12 +558,24 @@ export async function skipOccurrence(params: {
     where: {
       id: params.occurrenceId,
     },
+    include: {
+      taskTemplate: {
+        include: {
+          recurrenceRule: true,
+        },
+      },
+    },
   });
 
   if (!existing) {
     return;
   }
 
+  const isSliding = existing.taskTemplate?.recurrenceRule?.mode === "SLIDING";
+  const today = startOfDay(new Date());
+
+  // For SLIDING tasks, skipping an occurrence moves the anchor to today
+  // so the next one appears in "interval" days.
   const occurrence = await db.taskOccurrence.update({
     where: {
       id: params.occurrenceId,
@@ -544,6 +587,15 @@ export async function skipOccurrence(params: {
       actualMinutes: null,
       notes: params.notes ?? existing.notes,
       isManuallyModified: true,
+      ...(isSliding
+        ? {
+            scheduledDate: today,
+            dueDate: computeDueDate(
+              today,
+              existing.taskTemplate?.recurrenceRule?.dueOffsetDays ?? 0,
+            ),
+          }
+        : {}),
     },
   });
 
@@ -639,7 +691,7 @@ export async function rescheduleOccurrence(params: {
         existing.taskTemplate.id,
         params.scheduledDate,
         ruleRecord.mode as any,
-        ruleRecord.mode === "SLIDING" ? 0 : undefined, // Index will be recalculated during sync if needed
+        ruleRecord.mode === "SLIDING" ? 0 : undefined,
       );
 
       await db.taskOccurrence.update({
@@ -647,6 +699,7 @@ export async function rescheduleOccurrence(params: {
         data: { sourceGenerationKey: newKey },
       });
 
+      // For FIXED, we preemptively cancel others. For SLIDING, sync will handle it.
       // For FIXED, we preemptively cancel others. For SLIDING, sync will handle it.
       if (ruleRecord.mode === "FIXED") {
         await db.taskOccurrence.updateMany({
@@ -726,7 +779,7 @@ export async function reopenOccurrence(params: {
     return;
   }
 
-  const reopenedStatus = startOfDay(existing.scheduledDate) < startOfDay(new Date()) ? "overdue" : "planned";
+  const reopenedStatus = isPastDay(existing.scheduledDate) ? "overdue" : isToday(existing.scheduledDate) ? "due" : "planned";
   const occurrence = await db.taskOccurrence.update({
     where: {
       id: params.occurrenceId,
