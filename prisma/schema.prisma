@@ -121,6 +121,7 @@ model Household {
   tasks           TaskTemplate[]
   occurrences     TaskOccurrence[]
   holidays        HouseholdHoliday[]
+  savingsBoxes    SavingsBox[]
 
   @@index([createdByUserId])
 }
@@ -356,4 +357,109 @@ model PushSubscription {
   member     HouseholdMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([memberId])
+}
+
+enum SavingsBoxKind {
+  savings
+  project
+  debt
+  provision
+}
+
+enum SavingsEntryType {
+  deposit
+  withdrawal
+  transfer_in
+  transfer_out
+  auto_fill
+  adjustment
+}
+
+model SavingsBox {
+  id                String         @id @default(cuid())
+  householdId       String
+  name              String
+  kind              SavingsBoxKind @default(savings)
+  icon              String?
+  color             String     @default("#D8643D")
+  targetAmount      Decimal?   @db.Decimal(12, 2)
+  targetDate        DateTime?
+  allowNegative     Boolean    @default(false)
+  isArchived        Boolean    @default(false)
+  sortOrder         Int        @default(0)
+  notes             String?
+  createdByMemberId String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  household       Household              @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  autoFillRule    SavingsAutoFillRule?
+  entries         SavingsEntry[]
+  outTransfers    SavingsTransfer[]      @relation("TransferFrom")
+  inTransfers     SavingsTransfer[]      @relation("TransferTo")
+
+  @@index([householdId, isArchived, sortOrder])
+}
+
+model SavingsAutoFillRule {
+  id              String         @id @default(cuid())
+  boxId           String         @unique
+  amount          Decimal        @db.Decimal(12, 2)
+  type            RecurrenceType
+  interval        Int            @default(1)
+  weekdays        Json?
+  dayOfMonth      Int?
+  anchorDate      DateTime
+  startsOn        DateTime
+  endsOn          DateTime?
+  isPaused        Boolean        @default(false)
+  lastAppliedOn   DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  box SavingsBox @relation(fields: [boxId], references: [id], onDelete: Cascade)
+}
+
+model SavingsEntry {
+  id              String           @id @default(cuid())
+  boxId           String
+  householdId     String
+  type            SavingsEntryType
+  amount          Decimal          @db.Decimal(12, 2)
+  occurredOn      DateTime
+  reason          String?
+  authorMemberId  String?
+  transferId      String?
+  autoFillRuleId  String?
+  autoFillKey     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  box      SavingsBox       @relation(fields: [boxId], references: [id], onDelete: Cascade)
+  transfer SavingsTransfer? @relation(fields: [transferId], references: [id], onDelete: SetNull)
+
+  @@unique([autoFillRuleId, autoFillKey])
+  @@index([boxId, occurredOn])
+  @@index([householdId, occurredOn])
+  @@index([transferId])
+}
+
+model SavingsTransfer {
+  id             String   @id @default(cuid())
+  householdId    String
+  fromBoxId      String
+  toBoxId        String
+  amount         Decimal  @db.Decimal(12, 2)
+  occurredOn     DateTime
+  reason         String?
+  authorMemberId String?
+  createdAt      DateTime @default(now())
+
+  fromBox SavingsBox      @relation("TransferFrom", fields: [fromBoxId], references: [id], onDelete: Cascade)
+  toBox   SavingsBox      @relation("TransferTo", fields: [toBoxId], references: [id], onDelete: Cascade)
+  entries SavingsEntry[]
+
+  @@index([householdId, occurredOn])
+  @@index([fromBoxId])
+  @@index([toBoxId])
 }

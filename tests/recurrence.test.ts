@@ -13,8 +13,9 @@ describe("recurrence engine", () => {
   it("generates biweekly dates deterministically", () => {
     const dates = generateRecurrenceDates(
       {
-        type: "every_x_weeks",
-        interval: 2,
+          type: "every_x_weeks",
+          mode: "FIXED",
+          interval: 2,
         anchorDate: new Date(2026, 0, 5),
       },
       new Date(2026, 0, 1),
@@ -35,8 +36,9 @@ describe("recurrence engine", () => {
   it("supports monthly simple rules", () => {
     const dates = generateRecurrenceDates(
       {
-        type: "monthly_simple",
-        interval: 1,
+          type: "monthly_simple",
+          mode: "FIXED",
+          interval: 1,
         anchorDate: new Date(2026, 0, 10),
         dayOfMonth: 10,
       },
@@ -55,8 +57,9 @@ describe("recurrence engine", () => {
   it("describes and keys rules in a stable way", () => {
     expect(
       describeRecurrence({
-        type: "every_x_days",
-        interval: 14,
+          type: "every_x_days",
+          mode: "FIXED",
+          interval: 14,
         anchorDate: new Date(2026, 0, 1),
       }),
     ).toContain("14");
@@ -68,8 +71,9 @@ describe("recurrence engine", () => {
   it("describes one-time tasks clearly", () => {
     expect(
       describeRecurrence({
-        type: "daily",
-        interval: 1,
+          type: "daily",
+          mode: "FIXED",
+          interval: 1,
         anchorDate: new Date(2026, 0, 1),
         config: { singleRun: true },
       }),
@@ -79,7 +83,7 @@ describe("recurrence engine", () => {
   describe("computeNextAnchorAfter", () => {
     it("every_x_days: returns from + interval", () => {
       const next = computeNextAnchorAfter(
-        { type: "every_x_days", interval: 14, anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
+          { type: "every_x_days", mode: "FIXED", interval: 14, anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
         new Date(2026, 3, 25),
       );
       expect(format(next, "yyyy-MM-dd")).toBe("2026-05-09");
@@ -87,7 +91,7 @@ describe("recurrence engine", () => {
 
     it("daily: returns next day", () => {
       const next = computeNextAnchorAfter(
-        { type: "daily", interval: 1, anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
+          { type: "daily", mode: "FIXED", interval: 1, anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
         new Date(2026, 3, 25),
       );
       expect(format(next, "yyyy-MM-dd")).toBe("2026-04-26");
@@ -95,7 +99,7 @@ describe("recurrence engine", () => {
 
     it("every_x_weeks: returns from + interval*7 days", () => {
       const next = computeNextAnchorAfter(
-        { type: "every_x_weeks", interval: 2, anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
+          { type: "every_x_weeks", mode: "FIXED", interval: 2, anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
         new Date(2026, 3, 25),
       );
       expect(format(next, "yyyy-MM-dd")).toBe("2026-05-09");
@@ -104,7 +108,7 @@ describe("recurrence engine", () => {
     it("weekly: returns next matching weekday after fromDate", () => {
       // 2026-04-25 = Saturday (6). Weekdays = [1=Mon, 4=Thu] → next is Mon 2026-04-27
       const next = computeNextAnchorAfter(
-        { type: "weekly", interval: 1, weekdays: [1, 4], anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
+          { type: "weekly", mode: "FIXED", interval: 1, weekdays: [1, 4], anchorDate: new Date(2026, 0, 1), dueOffsetDays: 0 },
         new Date(2026, 3, 25),
       );
       expect(format(next, "yyyy-MM-dd")).toBe("2026-04-27");
@@ -114,8 +118,9 @@ describe("recurrence engine", () => {
       // April 25 with dayOfMonth=15 → next is May 15 (April 15 already passed)
       const next = computeNextAnchorAfter(
         {
-          type: "monthly_simple",
-          interval: 1,
+            type: "monthly_simple",
+            mode: "FIXED",
+            interval: 1,
           dayOfMonth: 15,
           anchorDate: new Date(2026, 0, 1),
           dueOffsetDays: 0,
@@ -129,8 +134,9 @@ describe("recurrence engine", () => {
       // April 5 with dayOfMonth=15 → next is April 15 (still ahead)
       const next = computeNextAnchorAfter(
         {
-          type: "monthly_simple",
-          interval: 1,
+            type: "monthly_simple",
+            mode: "FIXED",
+            interval: 1,
           dayOfMonth: 15,
           anchorDate: new Date(2026, 0, 1),
           dueOffsetDays: 0,

@@ -33,6 +33,7 @@
     "test:e2e": "node scripts/run-e2e.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "node --import tsx prisma/seed.ts",
     "db:seed:stress": "node --import tsx prisma/seed-stress.ts",

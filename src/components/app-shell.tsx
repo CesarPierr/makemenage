@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CalendarDays, Compass, LayoutGrid, LogOut, Moon, Settings2, Sun } from "lucide-react";
+import { CalendarDays, Compass, LayoutGrid, LogOut, Moon, PiggyBank, Settings2, Sun } from "lucide-react";
 
 import { FeatureTour } from "@/components/feature-tour";
 import { PWAInstallBanner } from "@/components/pwa-install-banner";
@@ -22,6 +22,7 @@ type AppShellProps = {
 const navIcons = {
   "/app": LayoutGrid,
   "/app/planifier": CalendarDays,
+  "/app/epargne": PiggyBank,
   "/app/settings": Settings2,
 } as const;
 
@@ -34,16 +35,21 @@ const sectionMeta = {
     title: "Planifier",
     description: "Calendrier, routines et organisation du futur.",
   },
+  "/app/epargne": {
+    title: "Épargne",
+    description: "Vos enveloppes, vos objectifs, en un coup d'œil.",
+  },
   "/app/settings": {
     title: "Réglages",
     description: "Tout ce qui organise le foyer sans encombrer le quotidien.",
   },
 } as const;
 
-/** Main 3 tabs visible on mobile bottom bar */
+/** Main tabs visible on mobile bottom bar */
 const mobileMainTabs = [
   { href: "/app" as const, label: "Aujourd'hui" },
   { href: "/app/planifier" as const, label: "Planifier" },
+  { href: "/app/epargne" as const, label: "Épargne" },
   { href: "/app/settings" as const, label: "Réglages" },
 ];
 
@@ -266,7 +272,7 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
           )}
           style={{ paddingBottom: "calc(0.375rem + env(safe-area-inset-bottom, 0px))" }}
         >
-          <div className="grid grid-cols-3 gap-1">
+          <div className="grid grid-cols-4 gap-1">
             {mobileMainTabs.map((item) => {
               const href = `${item.href}${suffix}`;
               const active = isActivePath(pathname, item.href);

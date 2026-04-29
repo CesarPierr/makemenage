@@ -108,3 +108,94 @@ export const redeemInviteSchema = z.object({
     .max(24)
     .transform((value) => value.toUpperCase()),
 });
+
+const amountString = z
+  .string()
+  .trim()
+  .regex(/^-?\d+([.,]\d{1,2})?$/, "Montant invalide")
+  .transform((value) => Math.round(Number.parseFloat(value.replace(",", ".")) * 100) / 100)
+  .refine((n) => Number.isFinite(n) && Math.abs(n) < 1_000_000_000_000, "Montant hors limites");
+
+const positiveAmount = amountString.refine((n) => n > 0, "Le montant doit être positif");
+
+const colorString = z
+  .string()
+  .regex(/^#[0-9A-Fa-f]{6}$/, "Couleur invalide")
+  .default("#D8643D");
+
+export const savingsBoxCreateSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  kind: z.enum(["savings", "project", "debt", "provision"]).default("savings"),
+  icon: z.string().max(40).optional(),
+  color: colorString,
+  initialBalance: amountString.optional(),
+  targetAmount: positiveAmount.optional(),
+  targetDate: z.preprocess(
+    (value) => (value ? parseDateInput(String(value)) : undefined),
+    z.date(),
+  ).optional(),
+  allowNegative: z.coerce.boolean().default(false),
+  notes: z.string().max(280).optional(),
+});
+
+export const savingsBoxUpdateSchema = savingsBoxCreateSchema.partial().extend({
+  isArchived: z.coerce.boolean().optional(),
+  sortOrder: z.coerce.number().int().min(0).max(10000).optional(),
+});
+
+export const savingsEntrySchema = z.object({
+  type: z.enum(["deposit", "withdrawal"]),
+  amount: positiveAmount,
+  occurredOn: z.preprocess(
+    (value) => parseDateInput(String(value ?? "")),
+    z.date(),
+  ),
+  reason: z.string().max(280).optional(),
+});
+
+export const savingsEntryUpdateSchema = z.object({
+  amount: positiveAmount.optional(),
+  occurredOn: z.preprocess(
+    (value) => (value ? parseDateInput(String(value)) : undefined),
+    z.date(),
+  ).optional(),
+  reason: z.string().max(280).optional(),
+});
+
+export const savingsAdjustSchema = z.object({
+  targetAmount: amountString,
+  occurredOn: z.preprocess(
+    (value) => parseDateInput(String(value ?? "")),
+    z.date(),
+  ),
+  reason: z.string().max(280).optional(),
+});
+
+export const savingsTransferSchema = z.object({
+  fromBoxId: z.string().cuid(),
+  toBoxId: z.string().cuid(),
+  amount: positiveAmount,
+  occurredOn: z.preprocess(
+    (value) => parseDateInput(String(value ?? "")),
+    z.date(),
+  ),
+  reason: z.string().max(280).optional(),
+}).refine((value) => value.fromBoxId !== value.toBoxId, {
+  message: "Source et destination doivent être différentes",
+  path: ["toBoxId"],
+});
+
+export const savingsAutoFillSchema = z.object({
+  amount: positiveAmount,
+  type: z.enum(["daily", "every_x_days", "weekly", "every_x_weeks", "monthly_simple"]),
+  interval: z.coerce.number().int().min(1).max(90).default(1),
+  weekdays: z.array(z.number().int().min(0).max(6)).optional(),
+  dayOfMonth: z.coerce.number().int().min(1).max(28).optional(),
+  anchorDate: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
+  startsOn: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
+  endsOn: z.preprocess(
+    (value) => (value ? parseDateInput(String(value)) : undefined),
+    z.date(),
+  ).optional(),
+  isPaused: z.coerce.boolean().default(false),
+});

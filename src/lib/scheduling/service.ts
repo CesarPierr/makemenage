@@ -190,8 +190,8 @@ export async function syncHouseholdOccurrences(
       startsOn: task.startsOn,
       endsOn: task.endsOn,
       lastCompletedAt: task.lastCompletedAt,
-      recurrence: mapRecurrenceRule(task.recurrenceRule as any),
-      assignment: mapAssignmentRule(task.assignmentRule as any, {
+      recurrence: mapRecurrenceRule(task.recurrenceRule),
+      assignment: mapAssignmentRule(task.assignmentRule, {
         preserveRotationOnSkip: options?.preserveRotationOnSkipOverride ?? null,
       }),
     };
@@ -352,7 +352,7 @@ export async function realignOverdueRecurrences(householdId: string) {
     const newAnchor = computeNextAnchorAfter(
       {
         type: rule.type,
-        mode: rule.mode as any,
+        mode: rule.mode,
         interval: rule.interval,
         weekdays: parseNumberArray(rule.weekdays),
         dayOfMonth: rule.dayOfMonth,
@@ -690,7 +690,7 @@ export async function rescheduleOccurrence(params: {
       const newKey = buildGenerationKey(
         existing.taskTemplate.id,
         params.scheduledDate,
-        ruleRecord.mode as any,
+        ruleRecord.mode,
         ruleRecord.mode === "SLIDING" ? 0 : undefined,
       );
 

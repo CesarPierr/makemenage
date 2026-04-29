@@ -11,9 +11,10 @@ describe("occurrence generation", () => {
         title: "Bathroom",
         estimatedMinutes: 30,
         startsOn: new Date("2026-01-05"),
-        recurrence: {
-          type: "every_x_weeks",
-          interval: 2,
+          recurrence: {
+            type: "every_x_weeks",
+            mode: "FIXED",
+            interval: 2,
           anchorDate: new Date("2026-01-05"),
           dueOffsetDays: 0,
         },
@@ -52,9 +53,10 @@ describe("occurrence generation", () => {
         title: "Floor",
         estimatedMinutes: 20,
         startsOn: new Date("2026-01-01"),
-        recurrence: {
-          type: "every_x_days",
-          interval: 7,
+          recurrence: {
+            type: "every_x_days",
+            mode: "FIXED",
+            interval: 7,
           anchorDate: new Date("2026-01-01"),
           dueOffsetDays: 0,
         },
@@ -96,9 +98,10 @@ describe("occurrence generation", () => {
         title: "Vaisselle",
         estimatedMinutes: 25,
         startsOn: new Date("2026-01-01"),
-        recurrence: {
-          type: "every_x_days",
-          interval: 7,
+          recurrence: {
+            type: "every_x_days",
+            mode: "FIXED",
+            interval: 7,
           anchorDate: new Date("2026-01-01"),
           dueOffsetDays: 0,
         },
@@ -150,9 +153,10 @@ describe("occurrence generation", () => {
         estimatedMinutes: 15,
         startsOn: new Date("2026-01-10"),
         endsOn: new Date("2026-01-10"),
-        recurrence: {
-          type: "daily",
-          interval: 1,
+          recurrence: {
+            type: "daily",
+            mode: "FIXED",
+            interval: 1,
           anchorDate: new Date("2026-01-10"),
           dueOffsetDays: 0,
           config: { singleRun: true },
@@ -183,9 +187,10 @@ describe("occurrence generation", () => {
         title: "Rotation",
         estimatedMinutes: 15,
         startsOn: new Date("2026-04-22"),
-        recurrence: {
-          type: "daily",
-          interval: 1,
+          recurrence: {
+            type: "daily",
+            mode: "FIXED",
+            interval: 1,
           anchorDate: new Date("2026-04-22"),
           dueOffsetDays: 0,
         },

@@ -14,8 +14,9 @@ describe("reproduction of scheduling issues", () => {
       estimatedMinutes: 5,
       startsOn: new Date(2026, 3, 20),
       recurrence: {
-        type: "every_x_days" as const,
-        interval: 7,
+          type: "every_x_days" as const,
+          mode: "FIXED" as const,
+          interval: 7,
         anchorDate: new Date(2026, 3, 20),
         dueOffsetDays: 0,
       },
@@ -94,8 +95,9 @@ describe("reproduction of scheduling issues", () => {
       estimatedMinutes: 20,
       startsOn: new Date(2026, 3, 20),
       recurrence: {
-        type: "every_x_days" as const,
-        interval: 3,
+          type: "every_x_days" as const,
+          mode: "FIXED" as const,
+          interval: 3,
         anchorDate: new Date(2026, 3, 20),
         dueOffsetDays: 0,
       },
