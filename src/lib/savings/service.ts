@@ -4,8 +4,9 @@ import { format, startOfDay } from "date-fns";
 import type { Prisma, RecurrenceType, SavingsBox, SavingsEntryType } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { sendPushToHousehold } from "@/lib/push";
 import { generateRecurrenceDates } from "@/lib/scheduling/recurrence";
-import { toNumber } from "@/lib/savings/currency";
+import { formatCurrency, toNumber } from "@/lib/savings/currency";
 
 type Decimalish = string | number | Prisma.Decimal;
 
@@ -46,6 +47,31 @@ export async function getBoxBalance(boxId: string): Promise<number> {
     select: { type: true, amount: true },
   });
   return computeBalance(entries);
+}
+
+export async function notifySavingsGoalIfReached(params: {
+  householdId: string;
+  boxId: string;
+  previousBalance: number;
+  nextBalance: number;
+}) {
+  const box = await db.savingsBox.findFirst({
+    where: { id: params.boxId, householdId: params.householdId },
+    select: { name: true, targetAmount: true },
+  });
+  const target = box?.targetAmount ? toNumber(box.targetAmount) : null;
+  if (!box || !target || target <= 0) return;
+  if (params.previousBalance >= target || params.nextBalance < target) return;
+
+  await sendPushToHousehold(
+    params.householdId,
+    {
+      title: "Objectif d'épargne atteint",
+      body: `${box.name} a atteint ${formatCurrency(target)}.`,
+      url: "/app/epargne",
+    },
+    "savings.goal_reached",
+  );
 }
 
 export async function getHouseholdBalances(householdId: string) {
@@ -89,8 +115,13 @@ export async function runAutoFillCatchup(params: {
 
   let created = 0;
   const touched = new Set<string>();
+  const filledByBox = new Map<
+    string,
+    { householdId: string; boxName: string; amount: number; count: number; previousBalance: number }
+  >();
 
   for (const rule of rules) {
+    let previousBalance: number | null = null;
     const fromDate = rule.lastAppliedOn
       ? new Date(rule.lastAppliedOn.getTime() + 24 * 60 * 60 * 1000)
       : rule.startsOn;
@@ -117,6 +148,7 @@ export async function runAutoFillCatchup(params: {
     for (const d of dates) {
       const key = format(d, "yyyy-MM-dd");
       try {
+        previousBalance ??= await getBoxBalance(rule.boxId);
         await db.savingsEntry.create({
           data: {
             boxId: rule.boxId,
@@ -131,6 +163,15 @@ export async function runAutoFillCatchup(params: {
         });
         created += 1;
         touched.add(rule.boxId);
+        const fill = filledByBox.get(rule.boxId) ?? {
+          householdId: rule.box.householdId,
+          boxName: rule.box.name,
+          amount: toNumber(rule.amount),
+          count: 0,
+          previousBalance,
+        };
+        fill.count++;
+        filledByBox.set(rule.boxId, fill);
         if (!lastApplied || d > lastApplied) lastApplied = d;
       } catch (err) {
         // P2002 unique violation = already applied for that date, skip silently.
@@ -145,6 +186,26 @@ export async function runAutoFillCatchup(params: {
         data: { lastAppliedOn: lastApplied },
       });
     }
+  }
+
+  for (const [boxId, fill] of filledByBox) {
+    const total = Math.round(fill.amount * fill.count * 100) / 100;
+    const nextBalance = fill.previousBalance + total;
+    await sendPushToHousehold(
+      fill.householdId,
+      {
+        title: "Versement automatique appliqué",
+        body: `${formatCurrency(total)} ajouté${fill.count > 1 ? "s" : ""} à ${fill.boxName}.`,
+        url: "/app/epargne",
+      },
+      "savings.auto_fill_applied",
+    );
+    await notifySavingsGoalIfReached({
+      householdId: fill.householdId,
+      boxId,
+      previousBalance: fill.previousBalance,
+      nextBalance,
+    });
   }
 
   return { createdEntries: created, affectedBoxes: Array.from(touched) };
@@ -183,8 +244,9 @@ export async function createTransfer(params: {
     throw new Error("Source and destination boxes must differ");
   }
   const amountStr = toDecimalString(params.amount);
+  const toPreviousBalance = await getBoxBalance(params.toBoxId);
 
-  return db.$transaction(async (tx) => {
+  const transfer = await db.$transaction(async (tx) => {
     const [from, to] = await Promise.all([
       tx.savingsBox.findFirst({ where: { id: params.fromBoxId, householdId: params.householdId } }),
       tx.savingsBox.findFirst({ where: { id: params.toBoxId, householdId: params.householdId } }),
@@ -230,6 +292,15 @@ export async function createTransfer(params: {
 
     return transfer;
   });
+
+  await notifySavingsGoalIfReached({
+    householdId: params.householdId,
+    boxId: params.toBoxId,
+    previousBalance: toPreviousBalance,
+    nextBalance: toPreviousBalance + params.amount,
+  });
+
+  return transfer;
 }
 
 export async function adjustBoxBalance(params: {
@@ -252,7 +323,7 @@ export async function adjustBoxBalance(params: {
     return null;
   }
 
-  return db.savingsEntry.create({
+  const entry = await db.savingsEntry.create({
     data: {
       boxId: params.boxId,
       householdId: params.householdId,
@@ -263,6 +334,15 @@ export async function adjustBoxBalance(params: {
       authorMemberId: params.authorMemberId ?? null,
     },
   });
+
+  await notifySavingsGoalIfReached({
+    householdId: params.householdId,
+    boxId: params.boxId,
+    previousBalance: currentBalance,
+    nextBalance: params.targetAmount,
+  });
+
+  return entry;
 }
 
 export async function deleteTransfer(params: { transferId: string; householdId: string }) {

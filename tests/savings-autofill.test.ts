@@ -15,13 +15,21 @@ type Rule = {
   endsOn: Date | null;
   isPaused: boolean;
   lastAppliedOn: Date | null;
-  box: { householdId: string };
+  box: { householdId: string; name: string };
 };
 
 const state = vi.hoisted(() => ({
   rules: [] as Rule[],
   entries: [] as Array<{ autoFillRuleId: string; autoFillKey: string; amount: string }>,
   ruleUpdates: [] as Array<{ id: string; data: { lastAppliedOn?: Date } }>,
+  pushCalls: [] as Array<{ householdId: string; title: string }>,
+}));
+
+vi.mock("@/lib/push", () => ({
+  sendPushToHousehold: vi.fn(async (householdId: string, payload: { title: string }) => {
+    state.pushCalls.push({ householdId, title: payload.title });
+    return { sent: 0, failed: 0, total: 0 };
+  }),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -36,6 +44,11 @@ vi.mock("@/lib/db", () => ({
       }),
     },
     savingsEntry: {
+      findMany: vi.fn(async ({ where }: { where: { boxId: string } }) =>
+        state.entries
+          .filter((entry) => entry.autoFillRuleId === "" || where.boxId)
+          .map((entry) => ({ type: "auto_fill", amount: entry.amount })),
+      ),
       create: vi.fn(async ({ data }: { data: { autoFillRuleId?: string; autoFillKey?: string; amount: string } }) => {
         const dup = state.entries.find(
           (e) => e.autoFillRuleId === data.autoFillRuleId && e.autoFillKey === data.autoFillKey,
@@ -53,6 +66,9 @@ vi.mock("@/lib/db", () => ({
         return data;
       }),
     },
+    savingsBox: {
+      findFirst: vi.fn(async () => null),
+    },
   },
 }));
 
@@ -62,6 +78,7 @@ beforeEach(() => {
   state.rules = [];
   state.entries = [];
   state.ruleUpdates = [];
+  state.pushCalls = [];
 });
 
 describe("auto-fill catchup", () => {
@@ -79,7 +96,7 @@ describe("auto-fill catchup", () => {
       endsOn: null,
       isPaused: false,
       lastAppliedOn: null,
-      box: { householdId: "hh1" },
+      box: { householdId: "hh1", name: "Précaution" },
     });
 
     const result = await runAutoFillCatchup({
@@ -90,6 +107,7 @@ describe("auto-fill catchup", () => {
     // Jan 5, Feb 5, Mar 5, Apr 5 = 4 fills
     expect(result.createdEntries).toBe(4);
     expect(result.affectedBoxes).toEqual(["box1"]);
+    expect(state.pushCalls).toEqual([{ householdId: "hh1", title: "Versement automatique appliqué" }]);
   });
 
   it("is idempotent: re-running creates no duplicates", async () => {
@@ -106,7 +124,7 @@ describe("auto-fill catchup", () => {
       endsOn: null,
       isPaused: false,
       lastAppliedOn: null,
-      box: { householdId: "hh1" },
+      box: { householdId: "hh1", name: "Précaution" },
     });
 
     await runAutoFillCatchup({ householdId: "hh1", asOf: new Date(2026, 3, 29) });
@@ -136,7 +154,7 @@ describe("auto-fill catchup", () => {
       endsOn: null,
       isPaused: false,
       lastAppliedOn: new Date(2026, 1, 5), // already applied through Feb
-      box: { householdId: "hh1" },
+      box: { householdId: "hh1", name: "Précaution" },
     });
 
     const result = await runAutoFillCatchup({
@@ -162,7 +180,7 @@ describe("auto-fill catchup", () => {
       endsOn: null,
       isPaused: true,
       lastAppliedOn: null,
-      box: { householdId: "hh1" },
+      box: { householdId: "hh1", name: "Précaution" },
     });
 
     const result = await runAutoFillCatchup({
@@ -187,7 +205,7 @@ describe("auto-fill catchup", () => {
       endsOn: new Date(2026, 1, 28), // ends in Feb
       isPaused: false,
       lastAppliedOn: null,
-      box: { householdId: "hh1" },
+      box: { householdId: "hh1", name: "Précaution" },
     });
 
     const result = await runAutoFillCatchup({
@@ -213,7 +231,7 @@ describe("auto-fill catchup", () => {
       endsOn: null,
       isPaused: false,
       lastAppliedOn: null,
-      box: { householdId: "hh1" },
+      box: { householdId: "hh1", name: "Précaution" },
     });
 
     const result = await runAutoFillCatchup({

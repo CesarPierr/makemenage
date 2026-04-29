@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { dataErrorOrRedirect, dataOrRedirect, withHousehold } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getBoxBalance, notifySavingsGoalIfReached } from "@/lib/savings/service";
 import { savingsEntrySchema } from "@/lib/validation";
 
 const PAGE_SIZE = 30;
@@ -62,6 +63,7 @@ export const POST = withHousehold<{ id: string; boxId: string }>(
       return dataErrorOrRedirect(request, 400, "Données invalides.", fallback);
     }
 
+    const previousBalance = await getBoxBalance(boxId);
     const entry = await db.savingsEntry.create({
       data: {
         boxId,
@@ -72,6 +74,13 @@ export const POST = withHousehold<{ id: string; boxId: string }>(
         reason: parsed.data.reason ?? null,
         authorMemberId: membership.id,
       },
+    });
+    const delta = parsed.data.type === "deposit" ? parsed.data.amount : -parsed.data.amount;
+    await notifySavingsGoalIfReached({
+      householdId,
+      boxId,
+      previousBalance,
+      nextBalance: previousBalance + delta,
     });
 
     return dataOrRedirect(request, `/app/epargne/${boxId}?household=${householdId}&entry=${entry.id}`, {

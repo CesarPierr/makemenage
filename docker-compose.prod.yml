@@ -31,6 +31,11 @@ services:
       DEFAULT_TIMEZONE: ${DEFAULT_TIMEZONE:-Europe/Paris}
       OCCURRENCE_PAST_DAYS: ${OCCURRENCE_PAST_DAYS:-30}
       OCCURRENCE_FUTURE_DAYS: ${OCCURRENCE_FUTURE_DAYS:-60}
+      CSRF_SECRET: ${CSRF_SECRET:?set-csrf-secret}
+      CRON_SECRET: ${CRON_SECRET:?set-cron-secret}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_EMAIL: ${VAPID_EMAIL:-mailto:admin@makemenage.fr}
     expose:
       - "3000"
     healthcheck:

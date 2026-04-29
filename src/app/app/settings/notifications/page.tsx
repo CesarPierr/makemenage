@@ -42,6 +42,10 @@ export default async function NotificationsSettingsPage({ searchParams }: Props)
                 <span className="mt-0.5 size-1.5 rounded-full bg-[var(--coral-500)] shrink-0 translate-y-1" />
                 Nouvelle tâche assignée à votre compte
               </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 size-1.5 rounded-full bg-[var(--coral-500)] shrink-0 translate-y-1" />
+                Versement automatique ou objectif d&apos;épargne atteint
+              </li>
             </ul>
           </div>
         </div>
