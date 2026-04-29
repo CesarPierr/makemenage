@@ -54,6 +54,10 @@ export function resolveCalculatorEntry(params: {
   };
 }
 
+export function resolveCalculatorTargetBoxId(defaultBoxId: string | null, targetBoxId?: string | null) {
+  return targetBoxId ?? defaultBoxId ?? null;
+}
+
 export function serializeCalculator(calculator: CalculatorWithFields) {
   return {
     ...calculator,
@@ -115,6 +119,7 @@ export function previewCalculator(calculator: CalculatorWithFields, values: Reco
 export async function runSavingsCalculator(params: {
   householdId: string;
   calculatorId: string;
+  targetBoxId?: string | null;
   inputs: Record<string, string | number | undefined>;
   authorMemberId?: string | null;
 }) {
@@ -124,10 +129,17 @@ export async function runSavingsCalculator(params: {
       householdId: params.householdId,
       isArchived: false,
     },
-    include: { fields: true, box: true },
+    include: { fields: true },
   });
   if (!calculator) throw new Error("Calculateur introuvable.");
-  if (calculator.box.isArchived) throw new Error("L'enveloppe liée est archivée.");
+
+  const targetBoxId = resolveCalculatorTargetBoxId(calculator.boxId, params.targetBoxId);
+  if (!targetBoxId) throw new Error("Choisissez une enveloppe cible.");
+
+  const targetBox = await db.savingsBox.findFirst({
+    where: { id: targetBoxId, householdId: params.householdId, isArchived: false },
+  });
+  if (!targetBox) throw new Error("Enveloppe cible introuvable.");
 
   const values = buildCalculatorValues(calculator, params.inputs);
   const preview = previewCalculator(calculator, values);
@@ -135,12 +147,12 @@ export async function runSavingsCalculator(params: {
     throw new Error("Le résultat est nul : aucun mouvement à créer.");
   }
 
-  const previousBalance = await getBoxBalance(calculator.boxId);
+  const previousBalance = await getBoxBalance(targetBoxId);
 
   const { entry, run } = await db.$transaction(async (tx) => {
     const entry = await tx.savingsEntry.create({
       data: {
-        boxId: calculator.boxId,
+        boxId: targetBoxId,
         householdId: params.householdId,
         type: preview.entryType,
         amount: preview.amount.toFixed(2),
@@ -154,7 +166,7 @@ export async function runSavingsCalculator(params: {
       data: {
         calculatorId: calculator.id,
         householdId: params.householdId,
-        boxId: calculator.boxId,
+        boxId: targetBoxId,
         inputValues: values,
         rawResult: preview.rawResult.toFixed(4),
         resultAmount: preview.amount.toFixed(2),
@@ -170,7 +182,7 @@ export async function runSavingsCalculator(params: {
   const delta = preview.entryType === "deposit" ? preview.amount : -preview.amount;
   await notifySavingsGoalIfReached({
     householdId: params.householdId,
-    boxId: calculator.boxId,
+    boxId: targetBoxId,
     previousBalance,
     nextBalance: previousBalance + delta,
   });

@@ -63,14 +63,14 @@ export const POST = withHousehold<{ id: string; calculatorId: string }>(
         data: { isArchived: action === "archive" },
         include: { fields: true },
       });
-      return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${updated.boxId}&tab=settings`, {
+      return dataOrRedirect(request, `/app/epargne?household=${householdId}&tab=calculators`, {
         calculator: serializeCalculator(updated),
       });
     }
 
     if (action === "delete") {
       await db.savingsCalculator.delete({ where: { id: calculatorId } });
-      return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${existing.boxId}&tab=settings`, {
+      return dataOrRedirect(request, `/app/epargne?household=${householdId}&tab=calculators`, {
         deleted: calculatorId,
       });
     }
@@ -92,11 +92,13 @@ export const POST = withHousehold<{ id: string; calculatorId: string }>(
       return dataErrorOrRedirect(request, 400, "Données invalides.", fallback);
     }
 
-    const box = await db.savingsBox.findFirst({
-      where: { id: parsed.data.boxId, householdId },
-    });
-    if (!box) {
-      return dataErrorOrRedirect(request, 404, "Enveloppe introuvable.", fallback);
+    if (parsed.data.boxId) {
+      const box = await db.savingsBox.findFirst({
+        where: { id: parsed.data.boxId, householdId },
+      });
+      if (!box) {
+        return dataErrorOrRedirect(request, 404, "Enveloppe introuvable.", fallback);
+      }
     }
 
     try {
@@ -112,7 +114,7 @@ export const POST = withHousehold<{ id: string; calculatorId: string }>(
       return tx.savingsCalculator.update({
         where: { id: calculatorId },
         data: {
-          boxId: parsed.data.boxId,
+          boxId: parsed.data.boxId ?? null,
           name: parsed.data.name,
           description: parsed.data.description ?? null,
           formula: parsed.data.formula,
@@ -136,7 +138,7 @@ export const POST = withHousehold<{ id: string; calculatorId: string }>(
       });
     });
 
-    return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${updated.boxId}&tab=settings`, {
+    return dataOrRedirect(request, `/app/epargne?household=${householdId}&tab=calculators`, {
       calculator: serializeCalculator(updated),
     });
   },

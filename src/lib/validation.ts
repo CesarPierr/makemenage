@@ -225,7 +225,7 @@ const calculatorFieldSchema = z.object({
 });
 
 export const savingsCalculatorSchema = z.object({
-  boxId: z.string().cuid(),
+  boxId: z.preprocess((value) => (value ? value : undefined), z.string().cuid().optional()),
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().max(240).optional(),
   formula: z.string().trim().min(1).max(500),
@@ -240,5 +240,6 @@ export const savingsCalculatorSchema = z.object({
 });
 
 export const savingsCalculatorRunSchema = z.object({
+  targetBoxId: z.preprocess((value) => (value ? value : undefined), z.string().cuid().optional()),
   inputs: z.record(z.string(), z.string().max(80)),
 });

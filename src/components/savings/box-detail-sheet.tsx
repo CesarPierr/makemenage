@@ -288,6 +288,7 @@ function BoxDetailContent({
               <CalculatorRunner
                 householdId={householdId}
                 boxId={box.id}
+                boxes={activeBoxes}
                 color={box.color}
                 onRun={reloadEntries}
               />

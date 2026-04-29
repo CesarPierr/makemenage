@@ -15,7 +15,10 @@ export const POST = withHousehold<{ id: string; calculatorId: string }>(
       }
     }
 
-    const parsed = savingsCalculatorRunSchema.safeParse({ inputs });
+    const parsed = savingsCalculatorRunSchema.safeParse({
+      targetBoxId: formData.get("targetBoxId") || undefined,
+      inputs,
+    });
     if (!parsed.success) {
       return dataErrorOrRedirect(request, 400, "Données invalides.", fallback);
     }
@@ -24,6 +27,7 @@ export const POST = withHousehold<{ id: string; calculatorId: string }>(
       const result = await runSavingsCalculator({
         householdId,
         calculatorId,
+        targetBoxId: parsed.data.targetBoxId,
         inputs: parsed.data.inputs,
         authorMemberId: membership.id,
       });

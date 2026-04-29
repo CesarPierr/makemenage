@@ -7,12 +7,15 @@ import { formatCurrency } from "@/lib/savings/currency";
 import { evaluateFormula } from "@/lib/savings/formula";
 import { useFormAction } from "@/lib/use-form-action";
 import { cn } from "@/lib/utils";
-import type { SavingsCalculatorView } from "@/components/savings/types";
+import type { SavingsBoxView, SavingsCalculatorView } from "@/components/savings/types";
 
 type CalculatorRunnerProps = {
   householdId: string;
-  boxId: string;
+  boxId?: string | null;
+  boxes: SavingsBoxView[];
   color: string;
+  title?: string;
+  defaultOpen?: boolean;
   onRun?: () => void;
 };
 
@@ -49,15 +52,25 @@ function applyPreviewResult(calculator: SavingsCalculatorView, raw: number) {
   return { amount: value, entryType };
 }
 
-export function CalculatorRunner({ householdId, boxId, color, onRun }: CalculatorRunnerProps) {
+export function CalculatorRunner({
+  householdId,
+  boxId = null,
+  boxes,
+  color,
+  title = "Calculateurs rapides",
+  defaultOpen = false,
+  onRun,
+}: CalculatorRunnerProps) {
   const [calculators, setCalculators] = useState<SavingsCalculatorView[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const [selectedId, setSelectedId] = useState<string>("");
+  const [targetBoxId, setTargetBoxId] = useState(boxId ?? "");
   const [inputs, setInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/households/${householdId}/savings/calculators?boxId=${boxId}`, {
+    const suffix = boxId ? `?boxId=${boxId}` : "";
+    fetch(`/api/households/${householdId}/savings/calculators${suffix}`, {
       headers: { "x-requested-with": "fetch" },
     })
       .then((res) => res.json())
@@ -67,6 +80,7 @@ export function CalculatorRunner({ householdId, boxId, color, onRun }: Calculato
         setCalculators(list);
         if (list[0]) {
           setSelectedId((current) => current || list[0].id);
+          setTargetBoxId((current) => current || boxId || list[0].boxId || boxes.find((b) => !b.isArchived)?.id || "");
           setInputs((current) => {
             if (Object.keys(current).length > 0) return current;
             return Object.fromEntries(
@@ -81,7 +95,7 @@ export function CalculatorRunner({ householdId, boxId, color, onRun }: Calculato
     return () => {
       cancelled = true;
     };
-  }, [householdId, boxId]);
+  }, [householdId, boxId, boxes]);
 
   const selected = useMemo(
     () => calculators.find((calculator) => calculator.id === selectedId) ?? calculators[0] ?? null,
@@ -123,7 +137,7 @@ export function CalculatorRunner({ householdId, boxId, color, onRun }: Calculato
       >
         <span className="flex items-center gap-2 text-sm font-bold text-[var(--ink-800)]">
           <Calculator className="size-4" style={{ color }} />
-          Calculateurs rapides
+          {title}
         </span>
         <ChevronDown className={cn("size-4 text-[var(--ink-500)] transition-transform", isOpen ? "rotate-180" : "")} />
       </button>
@@ -140,6 +154,7 @@ export function CalculatorRunner({ householdId, boxId, color, onRun }: Calculato
                   const next = calculators.find((calculator) => calculator.id === event.target.value);
                   setSelectedId(event.target.value);
                   if (next) {
+                    setTargetBoxId(boxId || next.boxId || boxes.find((b) => !b.isArchived)?.id || "");
                     setInputs(Object.fromEntries(
                       next.fields.map((field) => [field.key, field.defaultValue?.replace(".", ",") ?? ""]),
                     ));
@@ -164,10 +179,26 @@ export function CalculatorRunner({ householdId, boxId, color, onRun }: Calculato
                 for (const field of selected.fields) {
                   fd.set(`input:${field.key}`, inputs[field.key] ?? "");
                 }
+                fd.set("targetBoxId", targetBoxId);
                 run.submit(fd);
               }}
             >
               <p className="text-xs font-semibold text-[var(--ink-700)]">{selected.name}</p>
+              <label className="field-label">
+                <span>Enveloppe cible</span>
+                <select
+                  className="field"
+                  value={targetBoxId}
+                  onChange={(event) => setTargetBoxId(event.target.value)}
+                  required
+                >
+                  {boxes.filter((b) => !b.isArchived).map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
               {selected.fields.map((field) => (
                 <label key={field.id} className="field-label">
                   <span>{field.label}</span>
@@ -188,7 +219,7 @@ export function CalculatorRunner({ householdId, boxId, color, onRun }: Calculato
 
               <button
                 type="submit"
-                disabled={run.isSubmitting || !preview || preview.amount <= 0}
+                disabled={run.isSubmitting || !preview || preview.amount <= 0 || !targetBoxId}
                 className="btn-primary flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold disabled:opacity-50"
               >
                 <Calculator className="size-4" />

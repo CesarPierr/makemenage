@@ -2,11 +2,13 @@
 
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { ArrowLeftRight, History, Plus, Sparkles } from "lucide-react";
+import { ArrowLeftRight, Calculator, History, Plus, Sparkles } from "lucide-react";
 
 import { BoxCard } from "@/components/savings/box-card";
 import { BoxCreateWizard } from "@/components/savings/box-create-wizard";
 import { BoxDetailSheet } from "@/components/savings/box-detail-sheet";
+import { CalculatorManager } from "@/components/savings/calculator-manager";
+import { CalculatorRunner } from "@/components/savings/calculator-runner";
 import { TransferHistory } from "@/components/savings/transfer-history";
 import { TransferSheet } from "@/components/savings/transfer-sheet";
 import { formatCurrency } from "@/lib/savings/currency";
@@ -27,13 +29,15 @@ export function EpargneClient({
   initialTotalDebt,
 }: EpargneClientProps) {
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState<"boxes" | "transfers">("boxes");
+  const [manualTab, setManualTab] = useState<"boxes" | "transfers" | "calculators" | null>(null);
   const [manualOpenBoxId, setManualOpenBoxId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const boxes = initialBoxes;
+  const urlTab = searchParams.get("tab");
+  const tab = manualTab ?? (urlTab === "transfers" || urlTab === "calculators" ? urlTab : "boxes");
 
   const totalSavings = initialTotalSavings;
   const totalDebt = initialTotalDebt;
@@ -102,7 +106,7 @@ export function EpargneClient({
 
       <nav className="flex items-center gap-1 p-1 bg-black/[0.04] rounded-[1.2rem]">
         <button
-          onClick={() => setTab("boxes")}
+          onClick={() => setManualTab("boxes")}
           className={cn(
             "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-xl transition-all",
             tab === "boxes"
@@ -114,7 +118,7 @@ export function EpargneClient({
           Enveloppes
         </button>
         <button
-          onClick={() => setTab("transfers")}
+          onClick={() => setManualTab("transfers")}
           className={cn(
             "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-xl transition-all",
             tab === "transfers"
@@ -124,6 +128,18 @@ export function EpargneClient({
         >
           <History className={cn("size-4", tab === "transfers" ? "text-[var(--coral-500)]" : "")} />
           Transferts
+        </button>
+        <button
+          onClick={() => setManualTab("calculators")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-xl transition-all",
+            tab === "calculators"
+              ? "bg-white text-[var(--ink-950)] shadow-sm"
+              : "text-[var(--ink-500)] hover:text-[var(--ink-700)]",
+          )}
+        >
+          <Calculator className={cn("size-4", tab === "calculators" ? "text-[var(--coral-500)]" : "")} />
+          Calculateurs
         </button>
       </nav>
 
@@ -166,12 +182,28 @@ export function EpargneClient({
             </details>
           ) : null}
         </>
-      ) : (
+      ) : tab === "transfers" ? (
         <TransferHistory
           householdId={householdId}
           refreshKey={refreshKey}
           onChanged={() => setRefreshKey((k) => k + 1)}
         />
+      ) : (
+        <section className="space-y-4">
+          <CalculatorRunner
+            householdId={householdId}
+            boxes={activeBoxes}
+            color="var(--coral-500)"
+            title="Utiliser un calculateur"
+            defaultOpen
+          />
+          <div className="app-surface rounded-2xl border border-black/[0.03] p-5">
+            <CalculatorManager
+              householdId={householdId}
+              boxes={activeBoxes}
+            />
+          </div>
+        </section>
       )}
 
       <BoxCreateWizard

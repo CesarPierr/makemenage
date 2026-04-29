@@ -494,7 +494,7 @@ model SavingsTransfer {
 model SavingsCalculator {
   id             String                         @id @default(cuid())
   householdId    String
-  boxId          String
+  boxId          String?
   name           String
   description    String?
   formula        String
@@ -509,7 +509,7 @@ model SavingsCalculator {
   updatedAt      DateTime                       @updatedAt
 
   household      Household                      @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  box            SavingsBox                     @relation(fields: [boxId], references: [id], onDelete: Cascade)
+  box            SavingsBox?                    @relation(fields: [boxId], references: [id], onDelete: SetNull)
   fields         SavingsCalculatorField[]
   runs           SavingsCalculatorRun[]
 

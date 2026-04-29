@@ -35,7 +35,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
   const calculators = await db.savingsCalculator.findMany({
     where: {
       householdId,
-      ...(boxId ? { boxId } : {}),
+      ...(boxId ? { OR: [{ boxId }, { boxId: null }] } : {}),
       ...(includeArchived ? {} : { isArchived: false }),
     },
     include: { fields: true },
@@ -69,11 +69,13 @@ export const POST = withHousehold<{ id: string }>(
       return dataErrorOrRedirect(request, 400, "Données invalides.", fallback);
     }
 
-    const box = await db.savingsBox.findFirst({
-      where: { id: parsed.data.boxId, householdId },
-    });
-    if (!box) {
-      return dataErrorOrRedirect(request, 404, "Enveloppe introuvable.", fallback);
+    if (parsed.data.boxId) {
+      const box = await db.savingsBox.findFirst({
+        where: { id: parsed.data.boxId, householdId },
+      });
+      if (!box) {
+        return dataErrorOrRedirect(request, 404, "Enveloppe introuvable.", fallback);
+      }
     }
 
     try {
@@ -92,7 +94,7 @@ export const POST = withHousehold<{ id: string }>(
     const calculator = await db.savingsCalculator.create({
       data: {
         householdId,
-        boxId: parsed.data.boxId,
+        boxId: parsed.data.boxId ?? null,
         name: parsed.data.name,
         description: parsed.data.description ?? null,
         formula: parsed.data.formula,
@@ -117,7 +119,7 @@ export const POST = withHousehold<{ id: string }>(
       include: { fields: true },
     });
 
-    return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${calculator.boxId}&tab=settings`, {
+    return dataOrRedirect(request, `/app/epargne?household=${householdId}&tab=calculators`, {
       calculator: serializeCalculator(calculator),
     });
   },

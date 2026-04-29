@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/db", () => ({ db: {} }));
 vi.mock("@/lib/push", () => ({ sendPushToHousehold: vi.fn() }));
 
-const { applyCalculatorRounding, resolveCalculatorEntry } = await import("@/lib/savings/calculators");
+const { applyCalculatorRounding, resolveCalculatorEntry, resolveCalculatorTargetBoxId } = await import("@/lib/savings/calculators");
 
 describe("savings calculator result handling", () => {
   it("rounds results according to calculator mode", () => {
@@ -30,5 +30,11 @@ describe("savings calculator result handling", () => {
       negativeMode: "convert_to_opposite",
       roundingMode: "cents",
     })).toEqual({ entryType: "withdrawal", amount: 4.2 });
+  });
+
+  it("uses the run target box before the calculator default box", () => {
+    expect(resolveCalculatorTargetBoxId("default-box", "run-box")).toBe("run-box");
+    expect(resolveCalculatorTargetBoxId("default-box", null)).toBe("default-box");
+    expect(resolveCalculatorTargetBoxId(null, undefined)).toBeNull();
   });
 });

@@ -59,7 +59,7 @@ export type SavingsCalculatorFieldView = {
 export type SavingsCalculatorView = {
   id: string;
   householdId: string;
-  boxId: string;
+  boxId: string | null;
   name: string;
   description: string | null;
   formula: string;
