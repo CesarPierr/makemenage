@@ -124,6 +124,14 @@ const colorString = z
   .regex(/^#[0-9A-Fa-f]{6}$/, "Couleur invalide")
   .default("#D8643D");
 
+const calculatorNumberString = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/\s/g, ""))
+  .refine((value) => value === "" || /^-?\d+([.,]\d{1,4})?$/.test(value), "Nombre invalide")
+  .transform((value) => (value === "" ? undefined : Math.round(Number.parseFloat(value.replace(",", ".")) * 10000) / 10000))
+  .refine((n) => n === undefined || (Number.isFinite(n) && Math.abs(n) < 1_000_000_000_000), "Nombre hors limites");
+
 export const savingsBoxCreateSchema = z.object({
   name: z.string().trim().min(1).max(60),
   kind: z.enum(["savings", "project", "debt", "provision"]).default("savings"),
@@ -199,4 +207,38 @@ export const savingsAutoFillSchema = z.object({
     z.date(),
   ).optional(),
   isPaused: z.coerce.boolean().default(false),
+});
+
+const calculatorFieldSchema = z.object({
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .max(32)
+    .regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/, "Clé de variable invalide"),
+  label: z.string().trim().min(1).max(60),
+  type: z.enum(["number", "amount", "percent"]).default("number"),
+  defaultValue: calculatorNumberString.optional(),
+  helperText: z.string().trim().max(160).optional(),
+  isRequired: z.coerce.boolean().default(true),
+  sortOrder: z.coerce.number().int().min(0).max(1000).default(0),
+});
+
+export const savingsCalculatorSchema = z.object({
+  boxId: z.string().cuid(),
+  name: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(240).optional(),
+  formula: z.string().trim().min(1).max(500),
+  reasonTemplate: z.string().trim().max(180).optional(),
+  resultMode: z.enum(["deposit", "withdrawal"]).default("deposit"),
+  negativeMode: z.enum(["clamp_to_zero", "convert_to_opposite"]).default("clamp_to_zero"),
+  roundingMode: z.enum(["cents", "euro_floor", "euro_ceil", "euro_nearest"]).default("cents"),
+  fields: z.array(calculatorFieldSchema).min(1).max(12),
+}).refine((value) => new Set(value.fields.map((field) => field.key)).size === value.fields.length, {
+  message: "Les clés de variables doivent être uniques.",
+  path: ["fields"],
+});
+
+export const savingsCalculatorRunSchema = z.object({
+  inputs: z.record(z.string(), z.string().max(80)),
 });

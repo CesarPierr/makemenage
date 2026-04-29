@@ -43,3 +43,31 @@ export type SavingsEntryView = {
   autoFillRuleId: string | null;
   createdAt: string;
 };
+
+export type SavingsCalculatorFieldView = {
+  id: string;
+  calculatorId: string;
+  key: string;
+  label: string;
+  type: "number" | "amount" | "percent";
+  defaultValue: string | null;
+  helperText: string | null;
+  isRequired: boolean;
+  sortOrder: number;
+};
+
+export type SavingsCalculatorView = {
+  id: string;
+  householdId: string;
+  boxId: string;
+  name: string;
+  description: string | null;
+  formula: string;
+  reasonTemplate: string | null;
+  resultMode: "deposit" | "withdrawal";
+  negativeMode: "clamp_to_zero" | "convert_to_opposite";
+  roundingMode: "cents" | "euro_floor" | "euro_ceil" | "euro_nearest";
+  isArchived: boolean;
+  sortOrder: number;
+  fields: SavingsCalculatorFieldView[];
+};

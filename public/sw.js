@@ -1,4 +1,4 @@
-const CACHE_NAME = "makemenage-static-v6";
+const CACHE_NAME = "makemenage-static-v7";
 const STATIC_ASSETS = ["/manifest.json", "/icon.svg"];
 
 self.addEventListener("install", (event) => {

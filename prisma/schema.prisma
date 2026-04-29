@@ -122,6 +122,7 @@ model Household {
   occurrences     TaskOccurrence[]
   holidays        HouseholdHoliday[]
   savingsBoxes    SavingsBox[]
+  savingsCalculators SavingsCalculator[]
 
   @@index([createdByUserId])
 }
@@ -375,6 +376,29 @@ enum SavingsEntryType {
   adjustment
 }
 
+enum SavingsCalculatorFieldType {
+  number
+  amount
+  percent
+}
+
+enum SavingsCalculatorResultMode {
+  deposit
+  withdrawal
+}
+
+enum SavingsCalculatorNegativeMode {
+  clamp_to_zero
+  convert_to_opposite
+}
+
+enum SavingsCalculatorRoundingMode {
+  cents
+  euro_floor
+  euro_ceil
+  euro_nearest
+}
+
 model SavingsBox {
   id                String         @id @default(cuid())
   householdId       String
@@ -397,6 +421,8 @@ model SavingsBox {
   entries         SavingsEntry[]
   outTransfers    SavingsTransfer[]      @relation("TransferFrom")
   inTransfers     SavingsTransfer[]      @relation("TransferTo")
+  calculators     SavingsCalculator[]
+  calculatorRuns  SavingsCalculatorRun[]
 
   @@index([householdId, isArchived, sortOrder])
 }
@@ -437,6 +463,7 @@ model SavingsEntry {
 
   box      SavingsBox       @relation(fields: [boxId], references: [id], onDelete: Cascade)
   transfer SavingsTransfer? @relation(fields: [transferId], references: [id], onDelete: SetNull)
+  calculatorRun SavingsCalculatorRun?
 
   @@unique([autoFillRuleId, autoFillKey])
   @@index([boxId, occurredOn])
@@ -462,4 +489,71 @@ model SavingsTransfer {
   @@index([householdId, occurredOn])
   @@index([fromBoxId])
   @@index([toBoxId])
+}
+
+model SavingsCalculator {
+  id             String                         @id @default(cuid())
+  householdId    String
+  boxId          String
+  name           String
+  description    String?
+  formula        String
+  reasonTemplate String?
+  resultMode     SavingsCalculatorResultMode    @default(deposit)
+  negativeMode   SavingsCalculatorNegativeMode  @default(clamp_to_zero)
+  roundingMode   SavingsCalculatorRoundingMode  @default(cents)
+  isArchived     Boolean                        @default(false)
+  sortOrder      Int                            @default(0)
+  createdByMemberId String?
+  createdAt      DateTime                       @default(now())
+  updatedAt      DateTime                       @updatedAt
+
+  household      Household                      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  box            SavingsBox                     @relation(fields: [boxId], references: [id], onDelete: Cascade)
+  fields         SavingsCalculatorField[]
+  runs           SavingsCalculatorRun[]
+
+  @@index([householdId, isArchived, sortOrder])
+  @@index([boxId, isArchived, sortOrder])
+}
+
+model SavingsCalculatorField {
+  id             String                     @id @default(cuid())
+  calculatorId   String
+  key            String
+  label          String
+  type           SavingsCalculatorFieldType @default(number)
+  defaultValue   Decimal?                   @db.Decimal(12, 4)
+  helperText     String?
+  isRequired     Boolean                    @default(true)
+  sortOrder      Int                        @default(0)
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  calculator     SavingsCalculator          @relation(fields: [calculatorId], references: [id], onDelete: Cascade)
+
+  @@unique([calculatorId, key])
+  @@index([calculatorId, sortOrder])
+}
+
+model SavingsCalculatorRun {
+  id             String            @id @default(cuid())
+  calculatorId   String
+  householdId    String
+  boxId          String
+  inputValues    Json
+  rawResult      Decimal           @db.Decimal(12, 4)
+  resultAmount   Decimal           @db.Decimal(12, 2)
+  entryType      SavingsEntryType
+  entryId        String?           @unique
+  authorMemberId String?
+  createdAt      DateTime          @default(now())
+
+  calculator     SavingsCalculator @relation(fields: [calculatorId], references: [id], onDelete: Cascade)
+  box            SavingsBox        @relation(fields: [boxId], references: [id], onDelete: Cascade)
+  entry          SavingsEntry?     @relation(fields: [entryId], references: [id], onDelete: SetNull)
+
+  @@index([calculatorId, createdAt])
+  @@index([householdId, createdAt])
+  @@index([boxId, createdAt])
 }

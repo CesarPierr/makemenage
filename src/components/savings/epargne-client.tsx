@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeftRight, History, Plus, Sparkles } from "lucide-react";
 
 import { BoxCard } from "@/components/savings/box-card";
@@ -28,25 +28,21 @@ export function EpargneClient({
 }: EpargneClientProps) {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<"boxes" | "transfers">("boxes");
-  const [openBoxId, setOpenBoxId] = useState<string | null>(null);
+  const [manualOpenBoxId, setManualOpenBoxId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const boxes = initialBoxes;
 
-  // Open box from URL on mount or param change
-  useEffect(() => {
-    const boxId = searchParams.get("box");
-    if (boxId && boxes.some((b) => b.id === boxId)) {
-      setOpenBoxId(boxId);
-    }
-  }, [searchParams, boxes]);
-
   const totalSavings = initialTotalSavings;
   const totalDebt = initialTotalDebt;
   const activeBoxes = useMemo(() => boxes.filter((b) => !b.isArchived), [boxes]);
   const archivedBoxes = useMemo(() => boxes.filter((b) => b.isArchived), [boxes]);
+  const urlBoxId = searchParams.get("box");
+  const openBoxId =
+    manualOpenBoxId ??
+    (urlBoxId && boxes.some((b) => b.id === urlBoxId) ? urlBoxId : null);
   const openBox = useMemo(() => boxes.find((b) => b.id === openBoxId) ?? null, [boxes, openBoxId]);
 
   const balanceBoxes = useMemo(() => activeBoxes.filter((b) => b.kind !== "debt"), [activeBoxes]);
@@ -152,7 +148,7 @@ export function EpargneClient({
           ) : (
             <section className="grid gap-3 sm:grid-cols-2">
               {activeBoxes.map((b) => (
-                <BoxCard key={b.id} box={b} onClick={() => setOpenBoxId(b.id)} />
+                <BoxCard key={b.id} box={b} onClick={() => setManualOpenBoxId(b.id)} />
               ))}
             </section>
           )}
@@ -164,7 +160,7 @@ export function EpargneClient({
               </summary>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {archivedBoxes.map((b) => (
-                  <BoxCard key={b.id} box={b} onClick={() => setOpenBoxId(b.id)} />
+                  <BoxCard key={b.id} box={b} onClick={() => setManualOpenBoxId(b.id)} />
                 ))}
               </div>
             </details>
@@ -186,7 +182,7 @@ export function EpargneClient({
       <BoxDetailSheet
         isOpen={openBoxId !== null}
         onClose={() => {
-          setOpenBoxId(null);
+          setManualOpenBoxId(null);
           const url = new URL(window.location.href);
           url.searchParams.delete("box");
           url.searchParams.delete("tab");

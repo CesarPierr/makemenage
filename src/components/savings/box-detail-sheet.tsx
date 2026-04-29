@@ -16,9 +16,11 @@ import {
 } from "lucide-react";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { Dialog } from "@/components/ui/dialog";
 import { AdjustForm } from "@/components/savings/adjust-form";
 import { BalanceChart } from "@/components/savings/balance-chart";
+import { BoxDeleteDialog } from "@/components/savings/box-delete-dialog";
+import { CalculatorManager } from "@/components/savings/calculator-manager";
+import { CalculatorRunner } from "@/components/savings/calculator-runner";
 import { EntryForm } from "@/components/savings/entry-form";
 import { EntryRow } from "@/components/savings/entry-row";
 import { AutoFillForm } from "@/components/savings/auto-fill-form";
@@ -65,7 +67,7 @@ function BoxDetailContent({
     window.history.replaceState({}, "", url.toString());
   }, [tab]);
 
-  const [settingsTab, setSettingsTab] = useState<"general" | "autofill">("general");
+  const [settingsTab, setSettingsTab] = useState<"general" | "autofill" | "calculators">("general");
   const [actionType, setActionType] = useState<ActionType | null>(null);
   const [entries, setEntries] = useState<SavingsEntryView[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,40 +128,17 @@ function BoxDetailContent({
 
   return (
     <div className="space-y-4">
-      <Dialog
+      <BoxDeleteDialog
         isOpen={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        title="Supprimer l'enveloppe ?"
-        type="danger"
-        footer={
-          <>
-            <button
-              type="button"
-              className="btn-secondary px-4 py-2 text-sm font-semibold"
-              onClick={() => setConfirmDelete(false)}
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
-              className="btn-primary bg-red-600 hover:bg-red-700 border-red-700 px-4 py-2 text-sm font-semibold"
-              onClick={() => {
-                const fd = new FormData();
-                fd.set("_action", "delete");
-                remove.submit(fd);
-                setConfirmDelete(false);
-              }}
-            >
-              Supprimer définitivement
-            </button>
-          </>
-        }
-      >
-        <p className="text-sm text-gray-600">
-          Toute l&apos;historique de <strong>{box.name}</strong> sera définitivement supprimé. 
-          Cette action est irréversible.
-        </p>
-      </Dialog>
+        boxName={box.name}
+        onConfirm={() => {
+          const fd = new FormData();
+          fd.set("_action", "delete");
+          remove.submit(fd);
+          setConfirmDelete(false);
+        }}
+      />
 
       <div className="sticky top-0 z-10 bg-[var(--card)] pb-2 pt-1">
         <div className="grid grid-cols-3 gap-1 rounded-xl bg-black/[0.04] p-1">
@@ -305,6 +284,15 @@ function BoxDetailContent({
               </div>
             ) : null}
 
+            {!actionType ? (
+              <CalculatorRunner
+                householdId={householdId}
+                boxId={box.id}
+                color={box.color}
+                onRun={reloadEntries}
+              />
+            ) : null}
+
             {!actionType && (
               <details className="app-surface rounded-2xl border border-black/[0.03] overflow-hidden group">
                 <summary className="cursor-pointer p-4 text-sm font-bold text-[var(--ink-700)] hover:bg-black/[0.02] transition-colors list-none flex items-center justify-between">
@@ -375,6 +363,16 @@ function BoxDetailContent({
                 )}
               >
                 Auto-versement
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettingsTab("calculators")}
+                className={cn(
+                  "flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all",
+                  settingsTab === "calculators" ? "bg-white shadow-sm" : "text-[var(--ink-500)]"
+                )}
+              >
+                Calculateurs
               </button>
             </div>
 
@@ -449,7 +447,7 @@ function BoxDetailContent({
                   </div>
                 </section>
               </div>
-            ) : (
+            ) : settingsTab === "autofill" ? (
               <div className="animate-in fade-in duration-200">
                 <section className="app-surface rounded-2xl p-5 border border-black/[0.03]">
                   <h4 className="text-sm font-bold mb-4 flex items-center gap-2 text-[var(--coral-500)]">
@@ -461,6 +459,14 @@ function BoxDetailContent({
                     current={box.autoFillRule}
                   />
                 </section>
+              </div>
+            ) : (
+              <div className="app-surface rounded-2xl border border-black/[0.03] p-5 animate-in fade-in duration-200">
+                <CalculatorManager
+                  householdId={householdId}
+                  currentBoxId={box.id}
+                  boxes={activeBoxes}
+                />
               </div>
             )}
           </div>
