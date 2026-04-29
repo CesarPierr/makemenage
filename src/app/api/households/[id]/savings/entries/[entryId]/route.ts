@@ -32,11 +32,14 @@ export const POST = withHousehold<{ id: string; entryId: string }>(
       );
     }
 
+    const tab = new URL(request.url).searchParams.get("tab");
+    const tabParam = tab ? `&tab=${tab}` : "";
+
     const action = formData.get("_action")?.toString() ?? "update";
 
     if (action === "delete") {
       await db.savingsEntry.delete({ where: { id: entryId } });
-      return dataOrRedirect(request, `/app/epargne/${entry.boxId}?household=${householdId}&deleted=1`);
+      return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${entry.boxId}&deleted=1${tabParam}`);
     }
 
     const parsed = savingsEntryUpdateSchema.safeParse({
@@ -58,7 +61,7 @@ export const POST = withHousehold<{ id: string; entryId: string }>(
       },
     });
 
-    return dataOrRedirect(request, `/app/epargne/${entry.boxId}?household=${householdId}&updated=1`, {
+    return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${entry.boxId}&updated=1${tabParam}`, {
       entry: { ...updated, amount: updated.amount.toString() },
     });
   },

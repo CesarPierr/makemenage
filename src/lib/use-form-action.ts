@@ -58,7 +58,9 @@ export function useFormAction({
               ? new URLSearchParams(data)
               : undefined;
 
-        const headers: Record<string, string> = {};
+        const headers: Record<string, string> = {
+          "x-requested-with": "fetch",
+        };
         if (!(data instanceof FormData)) {
           headers["content-type"] = "application/x-www-form-urlencoded";
         }
@@ -81,6 +83,17 @@ export function useFormAction({
           router.push(response.url);
           onSuccess?.();
           return true;
+        }
+
+        const contentType = response.headers.get("content-type");
+        if (contentType?.includes("application/json")) {
+          const body = await response.json();
+          if (body.redirectTo) {
+            if (successMessage) success(successMessage);
+            router.push(body.redirectTo);
+            onSuccess?.();
+            return true;
+          }
         }
 
         if (successMessage) success(successMessage);

@@ -55,7 +55,7 @@ export const POST = withHousehold<{ id: string; boxId: string }>(
   async ({ request, params, formData }) => {
     const householdId = params.id;
     const boxId = params.boxId;
-    const fallback = `/app/epargne/${boxId}?household=${householdId}&error=invalid`;
+    const fallback = `/app/epargne?household=${householdId}&box=${boxId}&error=invalid`;
 
     const action = formData.get("_action")?.toString() ?? "update";
 
@@ -65,15 +65,6 @@ export const POST = withHousehold<{ id: string; boxId: string }>(
     }
 
     if (action === "delete") {
-      const entryCount = await db.savingsEntry.count({ where: { boxId } });
-      if (entryCount > 0) {
-        return dataErrorOrRedirect(
-          request,
-          400,
-          "Cette enveloppe a des mouvements. Archivez-la plutôt que de la supprimer.",
-          fallback,
-        );
-      }
       await db.savingsBox.delete({ where: { id: boxId } });
       return dataOrRedirect(request, `/app/epargne?household=${householdId}&deleted=1`);
     }
@@ -120,7 +111,7 @@ export const POST = withHousehold<{ id: string; boxId: string }>(
       },
     });
 
-    return dataOrRedirect(request, `/app/epargne/${boxId}?household=${householdId}&updated=1`, {
+    return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${boxId}&updated=1`, {
       box: { ...updated, targetAmount: updated.targetAmount?.toString() ?? null },
     });
   },

@@ -6,7 +6,7 @@ export const POST = withHousehold<{ id: string; boxId: string }>(
   async ({ request, params, membership, formData }) => {
     const householdId = params.id;
     const boxId = params.boxId;
-    const fallback = `/app/epargne/${boxId}?household=${householdId}&error=invalid`;
+    const fallback = `/app/epargne?household=${householdId}&box=${boxId}&error=invalid`;
 
     const parsed = savingsAdjustSchema.safeParse({
       targetAmount: formData.get("targetAmount"),
@@ -28,7 +28,7 @@ export const POST = withHousehold<{ id: string; boxId: string }>(
         authorMemberId: membership.id,
       });
 
-      return dataOrRedirect(request, `/app/epargne/${boxId}?household=${householdId}&adjusted=1`, {
+      return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${boxId}&adjusted=1`, {
         entry: entry ? { ...entry, amount: entry.amount.toString() } : null,
       });
     } catch (err) {

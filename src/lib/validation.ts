@@ -112,11 +112,12 @@ export const redeemInviteSchema = z.object({
 const amountString = z
   .string()
   .trim()
-  .regex(/^-?\d+([.,]\d{1,2})?$/, "Montant invalide")
+  .transform((value) => value.replace(/\s/g, ""))
+  .refine((value) => /^-?\d+([.,]\d{1,2})?$/.test(value), "Montant invalide")
   .transform((value) => Math.round(Number.parseFloat(value.replace(",", ".")) * 100) / 100)
   .refine((n) => Number.isFinite(n) && Math.abs(n) < 1_000_000_000_000, "Montant hors limites");
 
-const positiveAmount = amountString.refine((n) => n > 0, "Le montant doit être positif");
+const positiveAmount = amountString.refine((n) => n >= 0, "Le montant doit être positif ou nul");
 
 const colorString = z
   .string()

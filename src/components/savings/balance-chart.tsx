@@ -85,9 +85,20 @@ export function BalanceChart({
       return { x, y, balance: p.balance, date: p.date };
     });
 
-    const path = xy
-      .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
-      .join(" ");
+    // Smooth path generation (Cubic Bezier)
+    let path = "";
+    if (xy.length > 0) {
+      path = `M ${xy[0].x.toFixed(2)} ${xy[0].y.toFixed(2)}`;
+      for (let i = 0; i < xy.length - 1; i++) {
+        const p0 = xy[i];
+        const p1 = xy[i + 1];
+        const cp1x = p0.x + (p1.x - p0.x) / 2;
+        const cp1y = p0.y;
+        const cp2x = p0.x + (p1.x - p0.x) / 2;
+        const cp2y = p1.y;
+        path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`;
+      }
+    }
 
     const fillPath = `${path} L ${W} ${H} L 0 ${H} Z`;
 
@@ -121,45 +132,76 @@ export function BalanceChart({
   const last = data.points[data.points.length - 1];
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-xs text-[var(--ink-500)]">
-        <span>{format(first.date, "d MMM yyyy", { locale: fr })}</span>
-        <span>Aujourd&apos;hui</span>
-      </div>
-      <div className="rounded-xl bg-black/[0.02] p-2">
+    <div className="space-y-2">
+      <div className="rounded-xl bg-black/[0.01] p-1">
         <svg
           viewBox={`0 0 ${data.W} ${data.H}`}
           preserveAspectRatio="none"
-          className="block w-full"
+          className="block w-full overflow-visible"
           style={{ height }}
           role="img"
           aria-label={`Évolution du solde de ${formatCurrency(first.balance)} à ${formatCurrency(last.balance)}`}
         >
           <defs>
             <linearGradient id={`grad-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+              <stop offset="0%" stopColor={color} stopOpacity="0.25" />
               <stop offset="100%" stopColor={color} stopOpacity="0" />
             </linearGradient>
           </defs>
+          
           {data.zeroY !== null ? (
             <line
               x1="0"
               x2={data.W}
               y1={data.zeroY}
               y2={data.zeroY}
-              stroke="rgba(0,0,0,0.15)"
-              strokeWidth="0.3"
+              stroke="rgba(0,0,0,0.1)"
+              strokeWidth="0.2"
               strokeDasharray="1,1"
             />
           ) : null}
+
           <path d={data.fillPath} fill={`url(#grad-${color.replace("#", "")})`} />
-          <path d={data.path} fill="none" stroke={color} strokeWidth="1" vectorEffect="non-scaling-stroke" />
-          <circle cx={last.x} cy={last.y} r="1.2" fill={color} />
+          <path 
+            d={data.path} 
+            fill="none" 
+            stroke={color} 
+            strokeWidth="1.5" 
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke" 
+          />
+          
+          {/* Subtle dots for each entry */}
+          {data.points.map((p, i) => (
+            <circle 
+              key={i} 
+              cx={p.x} 
+              cy={p.y} 
+              r="0.8" 
+              fill={color} 
+              className="opacity-40" 
+            />
+          ))}
+          
+          {/* Final strong dot */}
+          <circle cx={last.x} cy={last.y} r="1.5" fill={color} className="shadow-sm" />
         </svg>
       </div>
-      <div className="flex items-center justify-between text-[0.7rem] text-[var(--ink-500)]">
-        <span>Min {formatCurrency(data.min)}</span>
-        <span>Max {formatCurrency(data.max)}</span>
+      
+      <div className="flex items-center justify-between px-1">
+        <div className="flex flex-col">
+          <span className="text-[0.6rem] uppercase tracking-tighter text-[var(--ink-400)] font-bold">Départ</span>
+          <span className="text-[0.65rem] font-medium text-[var(--ink-600)]">{format(first.date, "d MMM", { locale: fr })}</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="text-[0.6rem] uppercase tracking-tighter text-[var(--ink-400)] font-bold">Amplitude</span>
+          <span className="text-[0.65rem] font-bold text-[var(--ink-900)]">{formatCurrency(data.max - data.min)}</span>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-[0.6rem] uppercase tracking-tighter text-[var(--ink-400)] font-bold">Aujourd&apos;hui</span>
+          <span className="text-[0.65rem] font-medium text-[var(--ink-600)]">{format(last.date, "d MMM", { locale: fr })}</span>
+        </div>
       </div>
     </div>
   );

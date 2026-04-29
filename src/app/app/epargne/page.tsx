@@ -25,8 +25,12 @@ export default async function EpargnePage({ searchParams }: PageProps) {
   await runAutoFillCatchup({ householdId: membership.householdId });
 
   const boxes = await listBoxesWithBalances(membership.householdId, { includeArchived: true });
-  const totalBalance = boxes
-    .filter((b) => !b.isArchived)
+  const totalSavings = boxes
+    .filter((b) => !b.isArchived && b.kind !== "debt")
+    .reduce((sum, b) => sum + b.balance, 0);
+
+  const totalDebt = boxes
+    .filter((b) => !b.isArchived && b.kind === "debt")
     .reduce((sum, b) => sum + b.balance, 0);
 
   const initialBoxes: SavingsBoxView[] = boxes.map((b) => ({
@@ -68,7 +72,8 @@ export default async function EpargnePage({ searchParams }: PageProps) {
     <EpargneClient
       householdId={membership.householdId}
       initialBoxes={initialBoxes}
-      initialTotalBalance={Math.round(totalBalance * 100) / 100}
+      initialTotalSavings={Math.round(totalSavings * 100) / 100}
+      initialTotalDebt={Math.round(totalDebt * 100) / 100}
     />
   );
 }

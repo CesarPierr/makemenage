@@ -45,7 +45,7 @@ export const POST = withHousehold<{ id: string; boxId: string }>(
   async ({ request, params, membership, formData }) => {
     const householdId = params.id;
     const boxId = params.boxId;
-    const fallback = `/app/epargne/${boxId}?household=${householdId}&error=invalid`;
+    const fallback = `/app/epargne?household=${householdId}&box=${boxId}&error=invalid`;
 
     const box = await db.savingsBox.findFirst({ where: { id: boxId, householdId } });
     if (!box) {
@@ -83,7 +83,7 @@ export const POST = withHousehold<{ id: string; boxId: string }>(
       nextBalance: previousBalance + delta,
     });
 
-    return dataOrRedirect(request, `/app/epargne/${boxId}?household=${householdId}&entry=${entry.id}`, {
+    return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${boxId}&entry=${entry.id}`, {
       entry: { ...entry, amount: entry.amount.toString() },
     });
   },
