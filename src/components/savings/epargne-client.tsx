@@ -11,6 +11,7 @@ import { CalculatorManager } from "@/components/savings/calculator-manager";
 import { CalculatorRunner } from "@/components/savings/calculator-runner";
 import { TransferHistory } from "@/components/savings/transfer-history";
 import { TransferSheet } from "@/components/savings/transfer-sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { formatCurrency } from "@/lib/savings/currency";
 import { cn } from "@/lib/utils";
 import type { SavingsBoxView } from "@/components/savings/types";
@@ -29,15 +30,16 @@ export function EpargneClient({
   initialTotalDebt,
 }: EpargneClientProps) {
   const searchParams = useSearchParams();
-  const [manualTab, setManualTab] = useState<"boxes" | "transfers" | "calculators" | null>(null);
+  const [manualTab, setManualTab] = useState<"boxes" | "calculators" | null>(null);
   const [manualOpenBoxId, setManualOpenBoxId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [transferHistoryOpen, setTransferHistoryOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const boxes = initialBoxes;
   const urlTab = searchParams.get("tab");
-  const tab = manualTab ?? (urlTab === "transfers" || urlTab === "calculators" ? urlTab : "boxes");
+  const tab = manualTab ?? (urlTab === "calculators" ? "calculators" : "boxes");
 
   const totalSavings = initialTotalSavings;
   const totalDebt = initialTotalDebt;
@@ -92,14 +94,24 @@ export function EpargneClient({
             Nouvelle enveloppe
           </button>
           {activeBoxes.length >= 2 ? (
-            <button
-              onClick={() => setTransferOpen(true)}
-              type="button"
-              className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
-            >
-              <ArrowLeftRight className="size-4" />
-              Transférer
-            </button>
+            <>
+              <button
+                onClick={() => setTransferOpen(true)}
+                type="button"
+                className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
+              >
+                <ArrowLeftRight className="size-4" />
+                Transférer
+              </button>
+              <button
+                onClick={() => setTransferHistoryOpen(true)}
+                type="button"
+                className="btn-quiet inline-flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-[var(--ink-600)]"
+              >
+                <History className="size-4" />
+                Historique
+              </button>
+            </>
           ) : null}
         </div>
       </section>
@@ -116,18 +128,6 @@ export function EpargneClient({
         >
           <Sparkles className={cn("size-4", tab === "boxes" ? "text-[var(--coral-500)]" : "")} />
           Enveloppes
-        </button>
-        <button
-          onClick={() => setManualTab("transfers")}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-xl transition-all",
-            tab === "transfers"
-              ? "bg-white text-[var(--ink-950)] shadow-sm"
-              : "text-[var(--ink-500)] hover:text-[var(--ink-700)]",
-          )}
-        >
-          <History className={cn("size-4", tab === "transfers" ? "text-[var(--coral-500)]" : "")} />
-          Transferts
         </button>
         <button
           onClick={() => setManualTab("calculators")}
@@ -182,22 +182,32 @@ export function EpargneClient({
             </details>
           ) : null}
         </>
-      ) : tab === "transfers" ? (
-        <TransferHistory
-          householdId={householdId}
-          refreshKey={refreshKey}
-          onChanged={() => setRefreshKey((k) => k + 1)}
-        />
       ) : (
-        <section className="space-y-4">
-          <CalculatorRunner
-            householdId={householdId}
-            boxes={activeBoxes}
-            color="var(--coral-500)"
-            title="Utiliser un calculateur"
-            defaultOpen
-          />
+        <section className="space-y-5">
+          <div className="space-y-3">
+            <div className="px-1">
+              <p className="section-kicker text-[var(--coral-500)]">Utiliser</p>
+              <h2 className="text-lg font-bold text-[var(--ink-950)]">Lancer un calcul</h2>
+              <p className="text-sm text-[var(--ink-600)]">
+                Choisissez une carte, renseignez les valeurs, puis ajoutez le résultat à l&apos;enveloppe voulue.
+              </p>
+            </div>
+            <CalculatorRunner
+              householdId={householdId}
+              boxes={activeBoxes}
+              color="var(--coral-500)"
+              variant="grid"
+            />
+          </div>
+
           <div className="app-surface rounded-2xl border border-black/[0.03] p-5">
+            <div className="mb-4 border-b border-black/[0.05] pb-4">
+              <p className="section-kicker text-[var(--ink-500)]">Créer / gérer</p>
+              <h2 className="text-lg font-bold text-[var(--ink-950)]">Bibliothèque de calculateurs</h2>
+              <p className="text-sm text-[var(--ink-600)]">
+                Créez de nouvelles règles ou modifiez les modèles existants.
+              </p>
+            </div>
             <CalculatorManager
               householdId={householdId}
               boxes={activeBoxes}
@@ -230,6 +240,18 @@ export function EpargneClient({
         householdId={householdId}
         boxes={activeBoxes}
       />
+      <BottomSheet
+        isOpen={transferHistoryOpen}
+        onClose={() => setTransferHistoryOpen(false)}
+        title="Historique des transferts"
+        maxHeight={88}
+      >
+        <TransferHistory
+          householdId={householdId}
+          refreshKey={refreshKey}
+          onChanged={() => setRefreshKey((k) => k + 1)}
+        />
+      </BottomSheet>
     </div>
   );
 }
