@@ -39,7 +39,7 @@ export const POST = withHousehold<{ id: string; entryId: string }>(
 
     if (action === "delete") {
       await db.savingsEntry.delete({ where: { id: entryId } });
-      return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${entry.boxId}&deleted=1${tabParam}`);
+      return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${entry.boxId}&deleted=1${tabParam}`, {}, false);
     }
 
     const parsed = savingsEntryUpdateSchema.safeParse({
@@ -63,6 +63,6 @@ export const POST = withHousehold<{ id: string; entryId: string }>(
 
     return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${entry.boxId}&updated=1${tabParam}`, {
       entry: { ...updated, amount: updated.amount.toString() },
-    });
+    }, false);
   },
 );

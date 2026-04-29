@@ -199,7 +199,7 @@ export const savingsAutoFillSchema = z.object({
   type: z.enum(["daily", "every_x_days", "weekly", "every_x_weeks", "monthly_simple"]),
   interval: z.coerce.number().int().min(1).max(90).default(1),
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
-  dayOfMonth: z.coerce.number().int().min(1).max(28).optional(),
+  dayOfMonth: z.coerce.number().int().min(1).max(31).optional(),
   anchorDate: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
   startsOn: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
   endsOn: z.preprocess(
@@ -230,10 +230,10 @@ export const savingsCalculatorSchema = z.object({
   description: z.string().trim().max(240).optional(),
   formula: z.string().trim().min(1).max(500),
   reasonTemplate: z.string().trim().max(180).optional(),
-  resultMode: z.enum(["deposit", "withdrawal"]).default("deposit"),
+  resultMode: z.enum(["deposit", "withdrawal", "none"]).default("deposit"),
   negativeMode: z.enum(["clamp_to_zero", "convert_to_opposite"]).default("clamp_to_zero"),
   roundingMode: z.enum(["cents", "euro_floor", "euro_ceil", "euro_nearest"]).default("cents"),
-  fields: z.array(calculatorFieldSchema).min(1).max(12),
+  fields: z.array(calculatorFieldSchema).min(0).max(12),
 }).refine((value) => new Set(value.fields.map((field) => field.key)).size === value.fields.length, {
   message: "Les clés de variables doivent être uniques.",
   path: ["fields"],

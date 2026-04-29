@@ -32,14 +32,21 @@ export const POST = withHousehold<{ id: string; calculatorId: string }>(
         authorMemberId: membership.id,
       });
 
-      return dataOrRedirect(request, `/app/epargne?household=${householdId}&box=${result.run.boxId}&calculatorRun=${result.run.id}`, {
-        entry: { ...result.entry, amount: result.entry.amount.toString() },
+      const payload = {
+        entry: result.entry ? { ...result.entry, amount: result.entry.amount.toString() } : null,
         run: {
           ...result.run,
           rawResult: result.run.rawResult.toString(),
           resultAmount: result.run.resultAmount.toString(),
         },
-      });
+      };
+
+      return dataOrRedirect(
+        request,
+        `/app/epargne?household=${householdId}&box=${result.run.boxId}&calculatorRun=${result.run.id}`,
+        payload,
+        false,
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Calcul impossible.";
       return dataErrorOrRedirect(request, 400, message, fallback);

@@ -134,12 +134,12 @@ export function AutoFillForm({ householdId, boxId, current, onSaved }: AutoFillF
 
         {type === "monthly_simple" ? (
           <label className="field-label">
-            <span>Jour du mois (1–28)</span>
+            <span>Jour du mois (1–31)</span>
             <input
               className="field"
               type="number"
               min={1}
-              max={28}
+              max={31}
               value={dayOfMonth}
               onChange={(e) => setDayOfMonth(e.target.value)}
             />

@@ -488,6 +488,7 @@ export async function completeOccurrence(params: {
       actorMemberId: params.actorMemberId ?? undefined,
       previousValues: {
         status: existing.status,
+        scheduledDate: existing.scheduledDate.toISOString(),
         actualMinutes: existing.actualMinutes,
         notes: existing.notes,
       },
@@ -541,9 +542,12 @@ export async function completeOccurrence(params: {
         });
       }
 
+      // Sync is best-effort: completion is already committed above.
       await syncHouseholdOccurrences(existing.householdId, {
         taskId: existing.taskTemplate.id,
         forceOverwriteManual: false,
+      }).catch((err) => {
+        console.error("completeOccurrence: sync failed (non-fatal)", err);
       });
     }
   }
@@ -694,12 +698,15 @@ export async function rescheduleOccurrence(params: {
         ruleRecord.mode === "SLIDING" ? 0 : undefined,
       );
 
-      await db.taskOccurrence.update({
-        where: { id: params.occurrenceId },
-        data: { sourceGenerationKey: newKey },
-      });
+      // Re-keying is best-effort: if another occurrence already holds this key
+      // (e.g. sync generated a new one after a reopen), skip rather than crash.
+      await db.taskOccurrence
+        .update({
+          where: { id: params.occurrenceId },
+          data: { sourceGenerationKey: newKey },
+        })
+        .catch(() => {});
 
-      // For FIXED, we preemptively cancel others. For SLIDING, sync will handle it.
       // For FIXED, we preemptively cancel others. For SLIDING, sync will handle it.
       if (ruleRecord.mode === "FIXED") {
         await db.taskOccurrence.updateMany({
@@ -712,9 +719,13 @@ export async function rescheduleOccurrence(params: {
         });
       }
 
+      // Sync is best-effort: the reschedule is already committed above.
+      // A sync failure must not surface as a user-visible error.
       await syncHouseholdOccurrences(existing.householdId, {
         taskId: existing.taskTemplate.id,
         forceOverwriteManual: false,
+      }).catch((err) => {
+        console.error("rescheduleOccurrence: sync failed (non-fatal)", err);
       });
     }
   }
@@ -779,13 +790,26 @@ export async function reopenOccurrence(params: {
     return;
   }
 
-  const reopenedStatus = isPastDay(existing.scheduledDate) ? "overdue" : isToday(existing.scheduledDate) ? "due" : "planned";
+  // Restore the original scheduledDate if completion moved it (SLIDING mode sets it to today).
+  const completionLog = await db.occurrenceActionLog.findFirst({
+    where: { occurrenceId: params.occurrenceId, actionType: "completed" },
+    orderBy: { createdAt: "desc" },
+  });
+  const previousScheduledDate =
+    completionLog?.previousValues &&
+    typeof (completionLog.previousValues as Record<string, unknown>).scheduledDate === "string"
+      ? new Date((completionLog.previousValues as Record<string, unknown>).scheduledDate as string)
+      : null;
+
+  const restoredDate = previousScheduledDate ?? existing.scheduledDate;
+  const reopenedStatus = isPastDay(restoredDate) ? "overdue" : isToday(restoredDate) ? "due" : "planned";
   const occurrence = await db.taskOccurrence.update({
     where: {
       id: params.occurrenceId,
     },
     data: {
       status: reopenedStatus,
+      scheduledDate: restoredDate,
       completedAt: null,
       completedByMemberId: null,
       actualMinutes: null,

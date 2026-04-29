@@ -15,6 +15,7 @@ type TransferSheetProps = {
   householdId: string;
   boxes: SavingsBoxView[];
   defaultFromBoxId?: string;
+  onSuccess?: () => void;
 };
 
 export function TransferSheet({
@@ -23,6 +24,7 @@ export function TransferSheet({
   householdId,
   boxes,
   defaultFromBoxId,
+  onSuccess,
 }: TransferSheetProps) {
   const [fromBoxId, setFromBoxId] = useState(defaultFromBoxId ?? boxes[0]?.id ?? "");
   const [toBoxId, setToBoxId] = useState(boxes.find((b) => b.id !== defaultFromBoxId)?.id ?? "");
@@ -37,6 +39,7 @@ export function TransferSheet({
     onSuccess: () => {
       setAmount("");
       setReason("");
+      onSuccess?.();
       onClose();
     },
   });

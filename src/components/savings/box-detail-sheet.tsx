@@ -39,6 +39,7 @@ type BoxDetailSheetProps = {
   box: SavingsBoxView | null;
   householdId: string;
   activeBoxes: SavingsBoxView[];
+  onChanged?: () => void;
 };
 
 function BoxDetailContent({
@@ -46,11 +47,13 @@ function BoxDetailContent({
   householdId,
   onClose,
   activeBoxes,
+  onChanged,
 }: {
   box: SavingsBoxView;
   householdId: string;
   onClose: () => void;
   activeBoxes: SavingsBoxView[];
+  onChanged?: () => void;
 }) {
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window !== "undefined") {
@@ -68,6 +71,9 @@ function BoxDetailContent({
   }, [tab]);
 
   const [settingsTab, setSettingsTab] = useState<"general" | "autofill" | "calculators">("general");
+  const [managerOpen, setManagerOpen] = useState(false);
+  const [editingCalculatorId, setEditingCalculatorId] = useState<string | null>(null);
+  const [refreshCalculatorsKey, setRefreshCalculatorsKey] = useState(0);
   const [actionType, setActionType] = useState<ActionType | null>(null);
   const [entries, setEntries] = useState<SavingsEntryView[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,6 +127,7 @@ function BoxDetailContent({
     });
     const data = await res.json();
     setEntries(data.entries ?? []);
+    onChanged?.();
   }
 
   const target = box.targetAmount ? Number.parseFloat(box.targetAmount) : null;
@@ -163,20 +170,33 @@ function BoxDetailContent({
       <div className="min-h-[350px]">
         {tab === "summary" ? (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* Balance Card - Becomes compact when an action is active to save vertical space */}
             <div
-              className="rounded-2xl p-6 text-center"
+              className={cn(
+                "rounded-2xl transition-all duration-300",
+                actionType ? "p-3 flex items-center justify-between" : "p-6 text-center"
+              )}
               style={{ background: `${box.color}1A` }}
             >
-              <p className="text-xs uppercase tracking-widest text-[var(--ink-500)] font-bold">Solde actuel</p>
-              <p
-                className={cn(
-                  "mt-2 text-5xl font-bold tabular-nums tracking-tight",
-                  box.balance < 0 ? "text-red-700" : "text-[var(--ink-950)]",
-                )}
-              >
-                {formatCurrency(box.balance)}
-              </p>
-              {target ? (
+              <div>
+                <p className={cn(
+                  "uppercase tracking-widest font-bold",
+                  actionType ? "text-[10px] text-[var(--ink-400)]" : "text-xs text-[var(--ink-500)]"
+                )}>
+                  Solde actuel
+                </p>
+                <p
+                  className={cn(
+                    "font-bold tabular-nums tracking-tight transition-all",
+                    actionType ? "text-xl mt-0" : "text-5xl mt-2",
+                    box.balance < 0 ? "text-red-700" : "text-[var(--ink-950)]",
+                  )}
+                >
+                  {formatCurrency(box.balance)}
+                </p>
+              </div>
+
+              {!actionType && target ? (
                 <div className="mt-6 space-y-3">
                   <div className="mx-auto h-2.5 max-w-xs overflow-hidden rounded-full bg-black/[0.08]">
                     <div
@@ -191,6 +211,11 @@ function BoxDetailContent({
                       : ""}
                   </p>
                 </div>
+              ) : actionType && target ? (
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] uppercase font-bold text-[var(--ink-400)]">Objectif</span>
+                  <span className="text-sm font-bold text-[var(--ink-700)]">{progress?.toFixed(0)}%</span>
+                </div>
               ) : null}
             </div>
 
@@ -201,8 +226,8 @@ function BoxDetailContent({
                 className={cn(
                   "flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all active:scale-95",
                   actionType === "deposit"
-                    ? "bg-[var(--leaf-500)] border-[var(--leaf-600)] text-white shadow-lg"
-                    : "bg-[var(--leaf-50)] border-[var(--leaf-100)] text-[var(--leaf-700)] hover:bg-[var(--leaf-100)]"
+                    ? "bg-[var(--leaf-500)] border-[var(--leaf-600)] text-white shadow-lg ring-2 ring-[var(--leaf-200)]"
+                    : "bg-[var(--leaf-50)] border-[var(--leaf-100)] text-[var(--leaf-700)] hover:bg-[var(--leaf-100)] opacity-70"
                 )}
               >
                 <ArrowDown className="size-5" />
@@ -213,8 +238,8 @@ function BoxDetailContent({
                 className={cn(
                   "flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all active:scale-95",
                   actionType === "withdrawal"
-                    ? "bg-[var(--coral-500)] border-[var(--coral-600)] text-white shadow-lg"
-                    : "bg-red-50 border-red-100 text-red-700 hover:bg-red-100"
+                    ? "bg-[var(--coral-500)] border-[var(--coral-600)] text-white shadow-lg ring-2 ring-[var(--coral-200)]"
+                    : "bg-red-50 border-red-100 text-red-700 hover:bg-red-100 opacity-70"
                 )}
               >
                 <ArrowUp className="size-5" />
@@ -225,8 +250,8 @@ function BoxDetailContent({
                 className={cn(
                   "flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all active:scale-95",
                   actionType === "transfer"
-                    ? "bg-blue-600 border-blue-700 text-white shadow-lg"
-                    : "bg-blue-50 border-blue-100 text-blue-700 hover:bg-blue-100"
+                    ? "bg-blue-600 border-blue-700 text-white shadow-lg ring-2 ring-blue-200"
+                    : "bg-blue-50 border-blue-100 text-blue-700 hover:bg-blue-100 opacity-70"
                 )}
               >
                 <ArrowLeftRight className="size-5" />
@@ -237,15 +262,15 @@ function BoxDetailContent({
             {/* Dynamic Form Display */}
             {actionType ? (
               <div className="app-surface rounded-2xl p-5 border border-black/[0.03] animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-sm font-bold flex items-center gap-2">
+                <div className="flex items-center justify-between mb-5">
+                  <h4 className="text-xs uppercase tracking-widest font-bold text-[var(--ink-500)]">
                     {actionType === "deposit" ? "Nouveau versement" : actionType === "withdrawal" ? "Nouveau retrait" : "Nouveau transfert"}
                   </h4>
                   <button 
                     onClick={() => setActionType(null)}
-                    className="text-xs font-bold text-[var(--ink-400)] hover:text-[var(--ink-600)]"
+                    className="text-[10px] uppercase font-bold text-[var(--ink-400)] hover:text-red-500 transition-colors"
                   >
-                    Annuler
+                    Fermer
                   </button>
                 </div>
                 {actionType === "transfer" ? (
@@ -263,6 +288,7 @@ function BoxDetailContent({
                     householdId={householdId} 
                     boxId={box.id} 
                     defaultType={actionType}
+                    hideTypeSelector={true}
                     onSuccess={() => {
                       reloadEntries();
                       setActionType(null);
@@ -462,11 +488,36 @@ function BoxDetailContent({
                 </section>
               </div>
             ) : (
-              <div className="app-surface rounded-2xl border border-black/[0.03] p-5 animate-in fade-in duration-200">
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <CalculatorRunner
+                  key={refreshCalculatorsKey}
+                  householdId={householdId}
+                  boxId={box.id}
+                  boxes={activeBoxes}
+                  color="var(--coral-500)"
+                  variant="grid"
+                  onCreate={() => {
+                    setEditingCalculatorId(null);
+                    setManagerOpen(true);
+                  }}
+                  onEdit={(calc) => {
+                    setEditingCalculatorId(calc.id);
+                    setManagerOpen(true);
+                  }}
+                  onRun={reloadEntries}
+                />
+
                 <CalculatorManager
                   householdId={householdId}
                   currentBoxId={box.id}
                   boxes={activeBoxes}
+                  isOpen={managerOpen}
+                  initialEditingId={editingCalculatorId}
+                  onClose={() => {
+                    setManagerOpen(false);
+                    setEditingCalculatorId(null);
+                  }}
+                  onSuccess={() => setRefreshCalculatorsKey((k) => k + 1)}
                 />
               </div>
             )}
@@ -477,7 +528,7 @@ function BoxDetailContent({
   );
 }
 
-export function BoxDetailSheet({ isOpen, onClose, box, householdId, activeBoxes }: BoxDetailSheetProps) {
+export function BoxDetailSheet({ isOpen, onClose, box, householdId, activeBoxes, onChanged }: BoxDetailSheetProps) {
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title={box?.name ?? ""} maxHeight={95}>
       {box ? (
@@ -487,6 +538,7 @@ export function BoxDetailSheet({ isOpen, onClose, box, householdId, activeBoxes 
           householdId={householdId} 
           onClose={onClose} 
           activeBoxes={activeBoxes}
+          onChanged={onChanged}
         />
       ) : null}
     </BottomSheet>

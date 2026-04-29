@@ -37,6 +37,13 @@ export function resolveCalculatorEntry(params: {
   roundingMode: SavingsCalculatorRoundingMode;
 }) {
   let value = params.rawResult;
+  if (params.resultMode === "none") {
+    return {
+      entryType: "deposit" as const,
+      amount: applyCalculatorRounding(value, params.roundingMode),
+    };
+  }
+
   let entryType: "deposit" | "withdrawal" = params.resultMode;
 
   if (value < 0) {
@@ -143,6 +150,24 @@ export async function runSavingsCalculator(params: {
 
   const values = buildCalculatorValues(calculator, params.inputs);
   const preview = previewCalculator(calculator, values);
+  
+  if (calculator.resultMode === "none") {
+    // Just record the run without entry
+    const run = await db.savingsCalculatorRun.create({
+      data: {
+        calculatorId: calculator.id,
+        householdId: params.householdId,
+        boxId: targetBoxId || calculator.boxId || undefined,
+        inputValues: values,
+        rawResult: preview.rawResult.toFixed(4),
+        resultAmount: preview.amount.toFixed(2),
+        entryType: "auto_fill", // Dummy type since we don't have 'none' in EntryType enum
+        authorMemberId: params.authorMemberId ?? null,
+      },
+    });
+    return { run, preview, entry: null };
+  }
+
   if (preview.amount <= 0) {
     throw new Error("Le résultat est nul : aucun mouvement à créer.");
   }

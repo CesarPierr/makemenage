@@ -21,9 +21,14 @@ export function dataOrRedirect(
   request: Request,
   destination: string,
   payload: Record<string, unknown> = {},
+  forceRedirect: boolean = true,
 ) {
   if (isDataRequest(request)) {
-    return NextResponse.json({ ok: true, redirectTo: destination, ...payload });
+    return NextResponse.json({
+      ok: true,
+      ...(forceRedirect ? { redirectTo: destination } : {}),
+      ...payload,
+    });
   }
   return redirectTo(request, destination);
 }

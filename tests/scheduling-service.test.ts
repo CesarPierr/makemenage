@@ -7,6 +7,7 @@ const dbMocks = vi.hoisted(() => ({
   taskOccurrenceFindUnique: vi.fn(),
   taskOccurrenceUpdate: vi.fn(),
   occurrenceActionLogCreate: vi.fn(),
+  occurrenceActionLogFindFirst: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -26,6 +27,7 @@ vi.mock("@/lib/db", () => ({
     },
     occurrenceActionLog: {
       create: dbMocks.occurrenceActionLogCreate,
+      findFirst: dbMocks.occurrenceActionLogFindFirst,
     },
   },
 }));
@@ -107,6 +109,7 @@ describe("reopenOccurrence", () => {
     dbMocks.taskOccurrenceUpdate.mockResolvedValue({
       id: "occ-1",
     });
+    dbMocks.occurrenceActionLogFindFirst.mockResolvedValue(null);
 
     await reopenOccurrence({
       occurrenceId: "occ-1",

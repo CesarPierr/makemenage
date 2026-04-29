@@ -37,12 +37,17 @@ export function EpargneClient({
   const [transferHistoryOpen, setTransferHistoryOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const [managerOpen, setManagerOpen] = useState(false);
+  const [editingCalculatorId, setEditingCalculatorId] = useState<string | null>(null);
+  const [refreshCalculatorsKey, setRefreshCalculatorsKey] = useState(0);
+
   const boxes = initialBoxes;
   const urlTab = searchParams.get("tab");
   const tab = manualTab ?? (urlTab === "calculators" ? "calculators" : "boxes");
 
   const totalSavings = initialTotalSavings;
   const totalDebt = initialTotalDebt;
+
   const activeBoxes = useMemo(() => boxes.filter((b) => !b.isArchived), [boxes]);
   const archivedBoxes = useMemo(() => boxes.filter((b) => b.isArchived), [boxes]);
   const urlBoxId = searchParams.get("box");
@@ -118,7 +123,12 @@ export function EpargneClient({
 
       <nav className="flex items-center gap-1 p-1 bg-black/[0.04] rounded-[1.2rem]">
         <button
-          onClick={() => setManualTab("boxes")}
+          onClick={() => {
+            setManualTab("boxes");
+            const url = new URL(window.location.href);
+            url.searchParams.set("tab", "boxes");
+            window.history.replaceState({}, "", url.toString());
+          }}
           className={cn(
             "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-xl transition-all",
             tab === "boxes"
@@ -130,7 +140,12 @@ export function EpargneClient({
           Enveloppes
         </button>
         <button
-          onClick={() => setManualTab("calculators")}
+          onClick={() => {
+            setManualTab("calculators");
+            const url = new URL(window.location.href);
+            url.searchParams.set("tab", "calculators");
+            window.history.replaceState({}, "", url.toString());
+          }}
           className={cn(
             "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-xl transition-all",
             tab === "calculators"
@@ -144,7 +159,7 @@ export function EpargneClient({
       </nav>
 
       {tab === "boxes" ? (
-        <>
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           {isEmpty ? (
             <section className="app-surface rounded-2xl p-6 text-center">
               <Sparkles className="size-8 mx-auto text-[var(--coral-500)]" />
@@ -170,9 +185,10 @@ export function EpargneClient({
           )}
 
           {archivedBoxes.length > 0 ? (
-            <details className="app-surface rounded-2xl p-4">
-              <summary className="cursor-pointer text-sm font-semibold text-[var(--ink-700)]">
-                {archivedBoxes.length} enveloppe{archivedBoxes.length > 1 ? "s" : ""} archivée{archivedBoxes.length > 1 ? "s" : ""}
+            <details className="mt-4 app-surface rounded-2xl p-4 group">
+              <summary className="cursor-pointer text-sm font-semibold text-[var(--ink-500)] flex items-center justify-between">
+                <span>{archivedBoxes.length} enveloppe{archivedBoxes.length > 1 ? "s" : ""} archivée{archivedBoxes.length > 1 ? "s" : ""}</span>
+                <Plus className="size-4 group-open:rotate-45 transition-transform" />
               </summary>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {archivedBoxes.map((b) => (
@@ -181,38 +197,43 @@ export function EpargneClient({
               </div>
             </details>
           ) : null}
-        </>
+        </div>
       ) : (
-        <section className="space-y-5">
-          <div className="space-y-3">
-            <div className="px-1">
+        <section className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="px-1 flex items-center justify-between">
+            <div>
               <p className="section-kicker text-[var(--coral-500)]">Utiliser</p>
               <h2 className="text-lg font-bold text-[var(--ink-950)]">Lancer un calcul</h2>
-              <p className="text-sm text-[var(--ink-600)]">
-                Choisissez une carte, renseignez les valeurs, puis ajoutez le résultat à l&apos;enveloppe voulue.
-              </p>
             </div>
-            <CalculatorRunner
-              householdId={householdId}
-              boxes={activeBoxes}
-              color="var(--coral-500)"
-              variant="grid"
-            />
           </div>
+          
+          <CalculatorRunner
+            key={refreshCalculatorsKey}
+            householdId={householdId}
+            boxes={activeBoxes}
+            color="var(--coral-500)"
+            variant="grid"
+            onCreate={() => {
+              setEditingCalculatorId(null);
+              setManagerOpen(true);
+            }}
+            onEdit={(calc) => {
+              setEditingCalculatorId(calc.id);
+              setManagerOpen(true);
+            }}
+          />
 
-          <div className="app-surface rounded-2xl border border-black/[0.03] p-5">
-            <div className="mb-4 border-b border-black/[0.05] pb-4">
-              <p className="section-kicker text-[var(--ink-500)]">Créer / gérer</p>
-              <h2 className="text-lg font-bold text-[var(--ink-950)]">Bibliothèque de calculateurs</h2>
-              <p className="text-sm text-[var(--ink-600)]">
-                Créez de nouvelles règles ou modifiez les modèles existants.
-              </p>
-            </div>
-            <CalculatorManager
-              householdId={householdId}
-              boxes={activeBoxes}
-            />
-          </div>
+          <CalculatorManager
+            householdId={householdId}
+            boxes={activeBoxes}
+            isOpen={managerOpen}
+            initialEditingId={editingCalculatorId}
+            onClose={() => {
+              setManagerOpen(false);
+              setEditingCalculatorId(null);
+            }}
+            onSuccess={() => setRefreshCalculatorsKey(k => k + 1)}
+          />
         </section>
       )}
 
@@ -233,12 +254,14 @@ export function EpargneClient({
         box={openBox}
         householdId={householdId}
         activeBoxes={activeBoxes}
+        onChanged={() => setRefreshKey((k) => k + 1)}
       />
       <TransferSheet
         isOpen={transferOpen}
         onClose={() => setTransferOpen(false)}
         householdId={householdId}
         boxes={activeBoxes}
+        onSuccess={() => setRefreshKey((k) => k + 1)}
       />
       <BottomSheet
         isOpen={transferHistoryOpen}

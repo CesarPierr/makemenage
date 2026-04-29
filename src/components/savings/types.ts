@@ -64,7 +64,7 @@ export type SavingsCalculatorView = {
   description: string | null;
   formula: string;
   reasonTemplate: string | null;
-  resultMode: "deposit" | "withdrawal";
+  resultMode: "deposit" | "withdrawal" | "none";
   negativeMode: "clamp_to_zero" | "convert_to_opposite";
   roundingMode: "cents" | "euro_floor" | "euro_ceil" | "euro_nearest";
   isArchived: boolean;

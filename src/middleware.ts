@@ -119,9 +119,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Set __csrf cookie on page requests when authenticated (JS-readable double-submit)
+  // Set __csrf cookie on page requests when authenticated (JS-readable double-submit).
+  // Always overwrite — if CSRF_SECRET rotates, stale cookies self-heal on the next page load.
   const response = NextResponse.next();
-  if (sessionToken && !request.cookies.get(CSRF_COOKIE)) {
+  if (sessionToken) {
     const csrfToken = await deriveCsrfToken(sessionToken);
     const isSecure = request.nextUrl.protocol === "https:";
     response.cookies.set(CSRF_COOKIE, csrfToken, {

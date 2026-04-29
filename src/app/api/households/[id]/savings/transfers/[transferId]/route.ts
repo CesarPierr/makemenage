@@ -40,6 +40,6 @@ export const POST = withHousehold<{ id: string; transferId: string }>(
     if (boxId) redirectUrl += `&box=${boxId}`;
     if (tab) redirectUrl += `&tab=${tab}`;
 
-    return dataOrRedirect(request, redirectUrl);
+    return dataOrRedirect(request, redirectUrl, {}, false);
   },
 );

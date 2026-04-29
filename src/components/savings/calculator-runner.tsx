@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Calculator, ChevronDown } from "lucide-react";
+import { Calculator, ChevronDown, Plus, Settings2 } from "lucide-react";
 
 import { formatCurrency } from "@/lib/savings/currency";
 import { evaluateFormula } from "@/lib/savings/formula";
@@ -18,6 +18,8 @@ type CalculatorRunnerProps = {
   defaultOpen?: boolean;
   variant?: "accordion" | "grid";
   onRun?: () => void;
+  onEdit?: (calculator: SavingsCalculatorView) => void;
+  onCreate?: () => void;
 };
 
 function parseInput(value: string) {
@@ -62,6 +64,8 @@ export function CalculatorRunner({
   defaultOpen = false,
   variant = "accordion",
   onRun,
+  onEdit,
+  onCreate,
 }: CalculatorRunnerProps) {
   const [calculators, setCalculators] = useState<SavingsCalculatorView[]>([]);
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -80,6 +84,8 @@ export function CalculatorRunner({
         if (cancelled) return;
         const list = (data.calculators ?? []) as SavingsCalculatorView[];
         setCalculators(list);
+        
+        // If we are in accordion mode (contextual in box sheet), we might want to auto-select
         if (list[0] && variant === "accordion") {
           setSelectedId((current) => current || list[0].id);
           setTargetBoxId((current) => current || boxId || list[0].boxId || boxes.find((b) => !b.isArchived)?.id || "");
@@ -100,7 +106,7 @@ export function CalculatorRunner({
   }, [householdId, boxId, boxes, variant]);
 
   const selected = useMemo(
-    () => calculators.find((calculator) => calculator.id === selectedId) ?? calculators[0] ?? null,
+    () => calculators.find((calculator) => calculator.id === selectedId) ?? null,
     [calculators, selectedId],
   );
 
@@ -123,7 +129,7 @@ export function CalculatorRunner({
     action: selected
       ? `/api/households/${householdId}/savings/calculators/${selected.id}/run`
       : "",
-    successMessage: "Calcul ajouté à l'enveloppe.",
+    successMessage: selected?.resultMode === "none" ? "Calcul terminé." : "Calcul ajouté à l'enveloppe.",
     errorMessage: "Impossible d'appliquer ce calcul.",
     onSuccess: onRun,
   });
@@ -131,12 +137,15 @@ export function CalculatorRunner({
   if (calculators.length === 0) {
     if (variant === "grid") {
       return (
-        <div className="app-surface rounded-2xl border border-dashed border-black/10 p-6 text-center">
-          <Calculator className="mx-auto size-7 text-[var(--coral-500)]" />
-          <p className="mt-2 text-sm font-bold">Aucun calculateur prêt à utiliser</p>
-          <p className="text-xs text-[var(--ink-500)]">
-            Créez votre premier calculateur dans la bibliothèque ci-dessous.
-          </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <button
+            type="button"
+            onClick={onCreate}
+            className="app-surface rounded-2xl border border-dashed border-black/10 p-5 flex flex-col items-center justify-center gap-2 text-center hover:bg-black/[0.02] transition-colors group h-full min-h-[80px]"
+          >
+            <Plus className="size-5 text-[var(--ink-400)] group-hover:text-[var(--coral-500)] transition-colors" />
+            <span className="text-xs font-bold text-[var(--ink-400)]">Nouveau calculateur</span>
+          </button>
         </div>
       );
     }
@@ -145,58 +154,75 @@ export function CalculatorRunner({
 
   const form = selected ? (
     <form
-      className="space-y-3"
+      className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
         const fd = new FormData();
         for (const field of selected.fields) {
           fd.set(`input:${field.key}`, inputs[field.key] ?? "");
         }
-        fd.set("targetBoxId", targetBoxId);
+        if (selected.resultMode !== "none") {
+          fd.set("targetBoxId", targetBoxId);
+        }
         run.submit(fd);
       }}
     >
-      <p className="text-xs font-semibold text-[var(--ink-700)]">{selected.name}</p>
-      <label className="field-label">
-        <span>Enveloppe cible</span>
-        <select
-          className="field"
-          value={targetBoxId}
-          onChange={(event) => setTargetBoxId(event.target.value)}
-          required
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-bold text-[var(--ink-900)]">{selected.name}</p>
+        <button 
+          type="button" 
+          onClick={() => setSelectedId("")}
+          className="text-xs font-bold text-[var(--ink-400)] hover:text-red-500"
         >
-          {boxes.filter((b) => !b.isArchived).map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {selected.fields.map((field) => (
-        <label key={field.id} className="field-label">
-          <span>{field.label}</span>
-          <input
+          Annuler
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <label className="field-label sm:col-span-2">
+          <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Enveloppe cible</span>
+          <select
             className="field"
-            type="text"
-            inputMode="decimal"
-            value={inputs[field.key] ?? ""}
-            onChange={(event) => setInputs((current) => ({ ...current, [field.key]: event.target.value }))}
-            placeholder={field.type === "percent" ? "20" : field.type === "amount" ? "0,00" : "0"}
-            required={field.isRequired}
-          />
-          {field.helperText ? (
-            <span className="text-[0.7rem] text-[var(--ink-500)]">{field.helperText}</span>
-          ) : null}
+            value={targetBoxId}
+            onChange={(event) => setTargetBoxId(event.target.value)}
+            required
+          >
+            {boxes.filter((b) => !b.isArchived).map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
         </label>
-      ))}
+        {selected.fields.map((field) => (
+          <label key={field.id} className="field-label">
+            <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">{field.label}</span>
+            <input
+              className="field"
+              type="text"
+              inputMode="decimal"
+              value={inputs[field.key] ?? ""}
+              onChange={(event) => setInputs((current) => ({ ...current, [field.key]: event.target.value }))}
+              placeholder={field.type === "percent" ? "20" : field.type === "amount" ? "0,00" : "0"}
+              required={field.isRequired}
+              autoFocus={selected.fields[0].id === field.id}
+            />
+            {field.helperText ? (
+              <span className="text-[0.65rem] font-medium text-[var(--ink-400)] mt-0.5">{field.helperText}</span>
+            ) : null}
+          </label>
+        ))}
+      </div>
 
       <button
         type="submit"
-        disabled={run.isSubmitting || !preview || preview.amount <= 0 || !targetBoxId}
-        className="btn-primary flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold disabled:opacity-50"
+        disabled={run.isSubmitting || !preview || (selected.resultMode !== "none" && (preview.amount <= 0 || !targetBoxId))}
+        className="btn-primary flex w-full items-center justify-center gap-2 px-4 py-3.5 text-sm font-bold shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
       >
         <Calculator className="size-4" />
-        {preview
+        {selected.resultMode === "none"
+          ? "Terminer"
+          : preview
           ? `${preview.entryType === "deposit" ? "Ajouter" : "Retirer"} ${formatCurrency(preview.amount)}`
           : "Calculer"}
       </button>
@@ -205,42 +231,68 @@ export function CalculatorRunner({
 
   if (variant === "grid") {
     return (
-      <section className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
+      <section className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {calculators.map((calculator) => (
-            <button
-              key={calculator.id}
-              type="button"
-              onClick={() => {
-                setSelectedId(calculator.id);
-                setTargetBoxId(calculator.boxId || boxes.find((b) => !b.isArchived)?.id || "");
-                setInputs(Object.fromEntries(
-                  calculator.fields.map((field) => [field.key, field.defaultValue?.replace(".", ",") ?? ""]),
-                ));
-              }}
-              className={cn(
-                "app-surface interactive-surface rounded-2xl border p-4 text-left transition-all hover:shadow-md active:scale-[0.99]",
-                selectedId === calculator.id ? "border-[var(--coral-500)]" : "border-black/[0.04]",
-              )}
-              style={{ borderLeft: `4px solid ${color}` }}
-            >
-              <div className="flex items-start gap-2">
-                <Calculator className="mt-0.5 size-4 shrink-0" style={{ color }} />
-                <div className="min-w-0">
-                  <h3 className="truncate text-base font-bold text-[var(--ink-950)]">{calculator.name}</h3>
-                  <p className="mt-1 line-clamp-2 text-xs text-[var(--ink-500)]">
-                    {calculator.description || calculator.formula}
-                  </p>
-                  <p className="mt-2 text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--ink-400)]">
-                    {calculator.boxId ? "Cible proposée" : "Global"} · {calculator.fields.length} champ{calculator.fields.length > 1 ? "s" : ""}
-                  </p>
+            <div key={calculator.id} className="relative group">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedId(calculator.id);
+                  setTargetBoxId(calculator.boxId || boxes.find((b) => !b.isArchived)?.id || "");
+                  setInputs(Object.fromEntries(
+                    calculator.fields.map((field) => [field.key, field.defaultValue?.replace(".", ",") ?? ""]),
+                  ));
+                }}
+                className={cn(
+                  "w-full app-surface interactive-surface rounded-2xl border p-4 text-left transition-all hover:shadow-lg active:scale-[0.99]",
+                  selectedId === calculator.id 
+                    ? "border-[var(--coral-500)] bg-[var(--coral-50)] ring-2 ring-[var(--coral-100)]" 
+                    : "border-black/[0.04] hover:border-black/[0.1]",
+                )}
+                style={{ borderLeft: selectedId === calculator.id ? `4px solid var(--coral-500)` : `4px solid ${color}` }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={cn(
+                    "mt-0.5 p-2 rounded-xl transition-colors",
+                    selectedId === calculator.id ? "bg-white" : "bg-black/[0.03] group-hover:bg-black/[0.06]"
+                  )}>
+                    <Calculator className="size-4" style={{ color: selectedId === calculator.id ? "var(--coral-500)" : color }} />
+                  </div>
+                  <div className="min-w-0 flex-1 pr-6">
+                    <h3 className="truncate text-sm font-bold text-[var(--ink-950)]">{calculator.name}</h3>
+                    <p className="mt-0.5 line-clamp-1 text-[10px] uppercase font-bold tracking-wider text-[var(--ink-400)]">
+                      {calculator.boxId ? "Cible par défaut" : "Global"}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onEdit(calculator); }}
+                  className="absolute top-2 right-2 p-2 rounded-lg text-[var(--ink-400)] hover:text-[var(--ink-900)] hover:bg-black/[0.05] transition-all opacity-0 group-hover:opacity-100"
+                  title="Modifier le modèle"
+                >
+                  <Settings2 className="size-3.5" />
+                </button>
+              )}
+            </div>
           ))}
+          {onCreate && (
+            <button
+              type="button"
+              onClick={onCreate}
+              className="app-surface rounded-2xl border border-dashed border-black/10 p-4 flex items-center justify-center gap-2 hover:bg-black/[0.02] transition-colors group min-h-[72px]"
+            >
+              <Plus className="size-4 text-[var(--ink-400)] group-hover:text-[var(--coral-500)] transition-colors" />
+              <span className="text-xs font-bold text-[var(--ink-400)]">Nouveau</span>
+            </button>
+          )}
         </div>
+        
         {selected ? (
-          <div className="app-surface rounded-2xl border border-black/[0.03] p-4">
+          <div className="app-surface rounded-2xl border border-black/[0.03] p-5 animate-in fade-in zoom-in-95 duration-200">
             {form}
           </div>
         ) : null}

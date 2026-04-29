@@ -385,6 +385,7 @@ enum SavingsCalculatorFieldType {
 enum SavingsCalculatorResultMode {
   deposit
   withdrawal
+  none
 }
 
 enum SavingsCalculatorNegativeMode {
@@ -540,7 +541,7 @@ model SavingsCalculatorRun {
   id             String            @id @default(cuid())
   calculatorId   String
   householdId    String
-  boxId          String
+  boxId          String?
   inputValues    Json
   rawResult      Decimal           @db.Decimal(12, 4)
   resultAmount   Decimal           @db.Decimal(12, 2)
@@ -550,7 +551,7 @@ model SavingsCalculatorRun {
   createdAt      DateTime          @default(now())
 
   calculator     SavingsCalculator @relation(fields: [calculatorId], references: [id], onDelete: Cascade)
-  box            SavingsBox        @relation(fields: [boxId], references: [id], onDelete: Cascade)
+  box            SavingsBox?       @relation(fields: [boxId], references: [id], onDelete: Cascade)
   entry          SavingsEntry?     @relation(fields: [entryId], references: [id], onDelete: SetNull)
 
   @@index([calculatorId, createdAt])
