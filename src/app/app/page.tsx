@@ -113,22 +113,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           householdName={context.household.name}
           currentMemberName={context.currentMember?.displayName ?? "vous"}
         />
-        <div className="text-center">
-          <button
-            onClick={async () => {
-              "use client";
-              const csrfToken = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/)?.[1] ?? "";
-              await fetch(`/api/households/${context.household.id}/onboarding`, { 
-                method: "POST",
-                headers: csrfToken ? { "x-csrf-token": csrfToken } : {}
-              });
-              window.location.reload();
-            }}
-            className="text-xs text-ink-400 hover:text-ink-700"
-          >
-            Passer pour l&apos;instant
-          </button>
-        </div>
       </div>
     );
   }

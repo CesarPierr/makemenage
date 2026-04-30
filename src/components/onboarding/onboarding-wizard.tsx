@@ -223,6 +223,15 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
           >
             C&apos;est parti <ArrowRight className="size-4" />
           </button>
+          <div className="mt-4">
+            <button
+              className="text-xs text-ink-400 hover:text-ink-700 font-medium"
+              onClick={completeOnboarding}
+              type="button"
+            >
+              Passer l&apos;introduction
+            </button>
+          </div>
         </div>
       )}
 
