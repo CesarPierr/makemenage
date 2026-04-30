@@ -190,7 +190,7 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
             Bienvenue dans<br />{householdName} !
           </h2>
           <p className="mt-4 text-ink-700 leading-7">
-            Bonjour <strong>{currentMemberName}</strong>. MakeMenage est l&apos;outil ultime pour gérer le foyer sans friction.
+            Bonjour <strong>{currentMemberName}</strong>. Créez des tâches récurrentes, attribuez-les automatiquement à votre équipe ou votre foyer, et suivez votre épargne par enveloppes.
           </p>
           <div className="mt-8 grid gap-2.5 sm:grid-cols-3 text-left">
             <div className="flex flex-col gap-2 rounded-2xl border border-line bg-glass-bg p-4">
@@ -340,7 +340,7 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
           <div>
             <h2 className="display-title text-2xl sm:text-3xl">Gérez votre budget</h2>
             <p className="mt-3 text-sm text-ink-700 max-w-md mx-auto leading-relaxed">
-              MakeMenage intègre un module <strong>Épargne</strong> pour suivre vos caisses communes, 
+              Hearthly intègre un module <strong>Épargne</strong> pour suivre vos caisses communes, 
               les projets de vacances ou les dettes. Remplissez-les manuellement ou via des règles automatiques.
             </p>
           </div>
@@ -503,7 +503,7 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
             </div>
             <h2 className="display-title text-2xl sm:text-3xl">Invitez votre équipe</h2>
             <p className="mt-2 text-sm text-ink-700">
-              MakeMenage prend tout son sens à plusieurs. Générez un lien d&apos;accès pour les membres de votre foyer.
+              Hearthly prend tout son sens à plusieurs. Générez un lien d&apos;accès pour les membres de votre foyer.
             </p>
           </div>
 

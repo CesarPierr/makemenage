@@ -1,10 +1,10 @@
-# AGENTS.md — makemenage
+# AGENTS.md — hearthly
 
 Brief for AI coding agents working on this repo. Read this before exploring.
 
 ## What this app is
 
-A household chore-coordination web app for couples / colocs / families. Generates recurring task occurrences, attributes them fairly between members, exposes a mobile-first dashboard. Production target: 100 first users.
+A household chore-coordination and shared savings web app for couples / colocs / families. Generates recurring task occurrences, attributes them fairly between members, manages shared budget boxes, and exposes a mobile-first dashboard. Production target: 100 first users.
 
 ## Stack
 

@@ -5,5 +5,5 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-WorkingDirectory=/opt/makemenage
-ExecStart=/usr/bin/env bash /opt/makemenage/scripts/server/pull-and-deploy.sh
+WorkingDirectory=/opt/hearthly
+ExecStart=/usr/bin/env bash /opt/hearthly/scripts/server/pull-and-deploy.sh

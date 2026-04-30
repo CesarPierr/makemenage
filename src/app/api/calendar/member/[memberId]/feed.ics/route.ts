@@ -65,7 +65,7 @@ export async function GET(request: Request, { params }: Params) {
   }
 
   const calendar = ical({
-    name: `MakeMenage - ${targetMember.displayName}`,
+    name: `Hearthly - ${targetMember.displayName}`,
     timezone: householdTimezone,
   });
 

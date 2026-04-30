@@ -98,8 +98,10 @@ export default async function HomePage() {
       <header className="sticky top-0 z-20 mx-auto max-w-6xl px-4 pt-4 sm:px-6">
         <div className="app-surface flex items-center justify-between rounded-[2rem] px-5 py-3.5">
           <div className="flex items-center gap-2">
-            <House className="size-5 text-coral-500" />
-            <span className="font-bold tracking-tight">MakeMenage</span>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-coral-500 text-white shadow-sm">
+              <House className="size-4" />
+            </div>
+            <span className="font-bold tracking-tight">Hearthly</span>
           </div>
           <div className="flex items-center gap-2">
             <Link
@@ -128,13 +130,13 @@ export default async function HomePage() {
               Couple · Famille · Colocation
             </div>
             <h1 className="display-title text-4xl leading-tight sm:text-5xl lg:text-6xl">
-              Répartissez les tâches ménagères{" "}
-              <span style={{ color: "var(--coral-600)" }}>équitablement</span>,{" "}
-              sans effort
+              Organisez vos routines et votre budget.{" "}
+              <span style={{ color: "var(--coral-600)" }}>Partagez</span> les responsabilités équitablement.
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-ink-700">
-              Planning automatique, rotation juste et vue calendrier — conçu pour le mobile,
-              auto-hébergeable, et pensé pour les foyers qui veulent une vraie organisation sans friction.
+              Organisez votre quotidien. N&apos;oubliez plus rien.
+              Planning automatique, rotation juste et épargne partagée — conçu pour le mobile,
+              auto-hébergeable, et pensé pour les groupes qui veulent une vraie organisation sans friction.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -242,7 +244,7 @@ export default async function HomePage() {
           }}
         >
           <h2 className="display-title text-3xl sm:text-4xl">
-            Prêt à organiser votre foyer ?
+            Prêt à organiser votre quotidien ?
           </h2>
           <p className="mt-4 text-ink-700">
             Gratuit, sans engagement. Votre premier foyer est opérationnel en moins de 2 minutes.
@@ -261,7 +263,7 @@ export default async function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-line py-8 text-center text-sm text-ink-500">
-        <p>© {new Date().getFullYear()} MakeMenage · Auto-hébergeable · Conçu avec soin</p>
+        <p>© {new Date().getFullYear()} Hearthly · Auto-hébergeable · Conçu avec soin</p>
         <div className="mt-2 flex justify-center gap-4 text-xs">
           <Link href="/login" className="hover:text-ink-700">Connexion</Link>
           <Link href="/register" className="hover:text-ink-700">Inscription</Link>

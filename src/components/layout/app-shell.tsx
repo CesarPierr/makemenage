@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CalendarDays, Compass, LayoutGrid, LogOut, Moon, PiggyBank, Settings2, Sun } from "lucide-react";
+import { CalendarDays, Compass, Home, LayoutGrid, LogOut, Moon, PiggyBank, Settings2, Sun } from "lucide-react";
 
 import { FeatureTour } from "@/components/onboarding/feature-tour";
 import { PWAInstallBanner } from "@/components/shared/pwa-install-banner";
@@ -151,11 +151,16 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
       {/* Sidebar for Desktop */}
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)] lg:w-64 lg:flex-col">
         <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-          <div className="app-surface glow-card interactive-surface rounded-[2rem] p-6">
-            <p className="section-kicker">MakeMenage</p>
-            <h2 className="mt-1 text-xl font-bold tracking-tight">{householdName ?? "Votre foyer"}</h2>
-            <p className="mt-2 text-sm leading-6 text-ink-700">
-              Une base simple pour agir aujourd&apos;hui et planifier quand il le faut.
+          <div className="app-surface glow-card rounded-[2rem] p-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-9 items-center justify-center rounded-xl bg-coral-500 text-white shadow-lg shadow-coral-500/20">
+                <Home className="size-5" />
+              </div>
+              <p className="font-display text-xl font-bold tracking-tight text-ink-950">Hearthly</p>
+            </div>
+            <h2 className="mt-4 text-sm font-bold text-ink-950">{householdName ?? "Votre foyer"}</h2>
+            <p className="mt-1.5 text-xs leading-relaxed text-ink-600">
+              Organisez vos routines et votre budget. Partagez les responsabilités équitablement.
             </p>
           </div>
           
@@ -171,16 +176,19 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
                   key={item.href}
                   href={href}
                   className={cn(
-                    "interactive-surface flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition-all",
+                    "relative flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition-all duration-300",
                     active
-                      ? "bg-coral-500 text-[var(--sand-50)] shadow-[0_14px_28px_rgba(216,100,61,0.18)] scale-[1.02]"
-                      : "text-ink-700 hover:bg-sand-100 hover:text-ink-950 hover:shadow-sm"
+                      ? "bg-white text-ink-950 shadow-[0_12px_24px_-8px_rgba(70,48,20,0.12)] ring-1 ring-black/5 scale-[1.02]"
+                      : "text-ink-700 hover:bg-white/40 hover:text-ink-950"
                   )}
                 >
+                  {active && (
+                    <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-coral-500 animate-in fade-in slide-in-from-left-1" />
+                  )}
                   <Icon className="size-5 shrink-0" />
                   <div className="min-w-0">
                     <span>{item.label}</span>
-                    <p className={cn("truncate text-[0.72rem] font-medium opacity-80", active ? "text-white/88" : "text-ink-500")}>
+                    <p className={cn("truncate text-[0.72rem] font-medium transition-colors", active ? "text-ink-600" : "text-ink-500")}>
                       {meta.description}
                     </p>
                   </div>
@@ -223,7 +231,12 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
           <header className="app-surface glow-card sticky top-3 z-20 mb-4 rounded-[1.8rem] px-4 py-3 sm:py-4 sm:px-5 lg:static lg:top-0 lg:mb-6">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="section-kicker lg:hidden">MakeMenage</p>
+                <div className="flex items-center gap-2 lg:hidden mb-1">
+                  <div className="flex size-5 items-center justify-center rounded bg-coral-500 text-white shadow-sm">
+                    <Home className="size-3" />
+                  </div>
+                  <p className="section-kicker !tracking-normal !normal-case text-[0.65rem] font-bold">Hearthly</p>
+                </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2 lg:mt-0">
                   <h1 className="display-title text-xl leading-tight sm:text-3xl">
                     {activeMeta.title}
@@ -285,7 +298,7 @@ export function AppShell({ children, householdName, currentHouseholdId }: AppShe
                   className={cn(
                     "flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-xl px-1.5 py-2 text-center text-[0.65rem] font-semibold transition-all",
                     active
-                      ? "bg-coral-500 text-white shadow-[0_8px_20px_rgba(216,100,61,0.25)]"
+                      ? "bg-white text-ink-950 shadow-[0_8px_20px_rgba(70,48,20,0.12)] ring-1 ring-black/5"
                       : "text-[var(--ink-600)] active:bg-black/[0.04]",
                   )}
                   href={href}

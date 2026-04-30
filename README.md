@@ -1,10 +1,10 @@
 <div align="center">
 
-# MakeMenage
+# Hearthly
 
-**L'app qui répartit les tâches du foyer, équitablement et sans friction.**
+**L'app qui répartit les tâches et l'épargne du foyer, équitablement et sans friction.**
 
-Récurrences automatiques, rotation équitable entre membres, dashboard mobile-first, PWA installable, self-hostable en Docker.
+Récurrences automatiques, rotation équitable entre membres, épargne partagée, dashboard mobile-first, PWA installable, self-hostable en Docker.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-149eca?logo=react)](https://react.dev)
@@ -17,7 +17,7 @@ Récurrences automatiques, rotation équitable entre membres, dashboard mobile-f
 
 ---
 
-## Ce que fait MakeMenage
+## Ce que fait Hearthly
 
 - **Tâches récurrentes** — `daily`, `every_x_days`, `weekly`, `every_x_weeks`, `monthly_simple`, avec glissement intelligent (Sliding Window)
 - **Attribution équitable** — `fixed`, `manual`, `strict_alternation`, `round_robin`, `least_assigned_count`, `least_assigned_minutes`

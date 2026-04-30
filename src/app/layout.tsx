@@ -16,29 +16,29 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: {
-    default: "MakeMenage",
-    template: "%s · MakeMenage",
+    default: "Hearthly",
+    template: "%s · Hearthly",
   },
-  description: "Répartissez les tâches ménagères équitablement. Planning automatique, rotation juste et vue calendrier — pensé pour le mobile.",
-  keywords: ["tâches ménagères", "planning familial", "répartition tâches", "gestion foyer", "colocation"],
-  authors: [{ name: "MakeMenage" }],
+  description: "Organisez vos routines et votre budget. Partagez les responsabilités équitablement.",
+  keywords: ["gestion foyer", "tâches ménagères", "épargne partagée", "planning familial", "équité"],
+  authors: [{ name: "Hearthly" }],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "MakeMenage",
+    title: "Hearthly",
   },
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    title: "MakeMenage — Planning ménager équitable",
-    description: "Répartissez les tâches ménagères équitablement. Planning automatique, rotation juste et vue calendrier.",
-    siteName: "MakeMenage",
+    title: "Hearthly — Gestion équitable du foyer",
+    description: "Organisez vos routines et votre budget. Partagez les responsabilités équitablement.",
+    siteName: "Hearthly",
   },
   twitter: {
     card: "summary",
-    title: "MakeMenage",
-    description: "Planning ménager équitable pour foyer, couple ou colocation.",
+    title: "Hearthly",
+    description: "Organisez vos routines et votre budget. Partagez les responsabilités équitablement.",
   },
   other: {
     "mobile-web-app-capable": "yes",

@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
 
-const SESSION_COOKIE = "makemenage_session";
+const SESSION_COOKIE = "hearthly_session";
 const SESSION_DURATION_DAYS = 21;
 
 function shouldUseSecureSessionCookie() {

@@ -1,7 +1,7 @@
 {
-  "name": "MakeMenage",
-  "short_name": "MakeMenage",
-  "description": "Répartition équitable des tâches ménagères pour foyer, couple ou colocation.",
+  "name": "Hearthly",
+  "short_name": "Hearthly",
+  "description": "Répartition équitable du ménage et de l'épargne pour votre foyer.",
   "start_url": "/app",
   "display": "standalone",
   "background_color": "#F9F7F4",
