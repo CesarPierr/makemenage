@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { requireHouseholdContext, canManageHousehold } from "@/lib/households";
 import { redirect } from "next/navigation";
-import { ClientForm } from "@/components/client-form";
+import { ClientForm } from "@/components/shared/client-form";
 
 type PlanningPageProps = {
   searchParams: Promise<{ household?: string; rebalance?: string; absence?: string }>;
@@ -93,7 +93,7 @@ export default async function PlanningSettingsPage({ searchParams }: PlanningPag
             <span>Note</span>
             <input className="field" type="text" name="notes" placeholder="Facultative" />
           </label>
-          <div className="rounded-[1.2rem] border border-[rgba(56,115,93,0.12)] bg-[rgba(56,115,93,0.08)] px-4 py-3 text-sm leading-6 text-[var(--ink-700)]">
+          <div className="rounded-[1.2rem] border border-[rgba(56,115,93,0.12)] bg-[rgba(56,115,93,0.08)] px-4 py-3 text-sm leading-6 text-ink-700">
             Le planning futur est recalculé automatiquement.
           </div>
           <button className="btn-primary w-full px-5 py-3 font-semibold" type="submit">
@@ -112,7 +112,7 @@ export default async function PlanningSettingsPage({ searchParams }: PlanningPag
             </select>
           </label>
           <label className="field-label">
-            <span className="inline-flex items-start gap-3 rounded-[1rem] border border-[var(--line)] bg-white/70 px-4 py-3 font-medium text-[var(--ink-950)]">
+            <span className="inline-flex items-start gap-3 rounded-[1rem] border border-line bg-white/70 dark:bg-[#262830]/70 px-4 py-3 font-medium text-ink-950">
               <input name="forceOverwriteManual" type="checkbox" className="mt-1" />
               <span>Écraser les modifications manuelles futures</span>
             </span>
@@ -134,18 +134,18 @@ export default async function PlanningSettingsPage({ searchParams }: PlanningPag
         {upcomingAbsences.length ? (
           <div className="space-y-3">
             {upcomingAbsences.map((absence) => (
-              <div key={absence.id} className="rounded-[1.4rem] border border-[var(--line)] bg-white/70 p-4">
+              <div key={absence.id} className="rounded-[1.4rem] border border-line bg-white/70 dark:bg-[#262830]/70 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="size-3 rounded-full" style={{ backgroundColor: absence.member.color }} />
                       <p className="font-semibold">{absence.member.displayName}</p>
                     </div>
-                    <p className="mt-1 text-sm text-[var(--ink-700)]">
+                    <p className="mt-1 text-sm text-ink-700">
                       Du {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(absence.startDate)}
                       {" "}au {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(absence.endDate)}
                     </p>
-                    {absence.notes ? <p className="mt-1 text-sm text-[var(--ink-700)]">{absence.notes}</p> : null}
+                    {absence.notes ? <p className="mt-1 text-sm text-ink-700">{absence.notes}</p> : null}
                   </div>
                   <ClientForm action={`/api/members/absence/${absence.id}/delete`} method="POST">
                     <button className="btn-quiet px-4 py-2 text-sm font-semibold" type="submit">
@@ -157,7 +157,7 @@ export default async function PlanningSettingsPage({ searchParams }: PlanningPag
             ))}
           </div>
         ) : (
-          <div className="rounded-[1.4rem] border border-[var(--line)] bg-white/70 p-4 text-sm text-[var(--ink-700)]">
+          <div className="rounded-[1.4rem] border border-line bg-white/70 dark:bg-[#262830]/70 p-4 text-sm text-ink-700">
             Aucune absence future enregistrée.
           </div>
         )}

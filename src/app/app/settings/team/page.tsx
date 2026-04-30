@@ -1,7 +1,7 @@
-import { MemberSettingsList } from "@/components/member-settings-list";
+import { MemberSettingsList } from "@/components/settings/member-settings-list";
 import { requireUser } from "@/lib/auth";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
-import { ClientForm } from "@/components/client-form";
+import { ClientForm } from "@/components/shared/client-form";
 
 type TeamPageProps = {
   searchParams: Promise<{ household?: string; member?: string }>;
@@ -56,7 +56,7 @@ export default async function TeamSettingsPage({ searchParams }: TeamPageProps) 
 
       {manageable ? (
         <ClientForm action={`/api/households/${context.household.id}/members`} method="POST" className="soft-panel compact-form-grid p-5">
-          <p className="text-sm font-semibold text-[var(--ink-950)]">Ajouter un membre</p>
+          <p className="text-sm font-semibold text-ink-950">Ajouter un membre</p>
           <label className="field-label">
             <span>Nom</span>
             <input className="field" type="text" name="displayName" placeholder="Nom affiché" required />
@@ -80,7 +80,7 @@ export default async function TeamSettingsPage({ searchParams }: TeamPageProps) 
             </label>
           </div>
           <label className="field-label">
-            <span className="inline-flex items-center gap-3 rounded-[1rem] border border-[var(--line)] bg-white/70 px-4 py-3 font-medium text-[var(--ink-950)]">
+            <span className="inline-flex items-center gap-3 rounded-[1rem] border border-line bg-white/70 dark:bg-[#262830]/70 px-4 py-3 font-medium text-ink-950">
               <input defaultChecked name="includeInExistingTasks" type="checkbox" value="on" />
               Inclure ce membre dans les tâches futures existantes
             </span>

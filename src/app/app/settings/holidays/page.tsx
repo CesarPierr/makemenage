@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Plane, Trash2 } from "lucide-react";
 
-import { ClientForm } from "@/components/client-form";
+import { ClientForm } from "@/components/shared/client-form";
 import { requireUser } from "@/lib/auth";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 import { listHolidays } from "@/lib/holidays";
@@ -18,7 +18,7 @@ export default async function HolidaysPage({ searchParams }: HolidaysPageProps) 
 
   if (!canManageHousehold(context.membership.role)) {
     return (
-      <section className="app-surface rounded-[2rem] p-6 text-sm text-[var(--ink-700)]">
+      <section className="app-surface rounded-[2rem] p-6 text-sm text-ink-700">
         Cette page est réservée aux admins du foyer.
       </section>
     );
@@ -42,19 +42,19 @@ export default async function HolidaysPage({ searchParams }: HolidaysPageProps) 
     <section className="space-y-4">
       <div className="app-surface rounded-[2rem] p-5 sm:p-6">
         <div className="flex items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[rgba(47,109,136,0.1)] text-[var(--sky-600)]">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[rgba(47,109,136,0.1)] text-sky-600">
             <Plane className="size-5" aria-hidden="true" />
           </span>
           <div>
             <h2 className="display-title text-2xl leading-tight">Vacances du foyer</h2>
-            <p className="mt-1 text-sm leading-6 text-[var(--ink-700)]">
+            <p className="mt-1 text-sm leading-6 text-ink-700">
               Déclarez une période où tout le foyer est en pause. Les tâches prévues sur ces dates sont automatiquement décalées juste après.
             </p>
           </div>
         </div>
 
         {feedback ? (
-          <div className="mt-4 rounded-2xl border border-[rgba(56,115,93,0.18)] bg-[rgba(56,115,93,0.06)] px-4 py-3 text-sm text-[var(--leaf-600)]">
+          <div className="mt-4 rounded-2xl border border-[rgba(56,115,93,0.18)] bg-[rgba(56,115,93,0.06)] px-4 py-3 text-sm text-leaf-600">
             {feedback}
           </div>
         ) : null}
@@ -91,7 +91,7 @@ export default async function HolidaysPage({ searchParams }: HolidaysPageProps) 
         <h3 className="display-title mt-1 text-xl">Historique</h3>
 
         {holidays.length === 0 ? (
-          <p className="mt-4 rounded-2xl border border-dashed border-[var(--line)] p-5 text-center text-sm text-[var(--ink-500)]">
+          <p className="mt-4 rounded-2xl border border-dashed border-line p-5 text-center text-sm text-ink-500">
             Aucune période déclarée pour l&apos;instant.
           </p>
         ) : (
@@ -101,15 +101,15 @@ export default async function HolidaysPage({ searchParams }: HolidaysPageProps) 
               return (
                 <li
                   key={holiday.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-white/70 px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white/70 dark:bg-[#262830]/70 px-4 py-3"
                 >
                   <div className="min-w-0">
-                    <p className="font-semibold text-[var(--ink-950)]">
+                    <p className="font-semibold text-ink-950">
                       {format(holiday.startDate, "d MMM", { locale: fr })} —{" "}
                       {format(holiday.endDate, "d MMM yyyy", { locale: fr })}
-                      {holiday.label ? <span className="text-[var(--ink-500)]"> · {holiday.label}</span> : null}
+                      {holiday.label ? <span className="text-ink-500"> · {holiday.label}</span> : null}
                     </p>
-                    <p className="mt-0.5 text-xs text-[var(--ink-500)]">
+                    <p className="mt-0.5 text-xs text-ink-500">
                       {isPast ? "Période passée" : "À venir / en cours"}
                     </p>
                   </div>
@@ -122,7 +122,7 @@ export default async function HolidaysPage({ searchParams }: HolidaysPageProps) 
                   >
                     <button
                       aria-label="Supprimer la période"
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-white/70 px-3 py-2 text-xs font-semibold text-red-600 transition-all hover:bg-red-50"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/70 dark:bg-[#262830]/70 px-3 py-2 text-xs font-semibold text-red-600 transition-all hover:bg-red-50"
                       type="submit"
                     >
                       <Trash2 className="size-3.5" />

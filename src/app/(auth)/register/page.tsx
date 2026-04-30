@@ -26,10 +26,10 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
             Accueil
           </Link>
         </div>
-        <p className="mt-3 text-sm text-[var(--ink-700)]">Rapide, clair, pensé pour le téléphone.</p>
+        <p className="mt-3 text-sm text-ink-700">Rapide, clair, pensé pour le téléphone.</p>
         {params.error === "invalid_registration" ? (
           <div
-            className="mt-5 rounded-[1.4rem] border px-4 py-3 text-sm leading-6 text-[var(--coral-600)]"
+            className="mt-5 rounded-[1.4rem] border px-4 py-3 text-sm leading-6 text-coral-600"
             style={{
               backgroundColor: "rgba(216, 100, 61, 0.12)",
               borderColor: "rgba(30, 31, 34, 0.06)",
@@ -70,10 +70,10 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
             Créer mon compte
           </button>
         </form>
-        <p className="mt-5 text-sm text-[var(--ink-700)]">
+        <p className="mt-5 text-sm text-ink-700">
           Déjà inscrit ?{" "}
           <Link
-            className="font-semibold text-[var(--coral-600)]"
+            className="font-semibold text-coral-600"
             href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
           >
             Se connecter

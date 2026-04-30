@@ -8,16 +8,16 @@ import { db } from "@/lib/db";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 
 const TaskSettingsList = dynamic(
-  () => import("@/components/task-settings-list").then((m) => m.TaskSettingsList),
+  () => import("@/components/tasks/task-settings-list").then((m) => m.TaskSettingsList),
   {
-    loading: () => <div className="soft-panel p-4 text-sm text-[var(--ink-700)]">Chargement…</div>,
+    loading: () => <div className="soft-panel p-4 text-sm text-ink-700">Chargement…</div>,
   },
 );
 
 const TaskCreationWizard = dynamic(
-  () => import("@/components/task-creation-wizard").then((m) => m.TaskCreationWizard),
+  () => import("@/components/tasks/task-creation-wizard").then((m) => m.TaskCreationWizard),
   {
-    loading: () => <div className="soft-panel p-4 text-sm text-[var(--ink-700)]">Chargement…</div>,
+    loading: () => <div className="soft-panel p-4 text-sm text-ink-700">Chargement…</div>,
   },
 );
 
@@ -65,9 +65,9 @@ export default async function TasksSettingsPage({ searchParams }: TasksSettingsP
       <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
         <p className="section-kicker">Réglages · Tâches</p>
         <h2 className="display-title mt-2 text-3xl leading-tight sm:text-4xl">Gérer la bibliothèque de tâches</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-700)]">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-700">
           Tout le catalogue du foyer : ajouter, modifier, archiver les routines. Les actions du jour restent dans{" "}
-          <Link className="font-semibold text-[var(--coral-600)] underline" href={`/app${householdSuffix}`}>
+          <Link className="font-semibold text-coral-600 underline" href={`/app${householdSuffix}`}>
             Aujourd&apos;hui
           </Link>
           .
@@ -78,8 +78,8 @@ export default async function TasksSettingsPage({ searchParams }: TasksSettingsP
             aria-current={activeTab === "list" ? "page" : undefined}
             className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
               activeTab === "list"
-                ? "bg-[var(--coral-500)] text-white shadow-[0_8px_20px_rgba(216,100,61,0.2)]"
-                : "bg-white/80 border border-[var(--line)] text-[var(--ink-700)] hover:bg-white"
+                ? "bg-coral-500 text-white shadow-[0_8px_20px_rgba(216,100,61,0.2)]"
+                : "bg-white/80 dark:bg-[#262830]/80 border border-line text-ink-700 hover:bg-white dark:bg-[#262830]"
             }`}
             href={`/app/settings/tasks${householdSuffix}`}
           >
@@ -89,8 +89,8 @@ export default async function TasksSettingsPage({ searchParams }: TasksSettingsP
             aria-current={activeTab === "wizard" ? "page" : undefined}
             className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
               activeTab === "wizard"
-                ? "bg-[var(--coral-500)] text-white shadow-[0_8px_20px_rgba(216,100,61,0.2)]"
-                : "bg-white/80 border border-[var(--line)] text-[var(--ink-700)] hover:bg-white"
+                ? "bg-coral-500 text-white shadow-[0_8px_20px_rgba(216,100,61,0.2)]"
+                : "bg-white/80 dark:bg-[#262830]/80 border border-line text-ink-700 hover:bg-white dark:bg-[#262830]"
             }`}
             href={`/app/settings/tasks${householdSuffix}&tab=wizard`}
           >

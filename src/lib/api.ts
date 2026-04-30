@@ -6,6 +6,7 @@ import type { HouseholdMember, TaskOccurrence } from "@prisma/client";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { canManageHousehold } from "@/lib/households";
+import { logInfo } from "@/lib/logger";
 import { isDataRequest, normalizeNextPath, redirectTo } from "@/lib/request";
 
 type ParamsArg<P> = { params: Promise<P> };
@@ -94,6 +95,13 @@ export function withOccurrence<P extends { id: string }>(handler: OccurrenceHand
     const nextPath = normalizeNextPath(formData.get("nextPath")?.toString());
     const defaultDestination = nextPath ?? `/app?household=${occurrence.householdId}`;
 
+    logInfo("api_occurrence_request", {
+      path: request.url,
+      method: request.method,
+      userId: user.id,
+      occurrenceId: occurrence.id,
+    });
+
     return handler({
       request,
       user,
@@ -161,6 +169,13 @@ export function withHousehold<P>(
     if (options.requireManage && !canManage) {
       return dataErrorOrRedirect(request, 403, "Permissions insuffisantes.", "/app");
     }
+
+    logInfo("api_household_request", {
+      path: request.url,
+      method: request.method,
+      userId: user.id,
+      householdId,
+    });
 
     return handler({ request, user, params, membership, formData, canManage });
   };

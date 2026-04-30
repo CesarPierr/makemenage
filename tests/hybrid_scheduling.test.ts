@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { startOfDay, addDays, format } from "date-fns";
+import { format } from "date-fns";
 import { generateOccurrences } from "@/lib/scheduling/generator";
 
 const isoDate = (date: Date) => format(date, "yyyy-MM-dd");

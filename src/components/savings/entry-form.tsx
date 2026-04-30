@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 
 import { todayDateInput } from "@/lib/date-input";
@@ -26,11 +26,6 @@ export function EntryForm({
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [occurredOn, setOccurredOn] = useState(() => todayDateInput());
-
-  // Sync type if defaultType changes from parent (e.g. user clicks different quick action)
-  useEffect(() => {
-    setType(defaultType);
-  }, [defaultType]);
 
   const { submit, isSubmitting } = useFormAction({
     action: `/api/households/${householdId}/savings/boxes/${boxId}/entries`,
@@ -65,7 +60,7 @@ export function EntryForm({
               "flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
               type === "deposit"
                 ? "bg-[var(--leaf-500,#3F7E66)] text-white"
-                : "bg-black/[0.04] text-[var(--ink-700)]",
+                : "bg-black/[0.04] text-ink-700",
             )}
           >
             <ArrowDown className="size-4" />
@@ -77,8 +72,8 @@ export function EntryForm({
             className={cn(
               "flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
               type === "withdrawal"
-                ? "bg-[var(--coral-500)] text-white"
-                : "bg-black/[0.04] text-[var(--ink-700)]",
+                ? "bg-coral-500 text-white"
+                : "bg-black/[0.04] text-ink-700",
             )}
           >
             <ArrowUp className="size-4" />
@@ -89,7 +84,7 @@ export function EntryForm({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="field-label">
-          <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Montant (€)</span>
+          <span className="text-[10px] uppercase font-bold text-ink-500">Montant (€)</span>
           <input
             className="field"
             type="text"
@@ -103,7 +98,7 @@ export function EntryForm({
         </label>
 
         <label className="field-label">
-          <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Date</span>
+          <span className="text-[10px] uppercase font-bold text-ink-500">Date</span>
           <input
             className="field"
             type="date"
@@ -115,7 +110,7 @@ export function EntryForm({
       </div>
 
       <label className="field-label">
-        <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Raison (facultatif)</span>
+        <span className="text-[10px] uppercase font-bold text-ink-500">Raison (facultatif)</span>
         <input
           className="field"
           type="text"

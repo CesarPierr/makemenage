@@ -62,7 +62,7 @@ export function Dialog({ isOpen, onClose, title, children, footer, type = "defau
         <div className="flex items-start justify-between gap-3 mb-4">
           <h3 className="text-xl font-bold text-gray-900 sm:text-2xl">{title}</h3>
           <button
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-black/[0.06] text-[var(--ink-700)] transition-colors hover:bg-black/10 active:scale-90"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-black/[0.06] text-ink-700 transition-colors hover:bg-black/10 active:scale-90"
             onClick={onClose}
             type="button"
           >

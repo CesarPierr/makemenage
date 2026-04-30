@@ -28,13 +28,13 @@ export default async function ResetPasswordPage({ params, searchParams }: ResetP
             className="mt-6 rounded-[1.4rem] px-4 py-4 text-sm leading-6"
             style={{ backgroundColor: "rgba(216, 100, 61, 0.12)", border: "1px solid rgba(30, 31, 34, 0.06)" }}
           >
-            <p className="font-semibold text-[var(--coral-600)]">Lien expiré ou déjà utilisé</p>
-            <p className="mt-1 text-[var(--ink-700)]">
+            <p className="font-semibold text-coral-600">Lien expiré ou déjà utilisé</p>
+            <p className="mt-1 text-ink-700">
               Ce lien de réinitialisation n&apos;est plus valide. Faites une nouvelle demande.
             </p>
           </div>
-          <p className="mt-6 text-sm text-[var(--ink-700)]">
-            <Link className="font-semibold text-[var(--coral-600)]" href="/forgot-password">
+          <p className="mt-6 text-sm text-ink-700">
+            <Link className="font-semibold text-coral-600" href="/forgot-password">
               Nouvelle demande
             </Link>
           </p>
@@ -52,14 +52,14 @@ export default async function ResetPasswordPage({ params, searchParams }: ResetP
             <h1 className="display-title mt-2 text-4xl leading-tight">Nouveau mot de passe</h1>
           </div>
         </div>
-        <p className="mt-3 text-sm text-[var(--ink-700)]">Choisissez un mot de passe d&apos;au moins 8 caractères.</p>
+        <p className="mt-3 text-sm text-ink-700">Choisissez un mot de passe d&apos;au moins 8 caractères.</p>
 
         {error === "invalid" ? (
           <div
             className="mt-5 rounded-[1.4rem] px-4 py-3 text-sm leading-6"
             style={{ backgroundColor: "rgba(216, 100, 61, 0.12)", border: "1px solid rgba(30, 31, 34, 0.06)" }}
           >
-            <p className="font-semibold text-[var(--coral-600)]">
+            <p className="font-semibold text-coral-600">
               Les mots de passe ne correspondent pas ou sont trop courts.
             </p>
           </div>

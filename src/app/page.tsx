@@ -93,17 +93,17 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--sand-50)]">
+    <main className="min-h-screen bg-sand-50">
       {/* Nav */}
       <header className="sticky top-0 z-20 mx-auto max-w-6xl px-4 pt-4 sm:px-6">
         <div className="app-surface flex items-center justify-between rounded-[2rem] px-5 py-3.5">
           <div className="flex items-center gap-2">
-            <House className="size-5 text-[var(--coral-500)]" />
+            <House className="size-5 text-coral-500" />
             <span className="font-bold tracking-tight">MakeMenage</span>
           </div>
           <div className="flex items-center gap-2">
             <Link
-              className="hidden px-4 py-2 text-sm font-semibold text-[var(--ink-700)] hover:text-[var(--ink-950)] sm:inline-flex"
+              className="hidden px-4 py-2 text-sm font-semibold text-ink-700 hover:text-ink-950 sm:inline-flex"
               href="/login"
             >
               Connexion
@@ -123,7 +123,7 @@ export default async function HomePage() {
       <section className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pt-16">
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center lg:gap-12">
           <div>
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-[rgba(56,115,93,0.12)] px-3 py-1.5 text-sm font-semibold text-[var(--leaf-600)]">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-[rgba(56,115,93,0.12)] px-3 py-1.5 text-sm font-semibold text-leaf-600">
               <House className="size-4" />
               Couple · Famille · Colocation
             </div>
@@ -132,7 +132,7 @@ export default async function HomePage() {
               <span style={{ color: "var(--coral-600)" }}>équitablement</span>,{" "}
               sans effort
             </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-[var(--ink-700)]">
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-ink-700">
               Planning automatique, rotation juste et vue calendrier — conçu pour le mobile,
               auto-hébergeable, et pensé pour les foyers qui veulent une vraie organisation sans friction.
             </p>
@@ -163,7 +163,7 @@ export default async function HomePage() {
                 ))}
               </div>
               <p className="text-sm text-[var(--ink-600)]">
-                <span className="font-bold text-[var(--ink-950)]">100+</span> foyers déjà organisés
+                <span className="font-bold text-ink-950">100+</span> foyers déjà organisés
               </p>
             </div>
           </div>
@@ -200,7 +200,7 @@ export default async function HomePage() {
                 <Icon className="size-5" />
               </div>
               <h3 className="text-lg font-bold">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--ink-700)]">{description}</p>
+              <p className="mt-2 text-sm leading-6 text-ink-700">{description}</p>
             </article>
           ))}
         </div>
@@ -220,10 +220,10 @@ export default async function HomePage() {
                   <Star key={i} className="size-4 fill-[var(--coral-400)] text-[var(--coral-400)]" />
                 ))}
               </div>
-              <p className="text-sm leading-6 text-[var(--ink-700)] italic">&ldquo;{quote}&rdquo;</p>
+              <p className="text-sm leading-6 text-ink-700 italic">&ldquo;{quote}&rdquo;</p>
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-sm font-bold">{author}</p>
-                <span className="rounded-full bg-[rgba(216,100,61,0.1)] px-2.5 py-0.5 text-xs font-semibold text-[var(--coral-600)]">
+                <span className="rounded-full bg-[rgba(216,100,61,0.1)] px-2.5 py-0.5 text-xs font-semibold text-coral-600">
                   {tag}
                 </span>
               </div>
@@ -244,7 +244,7 @@ export default async function HomePage() {
           <h2 className="display-title text-3xl sm:text-4xl">
             Prêt à organiser votre foyer ?
           </h2>
-          <p className="mt-4 text-[var(--ink-700)]">
+          <p className="mt-4 text-ink-700">
             Gratuit, sans engagement. Votre premier foyer est opérationnel en moins de 2 minutes.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
@@ -260,11 +260,11 @@ export default async function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--line)] py-8 text-center text-sm text-[var(--ink-500)]">
+      <footer className="border-t border-line py-8 text-center text-sm text-ink-500">
         <p>© {new Date().getFullYear()} MakeMenage · Auto-hébergeable · Conçu avec soin</p>
         <div className="mt-2 flex justify-center gap-4 text-xs">
-          <Link href="/login" className="hover:text-[var(--ink-700)]">Connexion</Link>
-          <Link href="/register" className="hover:text-[var(--ink-700)]">Inscription</Link>
+          <Link href="/login" className="hover:text-ink-700">Connexion</Link>
+          <Link href="/register" className="hover:text-ink-700">Inscription</Link>
         </div>
       </footer>
     </main>

@@ -75,7 +75,7 @@ export function TransferSheet({
               ))}
             </select>
           </label>
-          <ArrowRight className="size-5 mb-3 text-[var(--ink-500)]" />
+          <ArrowRight className="size-5 mb-3 text-ink-500" />
           <label className="field-label">
             <span>Vers</span>
             <select

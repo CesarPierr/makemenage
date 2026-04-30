@@ -1,5 +1,5 @@
-import { CopyValueButton } from "@/components/copy-value-button";
-import { IntegrationSettingsPanel } from "@/components/integration-settings-panel";
+import { CopyValueButton } from "@/components/shared/copy-value-button";
+import { IntegrationSettingsPanel } from "@/components/settings/integration-settings-panel";
 import { requireUser } from "@/lib/auth";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 import { getOpenClawIntegrationSettings } from "@/lib/integrations/openclaw";
@@ -66,7 +66,7 @@ export default async function IntegrationsSettingsPage({ searchParams }: Integra
         <div>
           <p className="section-kicker">Calendrier</p>
           <h4 className="display-title mt-2 text-2xl">Abonnement iCal</h4>
-          <p className="mt-2 text-sm text-[var(--ink-700)] leading-6">
+          <p className="mt-2 text-sm text-ink-700 leading-6">
             Copiez ces liens dans Google Calendar, Apple Calendrier ou tout autre client compatible. Aucune connexion requise — le lien suffit.
           </p>
         </div>
@@ -76,7 +76,7 @@ export default async function IntegrationsSettingsPage({ searchParams }: Integra
             <CopyValueButton key={member.id} label={`Membre — ${member.displayName}`} value={member.url} />
           ))}
         </div>
-        <p className="text-xs text-[var(--ink-500)]">
+        <p className="text-xs text-ink-500">
           Ces liens donnent accès en lecture aux tâches et absences. Ne les partagez pas publiquement.
         </p>
       </article>
@@ -103,7 +103,7 @@ export default async function IntegrationsSettingsPage({ searchParams }: Integra
             <h4 className="display-title mt-2 text-2xl">
               {openClawSettings?.isEnabled ? "Connexion prête" : "Connexion inactive"}
             </h4>
-            <div className="mt-4 space-y-2 text-sm text-[var(--ink-700)]">
+            <div className="mt-4 space-y-2 text-sm text-ink-700">
               <p>Clé actuelle: {openClawSettings?.apiKeyPreview ?? "aucune"}</p>
               <p className="font-mono text-[0.72rem] break-all">
                 {`${appBaseUrl}/api/integrations/mcp/openclaw/discovery?householdId=${context.household.id}`}
@@ -112,7 +112,7 @@ export default async function IntegrationsSettingsPage({ searchParams }: Integra
           </article>
 
           <article className="soft-panel space-y-3 p-5">
-            <p className="text-sm font-semibold text-[var(--ink-950)]">Connexions rapides</p>
+            <p className="text-sm font-semibold text-ink-950">Connexions rapides</p>
             <CopyValueButton
               label="Copier la discovery URL"
               value={`${appBaseUrl}/api/integrations/mcp/openclaw/discovery?householdId=${context.household.id}`}
@@ -124,7 +124,7 @@ export default async function IntegrationsSettingsPage({ searchParams }: Integra
           </article>
 
           <article className="soft-panel space-y-3 p-5">
-            <p className="text-sm font-semibold text-[var(--ink-950)]">Serveur MCP local</p>
+            <p className="text-sm font-semibold text-ink-950">Serveur MCP local</p>
             <CopyValueButton
               label="Copier la commande MCP"
               value={`MAKEMENAGE_MCP_HOUSEHOLD_ID=${context.household.id} npm run mcp:server`}

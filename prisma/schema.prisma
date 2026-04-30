@@ -137,6 +137,7 @@ model HouseholdMember {
   isActive              Boolean            @default(true)
   weightingFactor       Float              @default(1)
   weeklyCapacityMinutes Int?
+  onboardingCompletedAt DateTime?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   household             Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)

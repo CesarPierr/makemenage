@@ -25,17 +25,17 @@ export default async function JoinInvitePage({ params }: JoinInvitePageProps) {
       <section className="app-surface glow-card w-full rounded-[2.2rem] p-6 sm:p-8">
         <p className="section-kicker">Invitation</p>
         <h1 className="display-title mt-2 text-4xl leading-tight">Rejoindre le foyer {invite.household.name}</h1>
-        <p className="mt-3 text-[var(--ink-700)]">
+        <p className="mt-3 text-ink-700">
           Invitation créée par {invite.createdByMember?.displayName ?? "un membre du foyer"} avec le code {invite.code}.
         </p>
 
         <div className="mt-5 mobile-section-grid">
           <div className="soft-panel px-4 py-3">
-            <p className="text-sm text-[var(--ink-700)]">Rôle prévu</p>
+            <p className="text-sm text-ink-700">Rôle prévu</p>
             <p className="mt-1 text-lg font-semibold capitalize">{invite.role}</p>
           </div>
           <div className="soft-panel px-4 py-3">
-            <p className="text-sm text-[var(--ink-700)]">Expire le</p>
+            <p className="text-sm text-ink-700">Expire le</p>
             <p className="mt-1 text-lg font-semibold">
               {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(invite.expiresAt)}
             </p>
@@ -43,14 +43,14 @@ export default async function JoinInvitePage({ params }: JoinInvitePageProps) {
         </div>
 
         {state !== "active" ? (
-          <div className="mt-6 rounded-[1.4rem] border px-4 py-3 text-sm leading-6 text-[var(--coral-600)]" style={{ backgroundColor: "rgba(216, 100, 61, 0.12)", borderColor: "rgba(30, 31, 34, 0.06)" }}>
+          <div className="mt-6 rounded-[1.4rem] border px-4 py-3 text-sm leading-6 text-coral-600" style={{ backgroundColor: "rgba(216, 100, 61, 0.12)", borderColor: "rgba(30, 31, 34, 0.06)" }}>
             Cette invitation n’est plus utilisable.
           </div>
         ) : null}
 
         {!user ? (
           <div className="mt-6 space-y-3">
-            <p className="text-sm leading-6 text-[var(--ink-700)]">
+            <p className="text-sm leading-6 text-ink-700">
               Connectez-vous ou créez un compte pour rejoindre ce foyer. Une fois connecté, vous reviendrez automatiquement sur cette invitation.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -64,7 +64,7 @@ export default async function JoinInvitePage({ params }: JoinInvitePageProps) {
           </div>
         ) : state === "active" ? (
           <form action={`/api/invitations/${token}/accept`} method="post" className="mt-6 space-y-3">
-            <p className="text-sm leading-6 text-[var(--ink-700)]">
+            <p className="text-sm leading-6 text-ink-700">
               Vous êtes connecté en tant que {user.displayName}. En rejoignant ce foyer, il apparaîtra dans votre liste de foyers et vous pourrez basculer entre eux.
             </p>
             <button className="btn-primary w-full px-5 py-3 font-semibold" type="submit">

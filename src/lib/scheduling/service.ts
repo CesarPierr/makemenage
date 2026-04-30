@@ -1,138 +1,22 @@
-import { addDays, endOfDay, startOfDay } from "date-fns";
-import type { AssignmentMode, RecurrenceType } from "@prisma/client";
+import "server-only";
 
+import { addDays, endOfDay, startOfDay } from "date-fns";
 import { db } from "@/lib/db";
 import { generateOccurrences } from "@/lib/scheduling/generator";
-import { buildGenerationKey, computeDueDate, computeNextAnchorAfter, generateRecurrenceDates } from "@/lib/scheduling/recurrence";
-import type {
-  AbsenceInput,
-  AssignmentRuleInput,
-  ExistingOccurrenceInput,
-  MemberInput,
-  RecurrenceRuleInput,
-  TaskTemplateInput,
-} from "@/lib/scheduling/types";
+import { buildGenerationKey, computeDueDate, computeNextAnchorAfter } from "@/lib/scheduling/recurrence";
+import { logWarn } from "@/lib/logger";
+import type { TaskTemplateInput } from "@/lib/scheduling/types";
 import { getGenerationWindow, isPastDay, isToday } from "@/lib/time";
 
-function parseStringArray(value: unknown) {
-  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
-}
-
-function parseNumberArray(value: unknown) {
-  return Array.isArray(value)
-    ? value
-        .map((entry) => Number(entry))
-        .filter((entry) => Number.isInteger(entry) && entry >= 0 && entry <= 6)
-    : [];
-}
-
-function mapMembers(
-  members: {
-    id: string;
-    displayName: string;
-    isActive: boolean;
-    weightingFactor: number;
-  }[],
-): MemberInput[] {
-  return members.map((member) => ({
-    id: member.id,
-    displayName: member.displayName,
-    isActive: member.isActive,
-    weightingFactor: member.weightingFactor,
-  }));
-}
-
-function mapAbsences(
-  members: {
-    id: string;
-    availabilities: { startDate: Date; endDate: Date; type: string }[];
-  }[],
-): AbsenceInput[] {
-  return members.flatMap((member) =>
-    member.availabilities
-      .filter((availability) => availability.type === "date_range_absence")
-      .map((availability) => ({
-        memberId: member.id,
-        startDate: availability.startDate,
-        endDate: availability.endDate,
-      })),
-  );
-}
-
-function mapRecurrenceRule(rule: {
-  type: RecurrenceType;
-  mode: "FIXED" | "SLIDING";
-  interval: number;
-  weekdays: unknown;
-  dayOfMonth: number | null;
-  anchorDate: Date;
-  dueOffsetDays: number;
-}): RecurrenceRuleInput {
-  return {
-    type: rule.type,
-    mode: rule.mode,
-    interval: rule.interval,
-    weekdays: parseNumberArray(rule.weekdays),
-    dayOfMonth: rule.dayOfMonth,
-    anchorDate: rule.anchorDate,
-    dueOffsetDays: rule.dueOffsetDays,
-  };
-}
-
-function mapAssignmentRule(rule: {
-  mode: AssignmentMode;
-  eligibleMemberIds: unknown;
-  fixedMemberId: string | null;
-  rotationOrder: unknown;
-  fairnessWindowDays: number | null;
-  preserveRotationOnSkip: boolean;
-  preserveRotationOnReschedule: boolean;
-  rebalanceOnMemberAbsence: boolean;
-  lockAssigneeAfterGeneration: boolean;
-}, options?: { preserveRotationOnSkip?: boolean | null }): AssignmentRuleInput {
-  return {
-    mode: rule.mode,
-    eligibleMemberIds: parseStringArray(rule.eligibleMemberIds),
-    fixedMemberId: rule.fixedMemberId,
-    rotationOrder: parseStringArray(rule.rotationOrder),
-    fairnessWindowDays: rule.fairnessWindowDays,
-    preserveRotationOnSkip: options?.preserveRotationOnSkip ?? rule.preserveRotationOnSkip,
-    preserveRotationOnReschedule: rule.preserveRotationOnReschedule,
-    rebalanceOnMemberAbsence: rule.rebalanceOnMemberAbsence,
-    lockAssigneeAfterGeneration: rule.lockAssigneeAfterGeneration,
-  };
-}
-
-function mapExistingOccurrences(
-  occurrences: {
-    id: string;
-    sourceGenerationKey: string;
-    scheduledDate: Date;
-    dueDate: Date;
-    assignedMemberId: string | null;
-    status:
-      | "planned"
-      | "due"
-      | "overdue"
-      | "completed"
-      | "skipped"
-      | "rescheduled"
-      | "cancelled";
-    actualMinutes: number | null;
-    isManuallyModified: boolean;
-  }[],
-): ExistingOccurrenceInput[] {
-  return occurrences.map((occurrence) => ({
-    id: occurrence.id,
-    sourceGenerationKey: occurrence.sourceGenerationKey,
-    scheduledDate: occurrence.scheduledDate,
-    dueDate: occurrence.dueDate,
-    assignedMemberId: occurrence.assignedMemberId,
-    status: occurrence.status,
-    actualMinutes: occurrence.actualMinutes,
-    isManuallyModified: occurrence.isManuallyModified,
-  }));
-}
+import {
+  mapAbsences,
+  mapAssignmentRule,
+  mapExistingOccurrences,
+  mapMembers,
+  mapRecurrenceRule,
+  parseNumberArray,
+  parseStringArray,
+} from "@/lib/scheduling/mappers";
 
 export async function syncHouseholdOccurrences(
   householdId: string,
@@ -547,7 +431,7 @@ export async function completeOccurrence(params: {
         taskId: existing.taskTemplate.id,
         forceOverwriteManual: false,
       }).catch((err) => {
-        console.error("completeOccurrence: sync failed (non-fatal)", err);
+        logWarn("completeOccurrence.sync_failed", { error: err instanceof Error ? err.message : String(err) });
       });
     }
   }
@@ -705,6 +589,9 @@ export async function rescheduleOccurrence(params: {
           where: { id: params.occurrenceId },
           data: { sourceGenerationKey: newKey },
         })
+        // Intentionally swallowed: if another occurrence already holds this key
+        // (e.g. sync generated a new one after a reopen), the unique constraint
+        // violation is expected and harmless.
         .catch(() => {});
 
       // For FIXED, we preemptively cancel others. For SLIDING, sync will handle it.
@@ -725,7 +612,7 @@ export async function rescheduleOccurrence(params: {
         taskId: existing.taskTemplate.id,
         forceOverwriteManual: false,
       }).catch((err) => {
-        console.error("rescheduleOccurrence: sync failed (non-fatal)", err);
+        logWarn("rescheduleOccurrence.sync_failed", { error: err instanceof Error ? err.message : String(err) });
       });
     }
   }

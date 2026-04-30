@@ -59,7 +59,7 @@ export function TransferHistory({ householdId, refreshKey, onChanged }: Transfer
 
   if (loading && transfers.length === 0) {
     return (
-      <div className="py-8 text-center text-sm text-[var(--ink-500)]">
+      <div className="py-8 text-center text-sm text-ink-500">
         Chargement de l&apos;historique…
       </div>
     );
@@ -68,7 +68,7 @@ export function TransferHistory({ householdId, refreshKey, onChanged }: Transfer
   if (!loading && transfers.length === 0) {
     return (
       <div className="py-12 text-center">
-        <p className="text-sm text-[var(--ink-500)]">Aucun transfert pour le moment.</p>
+        <p className="text-sm text-ink-500">Aucun transfert pour le moment.</p>
       </div>
     );
   }
@@ -112,10 +112,10 @@ export function TransferHistory({ householdId, refreshKey, onChanged }: Transfer
       {transfers.map((t) => (
         <div key={t.id} className="app-surface rounded-2xl p-4 shadow-sm border border-black/[0.04]">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-[var(--ink-500)] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-ink-500 uppercase tracking-wider">
               {format(new Date(t.occurredOn), "d MMMM yyyy", { locale: fr })}
             </span>
-            <span className="text-sm font-bold text-[var(--ink-950)]">
+            <span className="text-sm font-bold text-ink-950">
               {formatCurrency(Number.parseFloat(t.amount))}
             </span>
           </div>
@@ -137,7 +137,7 @@ export function TransferHistory({ householdId, refreshKey, onChanged }: Transfer
           </div>
 
           {t.reason && (
-            <p className="mt-2 text-xs text-[var(--ink-500)] italic">
+            <p className="mt-2 text-xs text-ink-500 italic">
               « {t.reason} »
             </p>
           )}

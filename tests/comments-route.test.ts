@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth", () => ({ requireUser: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: { taskOccurrence: { findFirst: vi.fn() }, occurrenceComment: { findMany: vi.fn(), create: vi.fn() }, householdMember: { findFirst: vi.fn() } } }));
-vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
+vi.mock("@/lib/logger", () => ({ logError: vi.fn(), logInfo: vi.fn() }));
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";

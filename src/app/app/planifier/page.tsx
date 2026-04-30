@@ -3,7 +3,7 @@ import { fr } from "date-fns/locale";
 import Link from "next/link";
 import { Activity, CalendarDays, ChevronRight, ClipboardList, Clock3, Plus, RefreshCcw, ShieldAlert, Users, Wrench } from "lucide-react";
 
-import { PlanifierHubCard } from "@/components/planifier-hub-card";
+import { PlanifierHubCard } from "@/components/dashboard/planifier-hub-card";
 import { requireUser } from "@/lib/auth";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 
@@ -105,7 +105,7 @@ export default async function PlanifierPage({ searchParams }: PlanifierPageProps
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-1">
         <div>
           <h2 className="display-title text-3xl leading-tight sm:text-4xl">Garder le cap</h2>
-          <p className="mt-1 text-sm font-medium text-[var(--ink-500)]">
+          <p className="mt-1 text-sm font-medium text-ink-500">
             Calendrier, routines et organisation du foyer
           </p>
         </div>
@@ -113,14 +113,14 @@ export default async function PlanifierPage({ searchParams }: PlanifierPageProps
         <div className="flex flex-wrap gap-2">
           <Link 
             href={`/app/calendar${householdParam}`}
-            className="accent-pill hover:scale-105 active:scale-95 transition-all shadow-sm bg-white"
+            className="accent-pill hover:scale-105 active:scale-95 transition-all shadow-sm bg-white dark:bg-[#262830]"
           >
             <span className="accent-pill-dot" style={{ backgroundColor: "var(--sky-500)" }} />
             <span className="text-[10px] font-bold uppercase tracking-wider">{upcomingOccurrences.length} à venir</span>
           </Link>
           <Link 
             href={`/app/my-tasks?household=${context.household.id}&tab=templates`}
-            className="accent-pill hover:scale-105 active:scale-95 transition-all shadow-sm bg-white"
+            className="accent-pill hover:scale-105 active:scale-95 transition-all shadow-sm bg-white dark:bg-[#262830]"
           >
             <span className="accent-pill-dot" style={{ backgroundColor: "var(--leaf-500)" }} />
             <span className="text-[10px] font-bold uppercase tracking-wider">{context.tasks.length} routines</span>
@@ -195,14 +195,14 @@ export default async function PlanifierPage({ searchParams }: PlanifierPageProps
                 href={href}
                 className="soft-panel interactive-surface flex items-center gap-4 px-4 py-4 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]"
               >
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[rgba(47,109,136,0.12)] text-[var(--sky-600)]">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[rgba(47,109,136,0.12)] text-sky-600">
                   <Icon className="size-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-[var(--ink-950)]">{label}</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--ink-700)]">{detail}</p>
+                  <p className="font-semibold text-ink-950">{label}</p>
+                  <p className="mt-1 text-sm leading-6 text-ink-700">{detail}</p>
                 </div>
-                <span className="text-sm font-bold text-[var(--sky-600)]">Ouvrir</span>
+                <span className="text-sm font-bold text-sky-600">Ouvrir</span>
               </Link>
             ))}
           </div>
@@ -214,7 +214,7 @@ export default async function PlanifierPage({ searchParams }: PlanifierPageProps
               <p className="section-kicker">À surveiller</p>
               <h3 className="display-title mt-2 text-3xl">Monitoring du foyer</h3>
             </div>
-            <Clock3 className="size-5 text-[var(--coral-600)]" />
+            <Clock3 className="size-5 text-coral-600" />
           </div>
 
           <div className="mt-5 space-y-3">
@@ -223,13 +223,13 @@ export default async function PlanifierPage({ searchParams }: PlanifierPageProps
                 href={`/app/settings/planning${householdParam}`}
                 className="soft-panel interactive-surface block px-4 py-4 transition-all hover:shadow-md"
               >
-                <p className="text-sm font-semibold text-[var(--ink-950)]">Absence la plus proche</p>
-                <p className="mt-2 text-lg font-semibold text-[var(--leaf-600)]">{absences[0].member.displayName}</p>
-                <p className="mt-1 text-sm text-[var(--ink-700)]">
+                <p className="text-sm font-semibold text-ink-950">Absence la plus proche</p>
+                <p className="mt-2 text-lg font-semibold text-leaf-600">{absences[0].member.displayName}</p>
+                <p className="mt-1 text-sm text-ink-700">
                   Du {format(absences[0].startDate, "d MMM", { locale: fr })} au {format(absences[0].endDate, "d MMM", { locale: fr })}
                 </p>
                 {absences[0].notes ? (
-                  <p className="mt-2 text-sm text-[var(--ink-700)] italic">{absences[0].notes}</p>
+                  <p className="mt-2 text-sm text-ink-700 italic">{absences[0].notes}</p>
                 ) : null}
               </Link>
             ) : null}
@@ -237,21 +237,21 @@ export default async function PlanifierPage({ searchParams }: PlanifierPageProps
             {activeOverrides.length ? (
               <Link 
                 href={`/app/calendar${householdParam}&modified=1`}
-                className="soft-panel interactive-surface flex items-center gap-4 px-4 py-4 transition-all hover:shadow-md border-l-4 border-[var(--coral-500)]"
+                className="soft-panel interactive-surface flex items-center gap-4 px-4 py-4 transition-all hover:shadow-md border-l-4 border-coral-500"
               >
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--coral-50)] text-[var(--coral-600)]">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--coral-50)] text-coral-600">
                   <Wrench className="size-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[var(--ink-950)]">Changements manuels actifs</p>
-                  <p className="mt-1 text-lg font-semibold text-[var(--coral-600)]">{activeOverrides.length} occurrence{activeOverrides.length > 1 ? "s" : ""}</p>
+                  <p className="text-sm font-semibold text-ink-950">Changements manuels actifs</p>
+                  <p className="mt-1 text-lg font-semibold text-coral-600">{activeOverrides.length} occurrence{activeOverrides.length > 1 ? "s" : ""}</p>
                 </div>
                 <ChevronRight className="size-5 text-[var(--ink-300)]" />
               </Link>
             ) : null}
 
             {!absences[0] && activeOverrides.length === 0 ? (
-              <div className="rounded-[1.4rem] border border-[var(--line)] bg-white/70 px-4 py-4 text-sm leading-6 text-[var(--ink-700)]">
+              <div className="rounded-[1.4rem] border border-line bg-white/70 dark:bg-[#262830]/70 px-4 py-4 text-sm leading-6 text-ink-700">
                 Rien de sensible à ajuster pour le moment. Vous pouvez simplement consulter le calendrier ou laisser le foyer suivre son rythme.
               </div>
             ) : null}

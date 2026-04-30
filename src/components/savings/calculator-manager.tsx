@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Calculator, ChevronLeft, ChevronRight, Info, Plus, Save, Trash2, Wand2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, Plus, Trash2 } from "lucide-react";
 
 import { Dialog } from "@/components/ui/dialog";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -9,17 +9,9 @@ import { formatCurrency } from "@/lib/savings/currency";
 import { evaluateFormula } from "@/lib/savings/formula";
 import { useFormAction } from "@/lib/use-form-action";
 import { cn } from "@/lib/utils";
-import type { SavingsBoxView, SavingsCalculatorFieldView, SavingsCalculatorView } from "@/components/savings/types";
-
-type DraftField = {
-  draftId: string;
-  key: string;
-  label: string;
-  type: "number" | "amount" | "percent";
-  defaultValue: string;
-  helperText: string;
-  isRequired: boolean;
-};
+import type { SavingsBoxView, SavingsCalculatorFieldView } from "@/components/savings/types";
+import { CalculatorManagerVariables } from "./calculator-manager-variables";
+import type { DraftField } from "./calculator-manager-types";
 
 type CalculatorManagerProps = {
   householdId: string;
@@ -136,6 +128,7 @@ export function CalculatorManager({
         resetWizard();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resetWizard sets the state it depends on; including it causes infinite loops
   }, [isOpen, initialEditingId, householdId]);
 
   const action = editingId
@@ -205,19 +198,7 @@ export function CalculatorManager({
     }
   }
 
-  function editCalculator(calculator: SavingsCalculatorView) {
-    setEditingId(calculator.id);
-    setName(calculator.name);
-    setBoxId(calculator.boxId ?? "");
-    setDescription(calculator.description ?? "");
-    setFormula(calculator.formula);
-    setReasonTemplate(calculator.reasonTemplate ?? "");
-    setResultMode(calculator.resultMode);
-    setNegativeMode(calculator.negativeMode);
-    setRoundingMode(calculator.roundingMode);
-    setFields(calculator.fields.map(fieldFromView));
-    setStep(0);
-  }
+
 
   function submitWizard() {
     const fd = new FormData();
@@ -255,7 +236,7 @@ export function CalculatorManager({
             <p className="font-bold">15% d&apos;une prime</p>
             <code className="mt-1 block text-xs">prime * 0.15</code>
           </div>
-          <p className="text-xs text-[var(--ink-500)]">Opérateurs : +, -, *, /, parenthèses. Fonctions : min, max, round, ceil, floor, abs.</p>
+          <p className="text-xs text-ink-500">Opérateurs : +, -, *, /, parenthèses. Fonctions : min, max, round, ceil, floor, abs.</p>
         </div>
       </Dialog>
 
@@ -268,7 +249,7 @@ export function CalculatorManager({
         <div className="space-y-5 pb-8">
           <div className="flex items-center gap-1.5 px-1">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className={cn("h-1.5 flex-1 rounded-full transition-all duration-300", i <= step ? "bg-[var(--coral-500)]" : "bg-black/[0.08]")} />
+              <div key={i} className={cn("h-1.5 flex-1 rounded-full transition-all duration-300", i <= step ? "bg-coral-500" : "bg-black/[0.08]")} />
             ))}
           </div>
 
@@ -276,25 +257,25 @@ export function CalculatorManager({
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="space-y-4">
                 <label className="field-label">
-                  <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Nom du calculateur</span>
+                  <span className="text-[10px] uppercase font-bold text-ink-500">Nom du calculateur</span>
                   <input className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: TVA 20%" required autoFocus />
                 </label>
                 <label className="field-label">
-                  <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Enveloppe par défaut</span>
+                  <span className="text-[10px] uppercase font-bold text-ink-500">Enveloppe par défaut</span>
                   <select className="field" value={boxId} onChange={(e) => setBoxId(e.target.value)}>
                     <option value="">Aucune (choisir à chaque fois)</option>
                     {boxes.filter((b) => !b.isArchived).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 </label>
                 <label className="field-label">
-                  <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Description (facultatif)</span>
+                  <span className="text-[10px] uppercase font-bold text-ink-500">Description (facultatif)</span>
                   <input className="field" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="À quoi sert-il ?" />
                 </label>
               </div>
 
               {!editingId && (
                 <div className="pt-4 border-t border-black/[0.05]">
-                  <p className="text-[10px] uppercase font-bold text-[var(--ink-400)] mb-3 tracking-widest">Utiliser un modèle</p>
+                  <p className="text-[10px] uppercase font-bold text-ink-400 mb-3 tracking-widest">Utiliser un modèle</p>
                   <div className="grid grid-cols-2 gap-2">
                     <button type="button" onClick={() => resetWizard("tva")} className="app-surface flex flex-col items-center gap-2 p-3 rounded-xl border border-black/[0.04] text-center transition-all active:scale-95 hover:bg-black/[0.02]">
                       <span className="text-xs font-bold text-blue-600">Provision TVA</span>
@@ -303,8 +284,8 @@ export function CalculatorManager({
                       <span className="text-xs font-bold text-green-600">Économie E85</span>
                     </button>
                     <button type="button" onClick={() => resetWizard("empty")} className="col-span-2 app-surface flex items-center justify-center gap-2 p-2 rounded-xl border border-dashed border-black/10 text-center transition-all active:scale-95 hover:bg-black/[0.02]">
-                      <Plus className="size-4 text-[var(--ink-400)]" />
-                      <span className="text-xs font-bold text-[var(--ink-500)]">Template vide</span>
+                      <Plus className="size-4 text-ink-400" />
+                      <span className="text-xs font-bold text-ink-500">Template vide</span>
                     </button>
                   </div>
                 </div>
@@ -313,64 +294,15 @@ export function CalculatorManager({
           ) : null}
 
           {step === 1 ? (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] uppercase font-bold tracking-widest text-[var(--ink-500)]">Variables du formulaire</p>
-                <button type="button" onClick={() => setFields((current) => [...current, blankField()])} className="btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold">
-                  <Plus className="size-3.5" /> Ajouter
-                </button>
-              </div>
-              <div className="space-y-3">
-                {fields.map((field, index) => (
-                  <div key={field.draftId} className="app-surface rounded-2xl border border-black/[0.05] p-4 space-y-3 relative overflow-hidden">
-                    <div className="grid gap-3 grid-cols-2">
-                      <label className="field-label">
-                        <span className="text-[10px] uppercase font-bold text-[var(--ink-400)]">ID Variable (clé)</span>
-                        <input className="field text-sm font-mono" placeholder="ex: montant" value={field.key} onChange={(e) => setFields((current) => current.map((item, i) => i === index ? { ...item, key: e.target.value.replace(/[^a-z0-9_]/g, "") } : item))} required />
-                      </label>
-                      <label className="field-label">
-                        <span className="text-[10px] uppercase font-bold text-[var(--ink-400)]">Type</span>
-                        <select className="field text-sm" value={field.type} onChange={(e) => setFields((current) => current.map((item, i) => i === index ? { ...item, type: e.target.value as DraftField["type"] } : item))}>
-                          <option value="number">Nombre</option>
-                          <option value="amount">€ Montant</option>
-                          <option value="percent">% Pourcentage</option>
-                        </select>
-                      </label>
-                      <label className="field-label col-span-2">
-                        <span className="text-[10px] uppercase font-bold text-[var(--ink-400)]">Libellé (Affiché à l&apos;utilisateur)</span>
-                        <input className="field text-sm" placeholder="Ex: Prix au litre" value={field.label} onChange={(e) => setFields((current) => current.map((item, i) => i === index ? { ...item, label: e.target.value } : item))} required />
-                      </label>
-                    </div>
-                    
-                    <details className="text-[10px] font-bold text-[var(--ink-400)]">
-                      <summary className="cursor-pointer hover:text-[var(--ink-600)] transition-colors">Plus d&apos;options...</summary>
-                      <div className="pt-3 space-y-3">
-                        <label className="field-label">
-                          <span className="text-[10px] uppercase font-bold">Valeur par défaut</span>
-                          <input className="field text-sm" value={field.defaultValue} onChange={(e) => setFields((current) => current.map((item, i) => i === index ? { ...item, defaultValue: e.target.value } : item))} />
-                        </label>
-                        <label className="field-label">
-                          <span className="text-[10px] uppercase font-bold">Texte d&apos;aide</span>
-                          <input className="field text-sm" value={field.helperText} onChange={(e) => setFields((current) => current.map((item, i) => i === index ? { ...item, helperText: e.target.value } : item))} />
-                        </label>
-                      </div>
-                    </details>
-
-                    <button type="button" onClick={() => setFields((current) => current.filter((_item, i) => i !== index))} className="absolute top-2 right-2 p-2 text-red-400 hover:text-red-600 transition-colors">
-                      <X className="size-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <CalculatorManagerVariables fields={fields} setFields={setFields} blankField={blankField} />
           ) : null}
 
           {step === 2 ? (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-[var(--ink-500)]">Variables disponibles</p>
-                  <p className="text-[10px] text-[var(--ink-400)] italic">Insérer dans la formule</p>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-ink-500">Variables disponibles</p>
+                  <p className="text-[10px] text-ink-400 italic">Insérer dans la formule</p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {fields.filter(f => f.key.trim()).map((field) => (
@@ -385,7 +317,7 @@ export function CalculatorManager({
                     </button>
                   ))}
                   {fields.filter(f => f.key.trim()).length === 0 && (
-                    <p className="text-[10px] text-[var(--ink-400)] py-1 px-1">Aucune variable définie.</p>
+                    <p className="text-[10px] text-ink-400 py-1 px-1">Aucune variable définie.</p>
                   )}
                 </div>
               </div>
@@ -415,7 +347,7 @@ export function CalculatorManager({
               </div>
 
               <details className="group">
-                <summary className="list-none cursor-pointer flex items-center gap-2 text-[10px] uppercase font-bold text-[var(--ink-400)] hover:text-[var(--ink-600)] transition-colors">
+                <summary className="list-none cursor-pointer flex items-center gap-2 text-[10px] uppercase font-bold text-ink-400 hover:text-[var(--ink-600)] transition-colors">
                   <Info className="size-3" />
                   <span>Aide à la syntaxe</span>
                   <ChevronRight className="size-3 group-open:rotate-90 transition-transform" />
@@ -433,7 +365,7 @@ export function CalculatorManager({
               </details>
 
               <label className="field-label">
-                <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Modèle de raison (historique)</span>
+                <span className="text-[10px] uppercase font-bold text-ink-500">Modèle de raison (historique)</span>
                 <input className="field" value={reasonTemplate} onChange={(e) => setReasonTemplate(e.target.value)} placeholder="Ex : Provision TVA sur {ca_brut} €" />
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {fields.filter(f => f.key.trim()).map(field => (
@@ -447,7 +379,7 @@ export function CalculatorManager({
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-[10px] text-[var(--ink-400)] leading-relaxed italic">Insérer dans le modèle de raison.</p>
+                <p className="mt-2 text-[10px] text-ink-400 leading-relaxed italic">Insérer dans le modèle de raison.</p>
               </label>
             </div>
           ) : null}
@@ -456,7 +388,7 @@ export function CalculatorManager({
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="field-label">
-                  <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Type de mouvement</span>
+                  <span className="text-[10px] uppercase font-bold text-ink-500">Type de mouvement</span>
                   <select className="field" value={resultMode} onChange={(e) => setResultMode(e.target.value as typeof resultMode)}>
                     <option value="deposit">Dépôt (Ajoute de l&apos;argent)</option>
                     <option value="withdrawal">Retrait (Sort de l&apos;argent)</option>
@@ -464,7 +396,7 @@ export function CalculatorManager({
                   </select>
                 </label>
                 <label className="field-label">
-                  <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Arrondi</span>
+                  <span className="text-[10px] uppercase font-bold text-ink-500">Arrondi</span>
                   <select className="field" value={roundingMode} onChange={(e) => setRoundingMode(e.target.value as typeof roundingMode)}>
                     <option value="cents">Au centime près</option>
                     <option value="euro_floor">Euro inférieur</option>
@@ -473,7 +405,7 @@ export function CalculatorManager({
                   </select>
                 </label>
                 <label className="field-label sm:col-span-2">
-                  <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Si le résultat est négatif</span>
+                  <span className="text-[10px] uppercase font-bold text-ink-500">Si le résultat est négatif</span>
                   <select className="field" value={negativeMode} onChange={(e) => setNegativeMode(e.target.value as typeof negativeMode)}>
                     <option value="clamp_to_zero">Ne rien faire (0 €)</option>
                     <option value="convert_to_opposite">Inverser (Dépôt ↔ Retrait)</option>
@@ -482,9 +414,9 @@ export function CalculatorManager({
               </div>
 
               <div className="app-surface rounded-2xl border-2 border-dashed border-black/[0.05] p-5 text-center">
-                <p className="text-[10px] uppercase font-bold text-[var(--ink-400)] mb-1">Résumé</p>
+                <p className="text-[10px] uppercase font-bold text-ink-400 mb-1">Résumé</p>
                 <p className="font-bold text-[var(--ink-900)]">{name}</p>
-                <p className="text-xs text-[var(--ink-500)] mt-1">{fieldsToPayload(fields).length} variable(s) · {resultMode === "deposit" ? "Dépôt" : "Retrait"}</p>
+                <p className="text-xs text-ink-500 mt-1">{fieldsToPayload(fields).length} variable(s) · {resultMode === "deposit" ? "Dépôt" : "Retrait"}</p>
               </div>
               
               {editingId && (

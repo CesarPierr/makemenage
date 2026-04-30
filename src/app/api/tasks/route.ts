@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
+
 import { requireUser } from "@/lib/auth";
-import { parseDateInput } from "@/lib/date-input";
 import { db } from "@/lib/db";
 import { canManageHousehold } from "@/lib/households";
 import { redirectTo } from "@/lib/request";
@@ -108,54 +108,45 @@ export async function POST(request: Request) {
     return redirectTo(request, `/app/my-tasks?household=${householdId}#new-task`);
   }
 
+  const validated = parsedTask.data;
+
   const recurrenceRule = await db.recurrenceRule.create({
     data: {
-      type: normalizedRecurrenceType as
-        | "daily"
-        | "every_x_days"
-        | "weekly"
-        | "every_x_weeks"
-        | "monthly_simple",
-      mode: (formData.get("recurrenceMode") as "FIXED" | "SLIDING") || "SLIDING",
-      interval: singleRun ? 1 : Number(formData.get("interval") ?? 1),
-      anchorDate: parseDateInput(startsOnRaw),
-      dueOffsetDays: 0,
+      type: singleRun ? "daily" : validated.recurrence.type,
+      mode: validated.recurrence.mode,
+      interval: singleRun ? 1 : validated.recurrence.interval,
+      anchorDate: validated.startsOn,
+      dueOffsetDays: validated.recurrence.dueOffsetDays,
       config: singleRun ? { singleRun: true } : undefined,
     },
   });
 
   const assignmentRule = await db.assignmentRule.create({
     data: {
-      mode: assignmentMode as
-        | "fixed"
-        | "manual"
-        | "strict_alternation"
-        | "round_robin"
-        | "least_assigned_count"
-        | "least_assigned_minutes",
+      mode: validated.assignment.mode,
       eligibleMemberIds,
-      fixedMemberId: assignmentMode === "fixed" ? eligibleMemberIds[0] : null,
+      fixedMemberId: validated.assignment.mode === "fixed" ? eligibleMemberIds[0] : null,
       rotationOrder: eligibleMemberIds,
-      fairnessWindowDays: 14,
-      rebalanceOnMemberAbsence: true,
-      lockAssigneeAfterGeneration: true,
+      fairnessWindowDays: validated.assignment.fairnessWindowDays,
+      rebalanceOnMemberAbsence: validated.assignment.rebalanceOnMemberAbsence,
+      lockAssigneeAfterGeneration: validated.assignment.lockAssigneeAfterGeneration,
     },
   });
 
   await db.taskTemplate.create({
     data: {
       householdId,
-      title: String(formData.get("title")),
-      description: (formData.get("description")?.toString() || null) ?? null,
-      category: (formData.get("category")?.toString() || null) ?? null,
-      room: (formData.get("room")?.toString() || null) ?? null,
-      icon: (formData.get("icon")?.toString() || null) ?? null,
-      color: parsedTask.data.color,
-      estimatedMinutes: parsedTask.data.estimatedMinutes,
+      title: validated.title,
+      description: validated.description ?? null,
+      category: validated.category ?? null,
+      room: validated.room ?? null,
+      icon: validated.icon ?? null,
+      color: validated.color,
+      estimatedMinutes: validated.estimatedMinutes,
       priority: 2,
       isCollective: formData.get("isCollective") === "on",
-      startsOn: parsedTask.data.startsOn,
-      endsOn: singleRun ? parsedTask.data.startsOn : parsedTask.data.endsOn ?? null,
+      startsOn: validated.startsOn,
+      endsOn: singleRun ? validated.startsOn : validated.endsOn ?? null,
       recurrenceRuleId: recurrenceRule.id,
       assignmentRuleId: assignmentRule.id,
       createdByMemberId: membership.id,

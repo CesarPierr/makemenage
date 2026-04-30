@@ -54,7 +54,7 @@ export function TransferForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
         <label className="field-label">
-          <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">De</span>
+          <span className="text-[10px] uppercase font-bold text-ink-500">De</span>
           <select
             className="field"
             value={fromBoxId}
@@ -72,7 +72,7 @@ export function TransferForm({
           <ArrowRight className="size-4" />
         </div>
         <label className="field-label">
-          <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Vers</span>
+          <span className="text-[10px] uppercase font-bold text-ink-500">Vers</span>
           <select
             className="field"
             value={toBoxId}
@@ -92,7 +92,7 @@ export function TransferForm({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="field-label">
-          <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Montant (€)</span>
+          <span className="text-[10px] uppercase font-bold text-ink-500">Montant (€)</span>
           <input
             className="field"
             type="text"
@@ -104,7 +104,7 @@ export function TransferForm({
           />
         </label>
         <label className="field-label">
-          <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Date</span>
+          <span className="text-[10px] uppercase font-bold text-ink-500">Date</span>
           <input
             className="field"
             type="date"
@@ -116,7 +116,7 @@ export function TransferForm({
       </div>
 
       <label className="field-label">
-        <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Raison (facultatif)</span>
+        <span className="text-[10px] uppercase font-bold text-ink-500">Raison (facultatif)</span>
         <input
           className="field"
           type="text"

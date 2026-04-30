@@ -1,0 +1,283 @@
+
+> makemenage@0.1.0 test
+> vitest run --coverage
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.5 [39m[90m/home/pierre/makemenage[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32m✓[39m tests/validation.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m tests/auth-routes.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m tests/csrf.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m tests/logger.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/savings-formula.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [31m❯[39m tests/ui/transfer-sheet.test.tsx [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 414[2mms[22m[39m
+[31m   [31m×[31m renders transfer sheet and handles submission correctly[39m[33m 413[2mms[22m[39m
+ [32m✓[39m tests/comments-route.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m tests/absence-routes.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m tests/tasks-routes.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m tests/openclaw-integration.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m tests/utils.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+[90mstdout[2m | tests/recalculate-route.test.ts[2m > [22m[2mrecalculate route[2m > [22m[2mreports skipped load into the next rotation when carry_over is selected
+[22m[39m{"ts":"2026-04-30T06:03:58.026Z","level":"info","event":"api_household_request","path":"http://localhost:3000/api/households/house-1/recalculate","method":"POST","userId":"user-1","householdId":"house-1"}
+
+[90mstdout[2m | tests/recalculate-route.test.ts[2m > [22m[2mrecalculate route[2m > [22m[2mresets to the normal rotation when no_carry_over is selected
+[22m[39m{"ts":"2026-04-30T06:03:58.034Z","level":"info","event":"api_household_request","path":"http://localhost:3000/api/households/house-1/recalculate","method":"POST","userId":"user-1","householdId":"house-1"}
+
+ [32m✓[39m tests/recalculate-route.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m tests/task-templates.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+[90mstdout[2m | tests/repro_scheduling.test.ts[2m > [22m[2mreproduction of scheduling issues[2m > [22m[2mshould shift future occurrences when an occurrence is rescheduled (user request)
+[22m[39mNext occurrence date with NEW logic: Thu Apr 30 2026
+
+[90mstdout[2m | tests/repro_scheduling.test.ts[2m > [22m[2mreproduction of scheduling issues[2m > [22m[2minvestigates missing 3-day strict alternation task
+[22m[39mGenerated 3-day occurrences: [
+  [32m'2026-04-19'[39m,
+  [32m'2026-04-22'[39m,
+  [32m'2026-04-25'[39m,
+  [32m'2026-04-28'[39m,
+  [32m'2026-05-01'[39m,
+  [32m'2026-05-04'[39m,
+  [32m'2026-05-07'[39m
+]
+
+ [32m✓[39m tests/repro_scheduling.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/savings-autofill.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m tests/generator.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/experience.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/household-management.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m tests/request.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/hybrid_scheduling.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/savings-currency.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/date-input.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/scheduling-service.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/history.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/context-sync.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/analytics.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m tests/assignment.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/recurrence.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/savings.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/savings-calculators.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/relative-date.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/ui/transfer-sheet.test.tsx[2m > [22mrenders transfer sheet and handles submission correctly
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an accessible element with the role "heading" and name "Transférer"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m"overflow: hidden;"[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<dialog[39m
+      [33mclass[39m=[32m"fixed inset-0 m-0 h-full w-full max-w-none max-h-none bg-transparent p-0 backdrop:bg-black/40 backdrop:backdrop-blur-sm open:animate-none"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex h-full w-full items-end justify-center"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"w-full rounded-t-3xl bg-[var(--card)] shadow-[0_-20px_60px_rgba(0,0,0,0.15)] overflow-hidden animate-slide-up"[39m
+          [33mstyle[39m=[32m"max-height: 85vh;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex justify-center pt-3 pb-1"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"h-1 w-10 rounded-full bg-black/15"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center justify-between gap-3 px-5 pb-3 pt-2"[39m
+          [36m>[39m
+            [36m<h3[39m
+              [33mclass[39m=[32m"text-lg font-bold text-ink-950"[39m
+            [36m>[39m
+              [0mTransférer[0m
+            [36m</h3>[39m
+            [36m<button[39m
+              [33maria-label[39m=[32m"Fermer"[39m
+              [33mclass[39m=[32m"flex size-11 items-center justify-center rounded-full bg-black/[0.06] text-ink-700 transition-colors hover:bg-black/10 active:scale-90"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"lucide lucide-x size-5"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"24"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"24"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M18 6 6 18"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"m6 6 12 12"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"overflow-y-auto overscroll-contain px-4 pb-12"[39m
+            [33mstyle[39m=[32m"max-height: calc(85vh - 4rem);"[39m
+          [36m>[39m
+            [36m<form[39m
+              [33mclass[39m=[32m"space-y-4"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid grid-cols-[1fr_auto_1fr] items-end gap-2"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"field-label"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mDe[0m
+                  [36m</span>[39m
+                  [36m<select[39m
+                    [33mclass[39m=[32m"field"[39m
+                    [33mrequired[39m=[32m""[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"box_1"[39m
+                    [36m>[39m
+                      [0mCompte Courant[0m
+                      [0m ([0m
+                      [0m1 500,00 €[0m
+                      [0m)[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"box_2"[39m
+                    [36m>[39m
+                      [0mLivret A[0m
+                      [0m ([0m
+                      [0m5 000,00 €[0m
+                      [0m)[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</label>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"lucide lucide-arrow-right size-5 mb-3 text-ink-500"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M5 12h14"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m12 5 7 7-7 7"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"field-label"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mVers[0m
+                  [36m</span>[39m
+                  [36m<select[39m
+                    [33mclass[39m=[32m"field"[39m
+                    [33mrequired[39m=[32m""[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"box_2"[39m
+                    [36m>[39m
+                      [0mLivret A[0m
+                      [0m ([0m
+                      [0m5 000,00 €[0m
+                      [0m)[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</label>[39m
+              [36m</div>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"field-label"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0mMontant (€)[0m
+                [36m</span>[39m
+                [36m<input[39m
+                  [33mclass[39m=[32m"field"[39m
+                  [33minputmode[39m=[32m"decimal"[39m
+                  [33mplaceholder[39m=[32m"0,00"[39m
+                  [33mrequired[39m=[32m""[39m
+                  [33mtype[39m=[32m"text"[39m
+                  [33mvalue[39m=[32m""[39m
+                [36m/>[39m
+              [36m</label>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"field-label"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0mDate[0m
+                [36m</span>[39m
+                [36m<input[39m
+                  [33mclass[39m=[32m"field"[39m
+                  [33mrequired[39m=[32m""[39m
+                  [33mtype[39m=[32m"date"[39m
+                  [33mvalue[39m=[32m"2026-04-30"[39m
+                [36m/>[39m
+              [36m</label>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"field-label"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0mRaison (facultatif)[0m
+                [36m</span>[39m
+                [36m<input[39m
+                  [33mclass[39m=[32m"field"[39m
+                  [33mmaxlength[39m=[32m"280"[39m
+                  [33mtype[39m=[32m"text"[39m
+                  [33mvalue[39m=[32m""[39m
+                [36m/>[39m
+              [36m</label>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"btn-primary w-full px-4 py-3 font-semibold disabled:opacity-50"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"submit"[39m
+              [36m>[39m
+                [0mTransférer[0m
+              [36m</button>[39m
+            [36m</form>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</dialog>[39m
+    [36m<div[39m
+      [33maria-live[39m=[32m"polite"[39m
+      [33mclass[39m=[32m"fixed bottom-20 left-3 right-3 z-50 flex flex-col items-center gap-2 sm:bottom-6 sm:left-auto sm:right-6 sm:items-end lg:bottom-6"[39m
+    [36m/>[39m
+  [36m</div>[39m
+[36m</body>[39m
+[90m [2m❯[22m Object.getElementError node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m tests/ui/transfer-sheet.test.tsx:[2m48:17[22m[39m
+    [90m 46|[39m
+    [90m 47|[39m   [90m// Check if form elements are present[39m
+    [90m 48|[39m   expect(screen.getByRole("heading", { name: "Transférer" })).toBeInTh…
+    [90m   |[39m                 [31m^[39m
+    [90m 49|[39m
+    [90m 50|[39m   [90m// Select the "Vers" box[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m30 passed[39m[22m[90m (31)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m154 passed[39m[22m[90m (155)[39m
+[2m   Start at [22m 08:03:55
+[2m   Duration [22m 6.27s[2m (transform 1.18s, setup 4.91s, import 24.38s, tests 765ms, environment 571ms)[22m
+

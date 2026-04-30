@@ -11,7 +11,7 @@ import {
   Users,
 } from "lucide-react";
 
-import { SettingsTabs } from "@/components/settings-tabs";
+import { SettingsTabs } from "@/components/settings/settings-tabs";
 import { requireUser } from "@/lib/auth";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 
@@ -56,15 +56,15 @@ export default async function SettingsLayout({ children }: SettingsLayoutProps) 
 
         <div className="mt-5 mobile-section-grid sm:grid-cols-3">
           <div className="soft-panel px-4 py-3">
-            <p className="text-sm text-[var(--ink-700)]">Membres</p>
+            <p className="text-sm text-ink-700">Membres</p>
             <p className="mt-1 text-2xl font-semibold">{context.household.members.length}</p>
           </div>
           <div className="soft-panel px-4 py-3">
-            <p className="text-sm text-[var(--ink-700)]">Tâches actives</p>
+            <p className="text-sm text-ink-700">Tâches actives</p>
             <p className="mt-1 text-2xl font-semibold">{context.tasks.length}</p>
           </div>
           <div className="soft-panel px-4 py-3">
-            <p className="text-sm text-[var(--ink-700)]">Mon rôle</p>
+            <p className="text-sm text-ink-700">Mon rôle</p>
             <p className="mt-1 text-2xl font-semibold capitalize">{context.membership.role}</p>
           </div>
         </div>

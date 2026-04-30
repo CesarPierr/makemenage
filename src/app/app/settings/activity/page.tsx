@@ -3,8 +3,8 @@ import { fr } from "date-fns/locale";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, RotateCcw, SkipForward } from "lucide-react";
 
-import { CollapsibleList } from "@/components/collapsible-list";
-import { ReopenButton } from "@/components/reopen-button";
+import { CollapsibleList } from "@/components/shared/collapsible-list";
+import { ReopenButton } from "@/components/shared/reopen-button";
 import { requireUser } from "@/lib/auth";
 import {
   getHistoryActionDescription,
@@ -95,24 +95,24 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
       <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
         <p className="section-kicker">Activité</p>
         <h2 className="display-title mt-2 text-4xl leading-tight">Ce qui a bougé récemment</h2>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--ink-700)]">
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-ink-700">
           Retrouvez vite ce qui a été terminé, passé, déplacé ou corrigé, sans perdre le fil du foyer.
         </p>
         <div className="mt-5 summary-strip sm:grid-cols-2 xl:grid-cols-4">
           <div className="metric-card interactive-surface px-4 py-3">
-            <p className="text-sm text-[var(--ink-700)]">Terminées</p>
+            <p className="text-sm text-ink-700">Terminées</p>
             <p className="mt-1 text-2xl font-semibold">{historySummary.completed}</p>
           </div>
           <div className="metric-card interactive-surface px-4 py-3">
-            <p className="text-sm text-[var(--ink-700)]">Sautées</p>
+            <p className="text-sm text-ink-700">Sautées</p>
             <p className="mt-1 text-2xl font-semibold">{historySummary.skipped}</p>
           </div>
           <div className="metric-card interactive-surface px-4 py-3">
-            <p className="text-sm text-[var(--ink-700)]">Reportées</p>
+            <p className="text-sm text-ink-700">Reportées</p>
             <p className="mt-1 text-2xl font-semibold">{historySummary.rescheduled}</p>
           </div>
           <div className="metric-card interactive-surface px-4 py-3">
-            <p className="text-sm text-[var(--ink-700)]">Corrections</p>
+            <p className="text-sm text-ink-700">Corrections</p>
             <p className="mt-1 text-2xl font-semibold">{historySummary.edited}</p>
           </div>
         </div>
@@ -130,7 +130,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
               <Link
                 key={filter.value}
                 href={buildFilterHref(filter.value)}
-                className={active ? "accent-pill border-[var(--ink-950)] text-[var(--ink-950)]" : "accent-pill"}
+                className={active ? "accent-pill border-ink-950 text-ink-950" : "accent-pill"}
               >
                 <span
                   className="accent-pill-dot"
@@ -162,9 +162,9 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
               <p className="section-kicker">Correction d&apos;erreur</p>
               <h3 className="display-title mt-1 text-2xl leading-tight">Tâches passées</h3>
             </div>
-            <span className="text-xs text-[var(--ink-500)]">30 derniers jours</span>
+            <span className="text-xs text-ink-500">30 derniers jours</span>
           </div>
-          <p className="text-sm text-[var(--ink-700)] mb-4">
+          <p className="text-sm text-ink-700 mb-4">
             Vous avez validé une tâche par erreur ? Retrouvez-la ici et remettez-la à faire.
           </p>
           <CollapsibleList
@@ -175,15 +175,15 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
               return (
                 <article
                   key={occ.id}
-                  className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-white/70 p-3"
+                  className="flex items-center gap-3 rounded-2xl border border-line bg-white/70 dark:bg-[#262830]/70 p-3"
                 >
                   <span
                     className="size-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: occ.taskTemplate.color ?? "var(--coral-500)" }}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-[var(--ink-950)]">{occ.taskTemplate.title}</p>
-                    <p className="text-xs text-[var(--ink-500)]">
+                    <p className="truncate text-sm font-semibold text-ink-950">{occ.taskTemplate.title}</p>
+                    <p className="text-xs text-ink-500">
                       {isCompleted ? "Validée" : "Passée"} · {format(occ.scheduledDate, "d MMM", { locale: fr })}
                       {occ.completedByMember ? ` · ${occ.completedByMember.displayName}` : ""}
                       {occ.actualMinutes ? ` · ${formatMinutes(occ.actualMinutes)}` : ""}
@@ -217,7 +217,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
                 const tone = getActionTone(log.actionType);
                 const Icon = tone.icon;
                 return (
-                  <article key={log.id} className="app-surface flex items-center gap-4 rounded-[1.3rem] p-3 transition-all hover:bg-white/50">
+                  <article key={log.id} className="app-surface flex items-center gap-4 rounded-[1.3rem] p-3 transition-all hover:bg-white/50 dark:bg-[#262830]/50">
                     <div
                       className="flex size-10 shrink-0 items-center justify-center rounded-full shadow-sm"
                       style={{ backgroundColor: tone.surface, color: tone.accent, border: `1px solid ${tone.accent}20` }}
@@ -226,12 +226,12 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <h3 className="truncate font-semibold text-[var(--ink-950)]">{log.occurrence.taskTemplate.title}</h3>
-                        <span className="shrink-0 text-[0.65rem] font-bold uppercase tracking-wider text-[var(--ink-500)]">
+                        <h3 className="truncate font-semibold text-ink-950">{log.occurrence.taskTemplate.title}</h3>
+                        <span className="shrink-0 text-[0.65rem] font-bold uppercase tracking-wider text-ink-500">
                           {format(log.createdAt, "HH:mm", { locale: fr })}
                         </span>
                       </div>
-                      <p className="truncate text-xs text-[var(--ink-700)]">
+                      <p className="truncate text-xs text-ink-700">
                         <span className="font-bold" style={{ color: tone.accent }}>{actionLabel}</span> · {actionDescription}
                       </p>
                     </div>
@@ -239,7 +239,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
                       <ReopenButton occurrenceId={log.occurrence.id} memberId={currentMemberId} compact />
                     ) : (
                       <div className="hidden shrink-0 sm:block">
-                        <span className="rounded-full bg-[var(--line)] px-2.5 py-1 text-[0.65rem] font-bold text-[var(--ink-700)]">
+                        <span className="rounded-full bg-line px-2.5 py-1 text-[0.65rem] font-bold text-ink-700">
                           {log.actorMember?.displayName ?? "Système"}
                         </span>
                       </div>
@@ -273,7 +273,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
                   const tone = getActionTone(log.actionType);
                   const Icon = tone.icon;
                   return (
-                    <article key={log.id} className="app-surface flex items-center gap-4 rounded-[1.3rem] p-3 transition-all hover:bg-white/50">
+                    <article key={log.id} className="app-surface flex items-center gap-4 rounded-[1.3rem] p-3 transition-all hover:bg-white/50 dark:bg-[#262830]/50">
                       <div
                         className="flex size-10 shrink-0 items-center justify-center rounded-full shadow-sm"
                         style={{ backgroundColor: tone.surface, color: tone.accent, border: `1px solid ${tone.accent}20` }}
@@ -282,12 +282,12 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <h3 className="truncate font-semibold text-[var(--ink-950)]">{log.occurrence.taskTemplate.title}</h3>
-                          <span className="shrink-0 text-[0.65rem] font-bold uppercase tracking-wider text-[var(--ink-500)]">
+                          <h3 className="truncate font-semibold text-ink-950">{log.occurrence.taskTemplate.title}</h3>
+                          <span className="shrink-0 text-[0.65rem] font-bold uppercase tracking-wider text-ink-500">
                             {format(log.createdAt, "dd MMM", { locale: fr })}
                           </span>
                         </div>
-                        <p className="truncate text-xs text-[var(--ink-700)]">
+                        <p className="truncate text-xs text-ink-700">
                           <span className="font-bold" style={{ color: tone.accent }}>{actionLabel}</span> · {actionDescription}
                         </p>
                       </div>
@@ -295,7 +295,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
                         <ReopenButton occurrenceId={log.occurrence.id} memberId={currentMemberId} compact />
                       ) : (
                         <div className="hidden shrink-0 sm:block">
-                          <span className="rounded-full bg-[var(--line)] px-2.5 py-1 text-[0.65rem] font-bold text-[var(--ink-700)]">
+                          <span className="rounded-full bg-line px-2.5 py-1 text-[0.65rem] font-bold text-ink-700">
                             {log.actorMember?.displayName ?? "Système"}
                           </span>
                         </div>
@@ -320,7 +320,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
         )}
 
         {!feedLogs.length && (
-          <div className="app-surface rounded-[1.8rem] p-5 text-sm leading-6 text-[var(--ink-700)]">
+          <div className="app-surface rounded-[1.8rem] p-5 text-sm leading-6 text-ink-700">
             Rien de marquant pour ce filtre. Les validations, sauts, reports et corrections utiles apparaîtront ici.
           </div>
         )}

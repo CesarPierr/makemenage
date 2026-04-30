@@ -1,9 +1,9 @@
-import { CopyValueButton } from "@/components/copy-value-button";
+import { CopyValueButton } from "@/components/shared/copy-value-button";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 import { redirect } from "next/navigation";
-import { ClientForm } from "@/components/client-form";
+import { ClientForm } from "@/components/shared/client-form";
 
 type AccessPageProps = {
   searchParams: Promise<{ household?: string; invite?: string }>;
@@ -88,7 +88,7 @@ export default async function AccessSettingsPage({ searchParams }: AccessPagePro
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold">Code {invite.code}</p>
-                    <p className="text-sm text-[var(--ink-700)]">
+                    <p className="text-sm text-ink-700">
                       Rôle {invite.role} · expire le{" "}
                       {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(invite.expiresAt)}
                     </p>
@@ -99,14 +99,14 @@ export default async function AccessSettingsPage({ searchParams }: AccessPagePro
                   <CopyValueButton label="Copier le lien" value={joinLink} />
                   <CopyValueButton label="Copier le code" value={invite.code} />
                 </div>
-                <a className="text-sm font-semibold text-[var(--coral-600)]" href={joinLink}>
+                <a className="text-sm font-semibold text-coral-600" href={joinLink}>
                   Ouvrir le lien d&apos;invitation
                 </a>
               </div>
             );
           })
         ) : (
-          <div className="soft-panel p-4 text-sm text-[var(--ink-700)]">Aucune invitation active.</div>
+          <div className="soft-panel p-4 text-sm text-ink-700">Aucune invitation active.</div>
         )}
       </div>
     </section>

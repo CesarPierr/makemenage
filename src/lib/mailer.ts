@@ -1,4 +1,8 @@
+import "server-only";
+
 import nodemailer from "nodemailer";
+
+import { logInfo } from "@/lib/logger";
 
 function createTransport() {
   const host = process.env.SMTP_HOST;
@@ -49,7 +53,7 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
 
   if (!transport) {
     // Dev mode: log to console
-    console.log(`[mailer] Password reset email for ${email}:\n${resetUrl}`);
+    logInfo("mailer.dev_mode", { email, resetUrl });
     return;
   }
 

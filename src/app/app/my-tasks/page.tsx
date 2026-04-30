@@ -3,8 +3,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { CollapsibleList } from "@/components/collapsible-list";
-import { OccurrenceCard } from "@/components/occurrence-card";
+import { CollapsibleList } from "@/components/shared/collapsible-list";
+import { OccurrenceCard } from "@/components/tasks/occurrence-card";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { groupOccurrencesByRoom } from "@/lib/experience";
@@ -12,19 +12,19 @@ import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
 import { cn, formatMinutes } from "@/lib/utils";
 
 const TaskCreationWizard = dynamic(
-  () => import("@/components/task-creation-wizard").then((module) => module.TaskCreationWizard),
+  () => import("@/components/tasks/task-creation-wizard").then((module) => module.TaskCreationWizard),
   {
-    loading: () => <div className="soft-panel p-4 text-sm text-[var(--ink-700)]">Chargement du formulaire…</div>,
+    loading: () => <div className="soft-panel p-4 text-sm text-ink-700">Chargement du formulaire…</div>,
   },
 );
 const TaskSettingsList = dynamic(
-  () => import("@/components/task-settings-list").then((module) => module.TaskSettingsList),
+  () => import("@/components/tasks/task-settings-list").then((module) => module.TaskSettingsList),
   {
-    loading: () => <div className="soft-panel p-4 text-sm text-[var(--ink-700)]">Chargement des récurrences…</div>,
+    loading: () => <div className="soft-panel p-4 text-sm text-ink-700">Chargement des récurrences…</div>,
   },
 );
 const CompletedTasksDialog = dynamic(
-  () => import("@/components/completed-tasks-dialog").then((module) => module.CompletedTasksDialog),
+  () => import("@/components/tasks/completed-tasks-dialog").then((module) => module.CompletedTasksDialog),
 );
 
 type MyTasksPageProps = {
@@ -124,7 +124,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
         <h2 className="display-title mt-2 text-4xl leading-tight">
           {manageable ? "Bibliothèque et suivi" : "Voir les tâches du foyer"}
         </h2>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--ink-700)]">
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-ink-700">
           Aujourd&apos;hui reste la page d&apos;action. Ici, vous retrouvez les routines, les tâches à venir et les réglages liés au planning.
         </p>
 
@@ -152,9 +152,9 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
             },
           ].map((item) => (
             <article key={item.label} className="metric-card interactive-surface px-4 py-4">
-              <p className="text-sm text-[var(--ink-700)]">{item.label}</p>
+              <p className="text-sm text-ink-700">{item.label}</p>
               <p className="mt-2 text-3xl font-semibold">{item.value}</p>
-              <p className="text-sm text-[var(--ink-500)]">{item.detail}</p>
+              <p className="text-sm text-ink-500">{item.detail}</p>
             </article>
           ))}
         </div>
@@ -166,15 +166,15 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
               className={cn(
                 "flex shrink-0 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all",
                 activeTab === "daily"
-                  ? "bg-white text-[var(--ink-950)] border-2 border-[var(--ink-950)] shadow-lg scale-105"
-                  : "bg-white/80 border border-[var(--line)] text-[var(--ink-700)] hover:bg-white",
+                  ? "bg-white dark:bg-[#262830] text-ink-950 border-2 border-ink-950 shadow-lg scale-105"
+                  : "bg-white/80 dark:bg-[#262830]/80 border border-line text-ink-700 hover:bg-white dark:bg-[#262830]",
               )}
             >
               Ma journée
               <span
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[0.6rem] font-bold",
-                  activeTab === "daily" ? "bg-[var(--ink-950)] text-white" : "bg-[var(--line)] text-[var(--ink-950)]",
+                  activeTab === "daily" ? "bg-ink-950 text-white" : "bg-line text-ink-950",
                 )}
               >
                 {todayAndOverdueAssigned.length}
@@ -188,8 +188,8 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
                   className={cn(
                     "flex shrink-0 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all",
                     activeTab === "templates"
-                      ? "bg-white text-[var(--ink-950)] border-2 border-[var(--ink-950)] shadow-lg scale-105"
-                      : "bg-white/80 border border-[var(--line)] text-[var(--ink-700)] hover:bg-white",
+                      ? "bg-white dark:bg-[#262830] text-ink-950 border-2 border-ink-950 shadow-lg scale-105"
+                      : "bg-white/80 dark:bg-[#262830]/80 border border-line text-ink-700 hover:bg-white dark:bg-[#262830]",
                   )}
                 >
                   Routines
@@ -197,8 +197,8 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
                     className={cn(
                       "rounded-full px-2 py-0.5 text-[0.6rem] font-bold",
                       activeTab === "templates"
-                        ? "bg-[var(--ink-950)] text-white"
-                        : "bg-[var(--line)] text-[var(--ink-950)]",
+                        ? "bg-ink-950 text-white"
+                        : "bg-line text-ink-950",
                     )}
                   >
                     {context.tasks.length}
@@ -209,8 +209,8 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
                   className={cn(
                     "flex shrink-0 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all",
                     activeTab === "wizard"
-                      ? "bg-white text-[var(--ink-950)] border-2 border-[var(--ink-950)] shadow-lg scale-105"
-                      : "bg-white/80 border border-[var(--line)] text-[var(--ink-700)] hover:bg-white",
+                      ? "bg-white dark:bg-[#262830] text-ink-950 border-2 border-ink-950 shadow-lg scale-105"
+                      : "bg-white/80 dark:bg-[#262830]/80 border border-line text-ink-700 hover:bg-white dark:bg-[#262830]",
                   )}
                 >
                   Ajouter
@@ -249,7 +249,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
                       <div className="flex items-center justify-between gap-3">
                         <span className="stat-pill px-3 py-1 text-xs font-semibold">{room}</span>
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-500">
                             {occurrences.length} tâche{occurrences.length > 1 ? "s" : ""}
                           </span>
                           <span className="stat-pill px-3 py-1 text-xs font-semibold">{formatMinutes(totalMinutes)}</span>
@@ -268,7 +268,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
                   ))}
                 </div>
               ) : (
-                <div className="soft-panel py-8 text-center text-[var(--ink-700)]">
+                <div className="soft-panel py-8 text-center text-ink-700">
                   C&apos;est tout pour aujourd&apos;hui ! 🎉
                 </div>
               )}
@@ -301,7 +301,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
                       <div className="flex items-center justify-between gap-3">
                         <span className="stat-pill px-3 py-1 text-xs font-semibold">{room}</span>
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-500)]">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-500">
                             {occurrences.length} tâche{occurrences.length > 1 ? "s" : ""}
                           </span>
                           <span className="stat-pill px-3 py-1 text-xs font-semibold">{formatMinutes(totalMinutes)}</span>
@@ -355,7 +355,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
             <div>
               <p className="section-kicker">Routines</p>
               <h3 className="display-title mt-2 text-3xl">Bibliothèque de tâches</h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--ink-700)]">
+              <p className="mt-2 text-sm leading-6 text-ink-700">
                 Toutes les routines du foyer restent ici, à part du quotidien, pour garder l&apos;action simple.
               </p>
             </div>

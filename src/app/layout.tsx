@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Manrope } from "next/font/google";
 
 import "./globals.css";
-import { ThemeProvider, ThemeScript } from "@/components/theme-provider";
+import { ThemeProvider, ThemeScript } from "@/components/shared/theme-provider";
 
 const fraunces = Fraunces({
   variable: "--font-display",
@@ -66,7 +66,7 @@ export default function RootLayout({
       <head>
         <ThemeScript />
       </head>
-      <body className="min-h-full bg-[var(--sand-50)] text-[var(--ink-950)] antialiased">
+      <body className="min-h-full bg-sand-50 text-ink-950 antialiased">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

@@ -14,6 +14,9 @@ const CSRF_EXEMPT_PREFIXES = [
 
 async function deriveCsrfToken(sessionToken: string): Promise<string> {
   const secret = process.env.CSRF_SECRET ?? "makemenage-csrf-default";
+  if (!process.env.CSRF_SECRET && process.env.NODE_ENV === "production") {
+    console.warn("[security] CSRF_SECRET is not set — using a hardcoded default. Set CSRF_SECRET in production.");
+  }
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),

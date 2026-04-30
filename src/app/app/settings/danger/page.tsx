@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { requireHouseholdContext } from "@/lib/households";
 import { redirect } from "next/navigation";
-import { ClientForm } from "@/components/client-form";
+import { ClientForm } from "@/components/shared/client-form";
 
 type DangerPageProps = {
   searchParams: Promise<{ household?: string; delete?: string }>;

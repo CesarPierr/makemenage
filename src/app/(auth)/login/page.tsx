@@ -54,7 +54,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Accueil
           </Link>
         </div>
-        <p className="mt-3 text-sm text-[var(--ink-700)]">Tâches, calendrier et historique du foyer.</p>
+        <p className="mt-3 text-sm text-ink-700">Tâches, calendrier et historique du foyer.</p>
         {feedbackMessage ? (
           <div
             className="mt-5 rounded-[1.4rem] px-4 py-3 text-sm leading-6"
@@ -98,15 +98,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Se connecter
           </button>
         </form>
-        <p className="mt-4 text-sm text-[var(--ink-700)]">
-          <Link className="font-semibold text-[var(--coral-600)]" href="/forgot-password">
+        <p className="mt-4 text-sm text-ink-700">
+          <Link className="font-semibold text-coral-600" href="/forgot-password">
             Mot de passe oublié ?
           </Link>
         </p>
-        <p className="mt-3 text-sm text-[var(--ink-700)]">
+        <p className="mt-3 text-sm text-ink-700">
           Pas encore de compte ?{" "}
           <Link
-            className="font-semibold text-[var(--coral-600)]"
+            className="font-semibold text-coral-600"
             href={next ? `/register?next=${encodeURIComponent(next)}` : "/register"}
           >
             Créer un compte

@@ -73,7 +73,7 @@ export function EntryRow({ entry, householdId, onChanged }: EntryRowProps) {
   if (editing) {
     content = (
       <form
-        className="rounded-xl border border-black/[0.08] bg-white p-3 space-y-2"
+        className="rounded-xl border border-black/[0.08] bg-white dark:bg-[#262830] p-3 space-y-2"
         onSubmit={(e) => {
           e.preventDefault();
           const fd = new FormData();
@@ -131,10 +131,10 @@ export function EntryRow({ entry, householdId, onChanged }: EntryRowProps) {
     content = (
       <div className="flex items-center gap-2 rounded-xl bg-black/[0.02] px-3 py-2.5">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-[var(--ink-950)]">
+          <p className="text-sm font-medium text-ink-950">
             {ENTRY_LABEL[entry.type]}
           </p>
-          <p className="text-xs text-[var(--ink-500)] truncate">
+          <p className="text-xs text-ink-500 truncate">
             {format(new Date(entry.occurredOn), "d MMM yyyy", { locale: fr })}
             {entry.reason ? ` · ${entry.reason}` : ""}
           </p>
@@ -142,7 +142,7 @@ export function EntryRow({ entry, householdId, onChanged }: EntryRowProps) {
         <p
           className={cn(
             "text-sm font-bold tabular-nums",
-            signed >= 0 ? "text-[var(--leaf-600)]" : "text-red-700",
+            signed >= 0 ? "text-leaf-600" : "text-red-700",
           )}
         >
           {formatSignedCurrency(signed)}
@@ -154,7 +154,7 @@ export function EntryRow({ entry, householdId, onChanged }: EntryRowProps) {
                 type="button"
                 aria-label="Modifier"
                 onClick={() => setEditing(true)}
-                className="size-7 rounded-md text-[var(--ink-500)] transition-colors hover:bg-black/[0.06] hover:text-[var(--ink-950)] flex items-center justify-center"
+                className="size-7 rounded-md text-ink-500 transition-colors hover:bg-black/[0.06] hover:text-ink-950 flex items-center justify-center"
               >
                 <Pencil className="size-3.5" />
               </button>
@@ -163,7 +163,7 @@ export function EntryRow({ entry, householdId, onChanged }: EntryRowProps) {
                 aria-label="Supprimer"
                 disabled={remove.isSubmitting}
                 onClick={() => setConfirmDelete(true)}
-                className="size-7 rounded-md text-[var(--ink-500)] transition-colors hover:bg-red-50 hover:text-red-700 flex items-center justify-center disabled:opacity-50"
+                className="size-7 rounded-md text-ink-500 transition-colors hover:bg-red-50 hover:text-red-700 flex items-center justify-center disabled:opacity-50"
               >
                 <Trash2 className="size-3.5" />
               </button>
@@ -174,7 +174,7 @@ export function EntryRow({ entry, householdId, onChanged }: EntryRowProps) {
               aria-label="Annuler le transfert"
               disabled={removeTransfer.isSubmitting}
               onClick={() => setConfirmTransferCancel(true)}
-              className="size-7 rounded-md text-[var(--ink-500)] transition-colors hover:bg-red-50 hover:text-red-700 flex items-center justify-center disabled:opacity-50"
+              className="size-7 rounded-md text-ink-500 transition-colors hover:bg-red-50 hover:text-red-700 flex items-center justify-center disabled:opacity-50"
               title="Annuler le transfert"
             >
               <Undo2 className="size-3.5" />

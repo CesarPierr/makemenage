@@ -143,8 +143,8 @@ export function CalculatorRunner({
             onClick={onCreate}
             className="app-surface rounded-2xl border border-dashed border-black/10 p-5 flex flex-col items-center justify-center gap-2 text-center hover:bg-black/[0.02] transition-colors group h-full min-h-[80px]"
           >
-            <Plus className="size-5 text-[var(--ink-400)] group-hover:text-[var(--coral-500)] transition-colors" />
-            <span className="text-xs font-bold text-[var(--ink-400)]">Nouveau calculateur</span>
+            <Plus className="size-5 text-ink-400 group-hover:text-coral-500 transition-colors" />
+            <span className="text-xs font-bold text-ink-400">Nouveau calculateur</span>
           </button>
         </div>
       );
@@ -172,7 +172,7 @@ export function CalculatorRunner({
         <button 
           type="button" 
           onClick={() => setSelectedId("")}
-          className="text-xs font-bold text-[var(--ink-400)] hover:text-red-500"
+          className="text-xs font-bold text-ink-400 hover:text-red-500"
         >
           Annuler
         </button>
@@ -180,7 +180,7 @@ export function CalculatorRunner({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <label className="field-label sm:col-span-2">
-          <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">Enveloppe cible</span>
+          <span className="text-[10px] uppercase font-bold text-ink-500">Enveloppe cible</span>
           <select
             className="field"
             value={targetBoxId}
@@ -196,7 +196,7 @@ export function CalculatorRunner({
         </label>
         {selected.fields.map((field) => (
           <label key={field.id} className="field-label">
-            <span className="text-[10px] uppercase font-bold text-[var(--ink-500)]">{field.label}</span>
+            <span className="text-[10px] uppercase font-bold text-ink-500">{field.label}</span>
             <input
               className="field"
               type="text"
@@ -208,7 +208,7 @@ export function CalculatorRunner({
               autoFocus={selected.fields[0].id === field.id}
             />
             {field.helperText ? (
-              <span className="text-[0.65rem] font-medium text-[var(--ink-400)] mt-0.5">{field.helperText}</span>
+              <span className="text-[0.65rem] font-medium text-ink-400 mt-0.5">{field.helperText}</span>
             ) : null}
           </label>
         ))}
@@ -247,7 +247,7 @@ export function CalculatorRunner({
                 className={cn(
                   "w-full app-surface interactive-surface rounded-2xl border p-4 text-left transition-all hover:shadow-lg active:scale-[0.99]",
                   selectedId === calculator.id 
-                    ? "border-[var(--coral-500)] bg-[var(--coral-50)] ring-2 ring-[var(--coral-100)]" 
+                    ? "border-coral-500 bg-[var(--coral-50)] ring-2 ring-[var(--coral-100)]" 
                     : "border-black/[0.04] hover:border-black/[0.1]",
                 )}
                 style={{ borderLeft: selectedId === calculator.id ? `4px solid var(--coral-500)` : `4px solid ${color}` }}
@@ -255,13 +255,13 @@ export function CalculatorRunner({
                 <div className="flex items-start gap-3">
                   <div className={cn(
                     "mt-0.5 p-2 rounded-xl transition-colors",
-                    selectedId === calculator.id ? "bg-white" : "bg-black/[0.03] group-hover:bg-black/[0.06]"
+                    selectedId === calculator.id ? "bg-white dark:bg-[#262830]" : "bg-black/[0.03] group-hover:bg-black/[0.06]"
                   )}>
                     <Calculator className="size-4" style={{ color: selectedId === calculator.id ? "var(--coral-500)" : color }} />
                   </div>
                   <div className="min-w-0 flex-1 pr-6">
-                    <h3 className="truncate text-sm font-bold text-[var(--ink-950)]">{calculator.name}</h3>
-                    <p className="mt-0.5 line-clamp-1 text-[10px] uppercase font-bold tracking-wider text-[var(--ink-400)]">
+                    <h3 className="truncate text-sm font-bold text-ink-950">{calculator.name}</h3>
+                    <p className="mt-0.5 line-clamp-1 text-[10px] uppercase font-bold tracking-wider text-ink-400">
                       {calculator.boxId ? "Cible par défaut" : "Global"}
                     </p>
                   </div>
@@ -271,7 +271,7 @@ export function CalculatorRunner({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onEdit(calculator); }}
-                  className="absolute top-2 right-2 p-2 rounded-lg text-[var(--ink-400)] hover:text-[var(--ink-900)] hover:bg-black/[0.05] transition-all opacity-0 group-hover:opacity-100"
+                  className="absolute top-2 right-2 p-2 rounded-lg text-ink-400 hover:text-[var(--ink-900)] hover:bg-black/[0.05] transition-all opacity-0 group-hover:opacity-100"
                   title="Modifier le modèle"
                 >
                   <Settings2 className="size-3.5" />
@@ -285,8 +285,8 @@ export function CalculatorRunner({
               onClick={onCreate}
               className="app-surface rounded-2xl border border-dashed border-black/10 p-4 flex items-center justify-center gap-2 hover:bg-black/[0.02] transition-colors group min-h-[72px]"
             >
-              <Plus className="size-4 text-[var(--ink-400)] group-hover:text-[var(--coral-500)] transition-colors" />
-              <span className="text-xs font-bold text-[var(--ink-400)]">Nouveau</span>
+              <Plus className="size-4 text-ink-400 group-hover:text-coral-500 transition-colors" />
+              <span className="text-xs font-bold text-ink-400">Nouveau</span>
             </button>
           )}
         </div>
@@ -311,7 +311,7 @@ export function CalculatorRunner({
           <Calculator className="size-4" style={{ color }} />
           {title}
         </span>
-        <ChevronDown className={cn("size-4 text-[var(--ink-500)] transition-transform", isOpen ? "rotate-180" : "")} />
+        <ChevronDown className={cn("size-4 text-ink-500 transition-transform", isOpen ? "rotate-180" : "")} />
       </button>
 
       {isOpen ? (

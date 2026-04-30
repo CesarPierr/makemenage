@@ -1,4 +1,6 @@
-import { subDays } from "date-fns";
+import { addDays, subDays } from "date-fns";
+
+import { isoDateKey } from "@/lib/time";
 
 type MemberLike = {
   id: string;
@@ -97,18 +99,14 @@ export function buildRollingCompletionMetrics(members: MemberLike[], occurrences
 export function calculateStreak(occurrences: OccurrenceLike[]): number {
   const completedDates = occurrences
     .filter((o) => o.status === "completed" && o.completedAt)
-    .map((o) => {
-      // Use local timezone offset safely to get YYYY-MM-DD
-      const date = new Date(o.completedAt as Date);
-      return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split("T")[0];
-    });
+    .map((o) => isoDateKey(new Date(o.completedAt as Date)));
 
   const uniqueDates = [...new Set(completedDates)].sort().reverse(); // newest first
   if (uniqueDates.length === 0) return 0;
 
   const now = new Date();
-  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
-  const yesterday = new Date(now.getTime() - 86400000 - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+  const today = isoDateKey(now);
+  const yesterday = isoDateKey(addDays(now, -1));
 
   if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) return 0;
 
@@ -118,8 +116,7 @@ export function calculateStreak(occurrences: OccurrenceLike[]): number {
   for (const date of uniqueDates) {
     if (date === expectedDate) {
       streak++;
-      const prev = new Date(new Date(date).getTime() - 86400000);
-      expectedDate = new Date(prev.getTime() - prev.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+      expectedDate = isoDateKey(addDays(new Date(date), -1));
     } else {
       break;
     }

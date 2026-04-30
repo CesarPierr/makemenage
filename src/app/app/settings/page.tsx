@@ -52,20 +52,20 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             className="app-surface group relative flex flex-col justify-between overflow-hidden rounded-[2rem] p-6 transition-all hover:-translate-y-1 hover:shadow-xl"
           >
             <div className="relative z-10">
-              <div className="inline-flex rounded-2xl bg-[rgba(216,100,61,0.14)] p-3 text-[var(--coral-600)]">
+              <div className="inline-flex rounded-2xl bg-[rgba(216,100,61,0.14)] p-3 text-coral-600">
                 <Icon className="size-5" />
               </div>
-              <h3 className="display-title mt-3 text-2xl group-hover:text-[var(--sky-600)] transition-colors">
+              <h3 className="display-title mt-3 text-2xl group-hover:text-sky-600 transition-colors">
                 {panel.label}
               </h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--ink-700)]">
+              <p className="mt-2 text-sm leading-6 text-ink-700">
                 {panel.description}
               </p>
             </div>
-            <div className="mt-6 flex items-center gap-2 text-sm font-bold text-[var(--sky-600)] opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="mt-6 flex items-center gap-2 text-sm font-bold text-sky-600 opacity-0 group-hover:opacity-100 transition-opacity">
               Configurer <ArrowRight className="size-4" />
             </div>
-            <div className="absolute -bottom-6 -right-6 size-32 rounded-full bg-[var(--sky-500)] opacity-[0.03] transition-transform group-hover:scale-150" />
+            <div className="absolute -bottom-6 -right-6 size-32 rounded-full bg-sky-500 opacity-[0.03] transition-transform group-hover:scale-150" />
           </Link>
         );
       })}

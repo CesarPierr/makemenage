@@ -11,7 +11,7 @@ Récurrences automatiques, rotation équitable entre membres, dashboard mobile-f
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript)](https://www.typescriptlang.org)
 [![Prisma](https://img.shields.io/badge/Prisma-6-2d3748?logo=prisma)](https://www.prisma.io)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)](https://www.postgresql.org)
-[![Tests](https://img.shields.io/badge/tests-Vitest%20%2B%20Playwright-6e9f18)](#tests)
+[![Tests](https://img.shields.io/badge/tests-Vitest-6e9f18)](#tests)
 
 </div>
 
@@ -19,8 +19,9 @@ Récurrences automatiques, rotation équitable entre membres, dashboard mobile-f
 
 ## Ce que fait MakeMenage
 
-- **Tâches récurrentes** — `daily`, `every_x_days`, `weekly`, `every_x_weeks`, `monthly_simple`
+- **Tâches récurrentes** — `daily`, `every_x_days`, `weekly`, `every_x_weeks`, `monthly_simple`, avec glissement intelligent (Sliding Window)
 - **Attribution équitable** — `fixed`, `manual`, `strict_alternation`, `round_robin`, `least_assigned_count`, `least_assigned_minutes`
+- **Épargne & Budget** — Cagnottes partagées, virements, formules de calcul intelligentes (Calculators) et auto-fill conditionnel
 - **Sessions focus** chronométrées par pièce
 - **Calendrier mensuel** filtrable par membre + vue agenda 7 jours sur mobile
 - **Vacances** — chaque membre peut s'absenter, les tâches glissent automatiquement
@@ -37,8 +38,37 @@ Récurrences automatiques, rotation équitable entre membres, dashboard mobile-f
 | Frontend | Next.js 16 (App Router), React 19, Tailwind 4 |
 | Backend | Routes Next.js, Prisma 6, PostgreSQL |
 | Auth | Sessions cookie HTTPOnly |
-| Tests | Vitest 4 (unit) + Playwright (E2E) |
+| Tests | Vitest 4 (unit) |
 | Déploiement | Docker Compose, systemd timers, cron local |
+
+### Architecture
+
+```mermaid
+graph TD
+    Client[Navigateur Web / PWA Mobile] -->|HTTP / JSON / FormData| Middleware[Rate Limiting + CSRF]
+    Middleware --> App[Next.js App Router]
+    
+    subgraph Frontend
+        App --> Pages[UI Components]
+        Pages --> Toast[Toast Notifications]
+    end
+    
+    subgraph Backend
+        App --> API[Routes API + Server Actions]
+        API --> Auth[Cookie Auth Layer]
+        API --> Engine[Scheduling Engine]
+        API --> Zod[Validation Zod]
+    end
+    
+    Engine --> Prisma[Prisma ORM]
+    Zod --> Prisma
+    Auth --> Prisma
+    
+    Prisma --> DB[(PostgreSQL)]
+    
+    MCP[Client MCP / LLM] -->|stdio| MCPServer[MCP Server Script]
+    MCPServer --> Prisma
+```
 
 ## Démarrage rapide
 
@@ -67,9 +97,6 @@ App : <http://localhost:3000>
 npm run lint         # ESLint
 npm run typecheck    # TypeScript strict
 npm run test         # Vitest (unit + couverture)
-
-npx playwright install chromium
-npm run test:e2e     # Playwright (E2E)
 ```
 
 ## Structure
@@ -79,7 +106,15 @@ src/
   app/                 routes Next.js (App Router)
     app/               UI authentifiée
     api/               endpoints JSON
-  components/          composants React (ui/ pour les primitives)
+  components/          composants React groupés par domaine:
+    tasks/             gestion et création de tâches
+    calendar/          vues mensuelles et synchro
+    dashboard/         widgets de la page d'accueil
+    settings/          vues de configuration
+    savings/           module d'épargne et calculatrices
+    layout/            app-shell, headers
+    shared/            utilitaires (formulaires, thèmes)
+    ui/                primitives Radix/Tailwind
   lib/
     scheduling/        moteur de récurrence et d'attribution
     analytics.ts       streaks et équité
@@ -87,7 +122,7 @@ src/
 prisma/                schéma + migrations + seeds
 public/                manifest, sw.js, icônes PWA
 scripts/               CI, MCP server, déploiement
-tests/                 Vitest + Playwright
+tests/                 Vitest unit tests
 docs/                  guides setup, prod, reverse proxy
 ```
 

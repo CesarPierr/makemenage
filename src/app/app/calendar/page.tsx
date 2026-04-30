@@ -2,13 +2,13 @@ import React from "react";
 import { addDays, format, startOfToday } from "date-fns";
 import { fr } from "date-fns/locale";
 
-import { CalendarMonth } from "@/components/calendar-month";
+import { CalendarMonth } from "@/components/calendar/calendar-month";
 import { requireUser } from "@/lib/auth";
 
 import { requireHouseholdContext } from "@/lib/households";
 import { ChevronLeft, ChevronRight, Wrench } from "lucide-react";
 import Link from "next/link";
-import { CalendarSidebar } from "@/components/calendar-sidebar";
+import { CalendarSidebar } from "@/components/calendar/calendar-sidebar";
 import { cn } from "@/lib/utils";
 
 type CalendarPageProps = {
@@ -100,7 +100,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                 {format(startDate, "d MMM", { locale: fr })} — {format(endDate, "d MMM yyyy", { locale: fr })}
               </h2>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <p className="text-sm leading-6 text-[var(--ink-700)]">
+                <p className="text-sm leading-6 text-ink-700">
                   Prochains jours et organisation.
                 </p>
                 <Link
@@ -108,7 +108,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                   className={cn(
                     "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all",
                     isModifiedFilter 
-                      ? "bg-[var(--coral-500)] text-white shadow-md shadow-coral-100" 
+                      ? "bg-coral-500 text-white shadow-md shadow-coral-100" 
                       : "bg-[var(--ink-100)] text-[var(--ink-600)] hover:bg-[var(--ink-200)]"
                   )}
                 >
@@ -176,7 +176,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
             </span>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--line)] pt-4" role="group" aria-label="Filtrer">
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4" role="group" aria-label="Filtrer">
             <Link
               href={`/app/calendar?household=${context.household.id}&monthOffset=${monthOffset}&dayOffset=${dayOffset}${isModifiedFilter ? "&modified=1" : ""}`}
               className={`accent-pill transition-all ${!activeMember ? "ring-2 ring-[var(--sky-500)] ring-offset-1 font-semibold" : "opacity-60 hover:opacity-100"}`}

@@ -68,11 +68,11 @@ export function EpargneClient({
       >
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <p className="section-kicker text-[var(--leaf-600)]">Épargne & Provisions</p>
-            <p className="mt-1 text-4xl font-bold tabular-nums text-[var(--ink-950)] sm:text-5xl">
+            <p className="section-kicker text-leaf-600">Épargne & Provisions</p>
+            <p className="mt-1 text-4xl font-bold tabular-nums text-ink-950 sm:text-5xl">
               {formatCurrency(totalSavings)}
             </p>
-            <p className="mt-1 text-sm text-[var(--ink-700)]">
+            <p className="mt-1 text-sm text-ink-700">
               Réparti sur {balanceBoxes.length} enveloppe{balanceBoxes.length > 1 ? "s" : ""}.
             </p>
           </div>
@@ -83,7 +83,7 @@ export function EpargneClient({
               <p className="mt-1 text-2xl font-bold tabular-nums text-red-700 sm:text-3xl">
                 {formatCurrency(totalDebt)}
               </p>
-              <p className="mt-0.5 text-xs text-[var(--ink-500)]">
+              <p className="mt-0.5 text-xs text-ink-500">
                 Sur {debtBoxes.length} poste{debtBoxes.length > 1 ? "s" : ""}.
               </p>
             </div>
@@ -132,11 +132,11 @@ export function EpargneClient({
           className={cn(
             "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-xl transition-all",
             tab === "boxes"
-              ? "bg-white text-[var(--ink-950)] shadow-sm"
-              : "text-[var(--ink-500)] hover:text-[var(--ink-700)]",
+              ? "bg-white dark:bg-[#262830] text-ink-950 shadow-sm"
+              : "text-ink-500 hover:text-ink-700",
           )}
         >
-          <Sparkles className={cn("size-4", tab === "boxes" ? "text-[var(--coral-500)]" : "")} />
+          <Sparkles className={cn("size-4", tab === "boxes" ? "text-coral-500" : "")} />
           Enveloppes
         </button>
         <button
@@ -149,11 +149,11 @@ export function EpargneClient({
           className={cn(
             "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-xl transition-all",
             tab === "calculators"
-              ? "bg-white text-[var(--ink-950)] shadow-sm"
-              : "text-[var(--ink-500)] hover:text-[var(--ink-700)]",
+              ? "bg-white dark:bg-[#262830] text-ink-950 shadow-sm"
+              : "text-ink-500 hover:text-ink-700",
           )}
         >
-          <Calculator className={cn("size-4", tab === "calculators" ? "text-[var(--coral-500)]" : "")} />
+          <Calculator className={cn("size-4", tab === "calculators" ? "text-coral-500" : "")} />
           Calculateurs
         </button>
       </nav>
@@ -162,9 +162,9 @@ export function EpargneClient({
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           {isEmpty ? (
             <section className="app-surface rounded-2xl p-6 text-center">
-              <Sparkles className="size-8 mx-auto text-[var(--coral-500)]" />
+              <Sparkles className="size-8 mx-auto text-coral-500" />
               <h3 className="mt-3 text-lg font-bold">Commencez par une enveloppe</h3>
-              <p className="mt-1 text-sm text-[var(--ink-700)] max-w-md mx-auto">
+              <p className="mt-1 text-sm text-ink-700 max-w-md mx-auto">
                 Choisissez un modèle (épargne précaution, vacances, voiture…) ou créez la vôtre.
               </p>
               <button
@@ -186,7 +186,7 @@ export function EpargneClient({
 
           {archivedBoxes.length > 0 ? (
             <details className="mt-4 app-surface rounded-2xl p-4 group">
-              <summary className="cursor-pointer text-sm font-semibold text-[var(--ink-500)] flex items-center justify-between">
+              <summary className="cursor-pointer text-sm font-semibold text-ink-500 flex items-center justify-between">
                 <span>{archivedBoxes.length} enveloppe{archivedBoxes.length > 1 ? "s" : ""} archivée{archivedBoxes.length > 1 ? "s" : ""}</span>
                 <Plus className="size-4 group-open:rotate-45 transition-transform" />
               </summary>
@@ -202,8 +202,8 @@ export function EpargneClient({
         <section className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="px-1 flex items-center justify-between">
             <div>
-              <p className="section-kicker text-[var(--coral-500)]">Utiliser</p>
-              <h2 className="text-lg font-bold text-[var(--ink-950)]">Lancer un calcul</h2>
+              <p className="section-kicker text-coral-500">Utiliser</p>
+              <h2 className="text-lg font-bold text-ink-950">Lancer un calcul</h2>
             </div>
           </div>
           

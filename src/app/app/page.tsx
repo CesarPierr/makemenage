@@ -1,18 +1,18 @@
 import dynamic from "next/dynamic";
 import { startOfDay } from "date-fns";
 
-import { ClientForm } from "@/components/client-form";
-import { HomeHeader } from "@/components/home-header";
-import { TaskWorkspaceClient } from "@/components/task-workspace-client";
-import { UxEventTracker } from "@/components/ux-event-tracker";
-import { WeekKanban } from "@/components/week-kanban";
+import { ClientForm } from "@/components/shared/client-form";
+import { HomeHeader } from "@/components/layout/home-header";
+import { TaskWorkspaceClient } from "@/components/tasks/task-workspace-client";
+import { UxEventTracker } from "@/components/shared/ux-event-tracker";
+import { WeekKanban } from "@/components/tasks/week-kanban";
 import { buildLoadMetrics, buildRollingCompletionMetrics, calculateStreak } from "@/lib/analytics";
 import { requireUser } from "@/lib/auth";
 import { canManageHousehold, getCurrentHouseholdContext } from "@/lib/households";
 
 const OnboardingWizard = dynamic(
-  () => import("@/components/onboarding-wizard").then((m) => m.OnboardingWizard),
-  { loading: () => <div className="app-surface rounded-[2rem] p-8 text-center text-[var(--ink-700)] text-sm">Chargement…</div> },
+  () => import("@/components/onboarding/onboarding-wizard").then((m) => m.OnboardingWizard),
+  { loading: () => <div className="app-surface rounded-[2rem] p-8 text-center text-ink-700 text-sm">Chargement…</div> },
 );
 
 type DashboardPageProps = {
@@ -38,12 +38,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <section className="app-surface glow-card rounded-[2rem] p-6 sm:p-8">
         <p className="section-kicker">Bienvenue</p>
         <h2 className="display-title mt-2 text-4xl leading-tight sm:text-5xl">Mettez votre foyer en route</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-700)]">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-700">
           Créez un foyer ou rejoignez-en un pour voir tout de suite ce qu&apos;il y a à faire aujourd&apos;hui.
         </p>
         {dashboardMessage ? (
           <div
-            className="mt-5 rounded-[1.4rem] border px-4 py-3 text-sm leading-6 text-[var(--coral-600)]"
+            className="mt-5 rounded-[1.4rem] border px-4 py-3 text-sm leading-6 text-coral-600"
             style={{ backgroundColor: "rgba(216, 100, 61, 0.12)", borderColor: "rgba(30, 31, 34, 0.06)" }}
           >
             {dashboardMessage}
@@ -98,11 +98,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     );
   }
 
-  if (context.tasks.length === 0 && canManageHousehold(context.membership.role) && params.onboarding !== "skip") {
+  const needsOnboarding = !context.currentMember?.onboardingCompletedAt && canManageHousehold(context.membership.role);
+
+  if (needsOnboarding) {
     return (
       <div className="space-y-4">
         {dashboardMessage ? (
-          <div className="app-surface rounded-[1.7rem] border border-[rgba(56,115,93,0.12)] px-4 py-3 text-sm text-[var(--leaf-600)]">
+          <div className="app-surface rounded-[1.7rem] border border-[rgba(56,115,93,0.12)] px-4 py-3 text-sm text-leaf-600">
             {dashboardMessage}
           </div>
         ) : null}
@@ -112,12 +114,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           currentMemberName={context.currentMember?.displayName ?? "vous"}
         />
         <div className="text-center">
-          <a
-            href={`/app?household=${context.household.id}&onboarding=skip`}
-            className="text-xs text-[var(--ink-400)] hover:text-[var(--ink-700)]"
+          <button
+            onClick={async () => {
+              "use client";
+              const csrfToken = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/)?.[1] ?? "";
+              await fetch(`/api/households/${context.household.id}/onboarding`, { 
+                method: "POST",
+                headers: csrfToken ? { "x-csrf-token": csrfToken } : {}
+              });
+              window.location.reload();
+            }}
+            className="text-xs text-ink-400 hover:text-ink-700"
           >
             Passer pour l&apos;instant
-          </a>
+          </button>
         </div>
       </div>
     );
@@ -146,7 +156,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         props={{ todayCount, overdueCount, weekTotal, taskCount: context.tasks.length }}
       />
       {dashboardMessage ? (
-        <div className="app-surface rounded-[1.7rem] border border-[rgba(56,115,93,0.12)] px-4 py-3 text-sm leading-6 text-[var(--leaf-600)]">
+        <div className="app-surface rounded-[1.7rem] border border-[rgba(56,115,93,0.12)] px-4 py-3 text-sm leading-6 text-leaf-600">
           {dashboardMessage}
         </div>
       ) : null}
@@ -197,7 +207,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <p className="section-kicker">Vue d&apos;ensemble</p>
               <h3 className="display-title mt-1 text-xl">Ma semaine</h3>
             </div>
-            <span className="chev rounded-full border border-[var(--line)] bg-white/70 p-1.5 text-[var(--ink-500)] transition-transform">
+            <span className="chev rounded-full border border-line bg-white/70 dark:bg-[#262830]/70 p-1.5 text-ink-500 transition-transform">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
             </span>
           </summary>

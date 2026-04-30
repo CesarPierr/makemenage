@@ -40,8 +40,8 @@ export function BottomSheetAction({
         variant === "danger"
           ? "text-red-700 hover:bg-red-50"
           : variant === "success"
-            ? "text-[var(--leaf-600)] hover:bg-[rgba(56,115,93,0.08)]"
-            : "text-[var(--ink-950)] hover:bg-black/[0.04]",
+            ? "text-leaf-600 hover:bg-[rgba(56,115,93,0.08)]"
+            : "text-ink-950 hover:bg-black/[0.04]",
         disabled && "pointer-events-none opacity-40",
       )}
       disabled={disabled}
@@ -51,7 +51,7 @@ export function BottomSheetAction({
       {Icon ? <Icon className="size-5 shrink-0 opacity-70" /> : null}
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-sm">{label}</p>
-        {hint ? <p className="text-xs text-[var(--ink-500)] mt-0.5">{hint}</p> : null}
+        {hint ? <p className="text-xs text-ink-500 mt-0.5">{hint}</p> : null}
       </div>
     </button>
   );
@@ -178,10 +178,10 @@ export function BottomSheet({ isOpen, onClose, title, children, maxHeight = 85 }
           {/* Header */}
           {title ? (
             <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-2">
-              <h3 className="text-lg font-bold text-[var(--ink-950)]">{title}</h3>
+              <h3 className="text-lg font-bold text-ink-950">{title}</h3>
               <button
                 aria-label="Fermer"
-                className="flex size-11 items-center justify-center rounded-full bg-black/[0.06] text-[var(--ink-700)] transition-colors hover:bg-black/10 active:scale-90"
+                className="flex size-11 items-center justify-center rounded-full bg-black/[0.06] text-ink-700 transition-colors hover:bg-black/10 active:scale-90"
                 onClick={onClose}
                 type="button"
               >

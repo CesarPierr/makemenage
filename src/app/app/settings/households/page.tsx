@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { requireHouseholdContext } from "@/lib/households";
-import { ClientForm } from "@/components/client-form";
+import { ClientForm } from "@/components/shared/client-form";
 
 type HouseholdsPageProps = {
   searchParams: Promise<{ household?: string; leave?: string }>;
@@ -28,7 +28,7 @@ export default async function HouseholdsSettingsPage({ searchParams }: Household
 
       {feedbackMessage ? (
         <div
-          className="rounded-[1.4rem] border border-[rgba(216,100,61,0.2)] bg-[rgba(216,100,61,0.12)] px-4 py-3 text-sm leading-6 text-[var(--coral-600)]"
+          className="rounded-[1.4rem] border border-[rgba(216,100,61,0.2)] bg-[rgba(216,100,61,0.12)] px-4 py-3 text-sm leading-6 text-coral-600"
         >
           {feedbackMessage.text}
         </div>
@@ -42,11 +42,11 @@ export default async function HouseholdsSettingsPage({ searchParams }: Household
               const active = membership.householdId === context.household.id;
 
               return (
-                <div key={membership.id} className="rounded-[1.3rem] border border-[var(--line)] bg-white/75 p-4">
+                <div key={membership.id} className="rounded-[1.3rem] border border-line bg-white/75 dark:bg-[#262830]/75 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-semibold">{membership.household.name}</p>
-                      <p className="text-sm text-[var(--ink-700)]">
+                      <p className="text-sm text-ink-700">
                         Rôle {membership.role} {active ? "· foyer actif" : ""}
                       </p>
                     </div>

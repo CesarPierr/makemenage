@@ -138,7 +138,7 @@ export function BoxCreateWizard({ isOpen, onClose, householdId }: BoxCreateWizar
               key={i}
               className={cn(
                 "h-1.5 flex-1 rounded-full transition-colors",
-                step >= i ? "bg-[var(--coral-500)]" : "bg-black/[0.08]",
+                step >= i ? "bg-coral-500" : "bg-black/[0.08]",
               )}
             />
           ))}
@@ -146,7 +146,7 @@ export function BoxCreateWizard({ isOpen, onClose, householdId }: BoxCreateWizar
 
         {step === 0 ? (
           <div className="space-y-4">
-            <p className="text-sm text-[var(--ink-700)]">
+            <p className="text-sm text-ink-700">
               Choisissez un modèle ou commencez à zéro.
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -161,7 +161,7 @@ export function BoxCreateWizard({ isOpen, onClose, householdId }: BoxCreateWizar
                   <Sparkles className="size-4 mt-0.5 shrink-0" style={{ color: t.color }} />
                   <div className="min-w-0">
                     <p className="font-semibold text-sm">{t.name}</p>
-                    <p className="text-xs text-[var(--ink-500)] line-clamp-2">{t.notes}</p>
+                    <p className="text-xs text-ink-500 line-clamp-2">{t.notes}</p>
                   </div>
                 </button>
               ))}
@@ -188,12 +188,12 @@ export function BoxCreateWizard({ isOpen, onClose, householdId }: BoxCreateWizar
                     className={cn(
                       "rounded-xl p-3 text-left text-sm transition-colors",
                       kind === k.value
-                        ? "bg-[var(--coral-500)] text-white"
-                        : "bg-black/[0.04] text-[var(--ink-700)]",
+                        ? "bg-coral-500 text-white"
+                        : "bg-black/[0.04] text-ink-700",
                     )}
                   >
                     <p className="font-semibold">{k.label}</p>
-                    <p className={cn("text-xs mt-0.5", kind === k.value ? "text-white/85" : "text-[var(--ink-500)]")}>
+                    <p className={cn("text-xs mt-0.5", kind === k.value ? "text-white/85" : "text-ink-500")}>
                       {k.hint}
                     </p>
                   </button>
@@ -271,10 +271,10 @@ export function BoxCreateWizard({ isOpen, onClose, householdId }: BoxCreateWizar
                 onChange={(e) => setAutoFillEnabled(e.target.checked)}
               />
               <span>
-                <span className="block text-sm font-semibold text-[var(--ink-950)]">
+                <span className="block text-sm font-semibold text-ink-950">
                   Ajouter automatiquement de l&apos;argent
                 </span>
-                <span className="block text-xs text-[var(--ink-500)]">
+                <span className="block text-xs text-ink-500">
                   Mensuel, hebdo ou intervalle personnalisé.
                 </span>
               </span>
@@ -340,7 +340,7 @@ export function BoxCreateWizard({ isOpen, onClose, householdId }: BoxCreateWizar
 
                 {autoFillType === "weekly" ? (
                   <div className="space-y-1.5">
-                    <p className="text-sm font-medium text-[var(--ink-700)]">Jours de la semaine</p>
+                    <p className="text-sm font-medium text-ink-700">Jours de la semaine</p>
                     <div className="grid grid-cols-7 gap-1.5">
                       {[
                         { value: 1, label: "L" },
@@ -358,8 +358,8 @@ export function BoxCreateWizard({ isOpen, onClose, householdId }: BoxCreateWizar
                           className={cn(
                             "h-10 rounded-lg text-sm font-semibold transition-colors",
                             autoFillWeekdays.includes(d.value)
-                              ? "bg-[var(--coral-500)] text-white"
-                              : "bg-black/[0.04] text-[var(--ink-700)]",
+                              ? "bg-coral-500 text-white"
+                              : "bg-black/[0.04] text-ink-700",
                           )}
                         >
                           {d.label}
@@ -401,13 +401,13 @@ export function BoxCreateWizard({ isOpen, onClose, householdId }: BoxCreateWizar
                 <span className="size-3 rounded-full" style={{ background: color }} />
                 <p className="font-semibold">{name}</p>
               </div>
-              <p className="text-xs text-[var(--ink-500)]">
+              <p className="text-xs text-ink-500">
                 {KIND_OPTIONS.find((k) => k.value === kind)?.label}
                 {initialBalance ? ` · solde ${initialBalance} €` : ""}
                 {targetAmount ? ` · objectif ${targetAmount} €` : ""}
                 {autoFillEnabled ? ` · auto ${autoFillAmount} €` : ""}
               </p>
-              {notes ? <p className="text-sm text-[var(--ink-700)]">{notes}</p> : null}
+              {notes ? <p className="text-sm text-ink-700">{notes}</p> : null}
             </div>
             <label className="field-label">
               <span>Note (facultatif)</span>

@@ -29,21 +29,21 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
               className="mt-6 rounded-[1.4rem] px-4 py-4 text-sm leading-6"
               style={{ backgroundColor: "rgba(56, 115, 93, 0.12)", border: "1px solid rgba(30, 31, 34, 0.06)" }}
             >
-              <p className="font-semibold text-[var(--ink-950)]">Email envoyé</p>
-              <p className="mt-1 text-[var(--ink-700)]">
+              <p className="font-semibold text-ink-950">Email envoyé</p>
+              <p className="mt-1 text-ink-700">
                 Si un compte existe avec cette adresse, vous recevrez un lien de réinitialisation dans les prochaines
                 minutes. Pensez à vérifier vos spams.
               </p>
             </div>
-            <p className="mt-6 text-sm text-[var(--ink-700)]">
-              <Link className="font-semibold text-[var(--coral-600)]" href="/login">
+            <p className="mt-6 text-sm text-ink-700">
+              <Link className="font-semibold text-coral-600" href="/login">
                 Retour à la connexion
               </Link>
             </p>
           </>
         ) : (
           <>
-            <p className="mt-3 text-sm text-[var(--ink-700)]">
+            <p className="mt-3 text-sm text-ink-700">
               Entrez votre adresse email. Si un compte existe, vous recevrez un lien pour créer un nouveau mot de passe.
             </p>
             <form action="/api/auth/forgot-password" method="post" className="mt-8 space-y-4">
@@ -61,9 +61,9 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
                 Envoyer le lien de réinitialisation
               </button>
             </form>
-            <p className="mt-5 text-sm text-[var(--ink-700)]">
+            <p className="mt-5 text-sm text-ink-700">
               Vous vous souvenez ?{" "}
-              <Link className="font-semibold text-[var(--coral-600)]" href="/login">
+              <Link className="font-semibold text-coral-600" href="/login">
                 Se connecter
               </Link>
             </p>

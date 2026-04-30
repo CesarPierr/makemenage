@@ -31,7 +31,7 @@ export function BoxCard({ box, onClick }: BoxCardProps) {
   if (goalReached) {
     statusLabel = {
       text: "Objectif atteint",
-      className: "text-[var(--leaf-600)] bg-[rgba(56,115,93,0.10)]",
+      className: "text-leaf-600 bg-[rgba(56,115,93,0.10)]",
       Icon: CheckCircle2,
     };
   } else if (debtIssue) {
@@ -60,23 +60,23 @@ export function BoxCard({ box, onClick }: BoxCardProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <PiggyBank className="size-4 shrink-0" style={{ color: box.color }} />
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink-500)]">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-500">
               {kindLabel[box.kind]}
             </p>
           </div>
-          <h3 className="mt-1 truncate text-base font-bold text-[var(--ink-950)]">{box.name}</h3>
+          <h3 className="mt-1 truncate text-base font-bold text-ink-950">{box.name}</h3>
         </div>
         <div className="text-right">
           <p
             className={cn(
               "text-xl font-bold tabular-nums",
-              inDebt ? "text-red-700" : "text-[var(--ink-950)]",
+              inDebt ? "text-red-700" : "text-ink-950",
             )}
           >
             {formatCurrency(balance)}
           </p>
           {target ? (
-            <p className="text-xs text-[var(--ink-500)] mt-0.5">/ {formatCurrency(target)}</p>
+            <p className="text-xs text-ink-500 mt-0.5">/ {formatCurrency(target)}</p>
           ) : null}
         </div>
       </div>
@@ -106,7 +106,7 @@ export function BoxCard({ box, onClick }: BoxCardProps) {
           </span>
         ) : null}
         {autoFillRule && !autoFillRule.isPaused ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-black/[0.04] px-2 py-0.5 text-[0.7rem] font-medium text-[var(--ink-700)]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-black/[0.04] px-2 py-0.5 text-[0.7rem] font-medium text-ink-700">
             <Target className="size-3" />
             Auto +{formatCurrency(autoFillRule.amount)}
           </span>

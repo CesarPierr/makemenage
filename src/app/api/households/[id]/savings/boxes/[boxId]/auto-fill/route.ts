@@ -1,5 +1,6 @@
 import { dataErrorOrRedirect, dataOrRedirect, withHousehold } from "@/lib/api";
 import { db } from "@/lib/db";
+import { logWarn } from "@/lib/logger";
 import { savingsAutoFillSchema } from "@/lib/validation";
 
 export const POST = withHousehold<{ id: string; boxId: string }>(
@@ -41,7 +42,7 @@ export const POST = withHousehold<{ id: string; boxId: string }>(
     });
 
     if (!parsed.success) {
-      console.error("AutoFill Validation Error:", parsed.error.format());
+      logWarn("savings.auto_fill.validation_failed", { errors: parsed.error.format() });
       return dataErrorOrRedirect(request, 400, "Données invalides.", fallback);
     }
 

@@ -120,7 +120,7 @@ export function BalanceChart({
   if (!data) {
     return (
       <div
-        className="rounded-xl bg-black/[0.02] flex items-center justify-center text-xs text-[var(--ink-500)]"
+        className="rounded-xl bg-black/[0.02] flex items-center justify-center text-xs text-ink-500"
         style={{ height }}
       >
         Pas encore d&apos;historique pour tracer une évolution.
@@ -191,15 +191,15 @@ export function BalanceChart({
       
       <div className="flex items-center justify-between px-1">
         <div className="flex flex-col">
-          <span className="text-[0.6rem] uppercase tracking-tighter text-[var(--ink-400)] font-bold">Départ</span>
+          <span className="text-[0.6rem] uppercase tracking-tighter text-ink-400 font-bold">Départ</span>
           <span className="text-[0.65rem] font-medium text-[var(--ink-600)]">{format(first.date, "d MMM", { locale: fr })}</span>
         </div>
         <div className="flex flex-col items-center">
-          <span className="text-[0.6rem] uppercase tracking-tighter text-[var(--ink-400)] font-bold">Amplitude</span>
+          <span className="text-[0.6rem] uppercase tracking-tighter text-ink-400 font-bold">Amplitude</span>
           <span className="text-[0.65rem] font-bold text-[var(--ink-900)]">{formatCurrency(data.max - data.min)}</span>
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-[0.6rem] uppercase tracking-tighter text-[var(--ink-400)] font-bold">Aujourd&apos;hui</span>
+          <span className="text-[0.6rem] uppercase tracking-tighter text-ink-400 font-bold">Aujourd&apos;hui</span>
           <span className="text-[0.65rem] font-medium text-[var(--ink-600)]">{format(last.date, "d MMM", { locale: fr })}</span>
         </div>
       </div>

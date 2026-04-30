@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, startOfDay, format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { generateOccurrences } from "../src/lib/scheduling/generator";
 
 describe("reproduction of scheduling issues", () => {

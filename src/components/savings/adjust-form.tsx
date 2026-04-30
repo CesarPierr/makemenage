@@ -43,7 +43,7 @@ export function AdjustForm({ householdId, boxId, currentBalance, onSuccess }: Ad
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <p className="text-xs text-[var(--ink-700)]">
+      <p className="text-xs text-ink-700">
         Mettez le solde à jour pour qu&apos;il corresponde à votre compte bancaire. Un mouvement
         d&apos;ajustement sera créé pour combler l&apos;écart.
       </p>
@@ -61,11 +61,11 @@ export function AdjustForm({ householdId, boxId, currentBalance, onSuccess }: Ad
       </label>
 
       {delta !== null && delta !== 0 ? (
-        <div className="rounded-xl bg-black/[0.04] px-3 py-2 text-xs text-[var(--ink-700)]">
+        <div className="rounded-xl bg-black/[0.04] px-3 py-2 text-xs text-ink-700">
           Solde actuel : <strong>{formatCurrency(currentBalance)}</strong>
           <br />
           Ajustement créé :{" "}
-          <strong className={delta > 0 ? "text-[var(--leaf-600)]" : "text-red-700"}>
+          <strong className={delta > 0 ? "text-leaf-600" : "text-red-700"}>
             {delta > 0 ? "+" : ""}
             {formatCurrency(delta)}
           </strong>

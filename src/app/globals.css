@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   --sand-50: #f7f2e9;
   --sand-100: #efe2cd;
@@ -59,6 +61,37 @@
 @theme inline {
   --color-background: var(--sand-50);
   --color-foreground: var(--ink-950);
+  
+  /* Sand Palette */
+  --color-sand-50: var(--sand-50);
+  --color-sand-100: var(--sand-100);
+  --color-sand-200: var(--sand-200);
+  --color-sand-300: var(--sand-300);
+  
+  /* Ink Palette */
+  --color-ink-950: var(--ink-950);
+  --color-ink-700: var(--ink-700);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  
+  /* Leaf Palette */
+  --color-leaf-500: var(--leaf-500);
+  --color-leaf-600: var(--leaf-600);
+  
+  /* Coral Palette */
+  --color-coral-400: #e58262;
+  --color-coral-500: var(--coral-500);
+  --color-coral-600: var(--coral-600);
+  
+  /* Sky Palette */
+  --color-sky-500: var(--sky-500);
+  --color-sky-600: var(--sky-600);
+  
+  /* UI Elements */
+  --color-glass-bg: var(--glass-bg);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  
   --font-sans: var(--font-sans);
   --font-mono: var(--font-sans);
 }
@@ -796,107 +829,4 @@ button:not(:disabled),
     radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.02), transparent 18%);
 }
 
-[data-theme="dark"] .app-surface {
-  background: var(--card);
-  border-color: var(--line);
-}
-
-@media (max-width: 768px) {
-  [data-theme="dark"] .app-surface {
-    background: rgba(38, 40, 48, 0.97);
-  }
-}
-
-[data-theme="dark"] .field {
-  background: rgba(50, 53, 63, 0.75);
-  border-color: var(--line);
-  color: var(--ink-950);
-}
-
-[data-theme="dark"] .field:hover {
-  background: rgba(58, 61, 72, 0.88);
-}
-
-[data-theme="dark"] .field:focus {
-  background: rgba(62, 65, 78, 0.96);
-}
-
-[data-theme="dark"] .soft-panel {
-  border-color: var(--line);
-  background: linear-gradient(135deg, rgba(50, 53, 63, 0.85), rgba(42, 44, 54, 0.65));
-}
-
-[data-theme="dark"] .metric-card {
-  background: linear-gradient(180deg, rgba(50, 53, 63, 0.9), rgba(42, 44, 54, 0.72));
-  border-color: var(--line);
-}
-
-[data-theme="dark"] .btn-secondary {
-  background: rgba(50, 53, 63, 0.75);
-  border-color: var(--line);
-}
-
-[data-theme="dark"] .btn-secondary:hover {
-  background: rgba(62, 65, 78, 0.92);
-}
-
-[data-theme="dark"] .btn-quiet {
-  background: rgba(50, 53, 63, 0.6);
-  border-color: var(--line);
-}
-
-[data-theme="dark"] .stat-pill,
-[data-theme="dark"] .accent-pill {
-  background: rgba(50, 53, 63, 0.82);
-  border-color: var(--line);
-}
-
-[data-theme="dark"] .glass-strip {
-  background: rgba(38, 40, 48, 0.86);
-  border-color: var(--line);
-}
-
-/* Tailwind bg-white/* utilities → dark-mode equivalents */
-[data-theme="dark"] .bg-white { background-color: rgb(38 40 48) !important; }
-[data-theme="dark"] .bg-white\/30 { background-color: rgb(38 40 48 / 0.30) !important; }
-[data-theme="dark"] .bg-white\/50 { background-color: rgb(38 40 48 / 0.50) !important; }
-[data-theme="dark"] .bg-white\/60 { background-color: rgb(38 40 48 / 0.60) !important; }
-[data-theme="dark"] .bg-white\/70 { background-color: rgb(38 40 48 / 0.70) !important; }
-[data-theme="dark"] .bg-white\/75 { background-color: rgb(38 40 48 / 0.75) !important; }
-[data-theme="dark"] .bg-white\/80 { background-color: rgb(38 40 48 / 0.80) !important; }
-[data-theme="dark"] .bg-white\/88 { background-color: rgb(38 40 48 / 0.88) !important; }
-
-/* Text on white surfaces → legible in dark */
-[data-theme="dark"] .text-\[var\(--ink-950\)\] { color: var(--ink-950); }
-
-/* Active pill (white bg + dark text) stays readable */
-[data-theme="dark"] .rounded-full.bg-white {
-  background-color: rgb(50 53 63) !important;
-  color: var(--ink-950);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --sand-50: #1a1b1e;
-    --sand-100: #25272d;
-    --sand-200: #2e3038;
-    --sand-300: #363840;
-    --ink-950: #edeef2;
-    --ink-700: #d1d5db;
-    --ink-500: #9ca3af;
-    --ink-400: #6b7280;
-    --leaf-500: #4d9e7e;
-    --leaf-600: #6ab89a;
-    --coral-500: #e8704f;
-    --coral-600: #cc5636;
-    --sky-500: #4090af;
-    --sky-600: #327693;
-    --card: rgba(38, 40, 48, 0.94);
-    --card-end: rgba(30, 32, 38, 0.98);
-    --line: rgba(255, 255, 255, 0.07);
-    --line-strong: rgba(255, 255, 255, 0.12);
-    --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-    --shadow-soft: 0 12px 28px rgba(0, 0, 0, 0.32);
-    --shadow-strong: 0 22px 54px rgba(0, 0, 0, 0.55);
-  }
-}
+/* Dark Mode overrides removed (handled automatically by root variables) */

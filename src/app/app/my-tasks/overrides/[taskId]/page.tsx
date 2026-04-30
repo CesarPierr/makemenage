@@ -3,7 +3,7 @@ import { fr } from "date-fns/locale";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { OccurrenceCard } from "@/components/occurrence-card";
+import { OccurrenceCard } from "@/components/tasks/occurrence-card";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { canManageHousehold, requireHouseholdContext } from "@/lib/households";
@@ -99,7 +99,7 @@ export default async function TaskOverridesPage({ params, searchParams }: Overri
       <div className="app-surface glow-card rounded-[2rem] p-5 sm:p-6">
         <div className="flex flex-wrap items-center gap-3">
           <Link
-            className="stat-pill px-3 py-1 text-xs font-semibold text-[var(--ink-700)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(30,31,34,0.08)]"
+            className="stat-pill px-3 py-1 text-xs font-semibold text-ink-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(30,31,34,0.08)]"
             href={`/app/my-tasks?household=${context.household.id}#administration`}
           >
             Retour aux tâches
@@ -110,7 +110,7 @@ export default async function TaskOverridesPage({ params, searchParams }: Overri
         </div>
         <p className="section-kicker mt-4">Occurrences modifiées</p>
         <h2 className="display-title mt-2 text-4xl leading-tight">{task.title}</h2>
-        <p className="mt-3 max-w-2xl text-sm text-[var(--ink-700)]">
+        <p className="mt-3 max-w-2xl text-sm text-ink-700">
           Cette vue regroupe les prochaines occurrences ajustées manuellement. Vous pouvez voir ce qui a changé et les modifier à nouveau sans repasser par toute l&apos;administration.
         </p>
       </div>
@@ -131,24 +131,24 @@ export default async function TaskOverridesPage({ params, searchParams }: Overri
                       </span>
                     ))}
                   </div>
-                  <div className="grid gap-3 text-sm text-[var(--ink-700)] sm:grid-cols-2">
+                  <div className="grid gap-3 text-sm text-ink-700 sm:grid-cols-2">
                     <p>
                       Date d&apos;origine:{" "}
-                      <strong className="text-[var(--ink-950)]">
+                      <strong className="text-ink-950">
                         {format(occurrence.originalScheduledDate, "EEE d MMM yyyy", { locale: fr })}
                       </strong>
                     </p>
                     <p>
                       Date actuelle:{" "}
-                      <strong className="text-[var(--ink-950)]">
+                      <strong className="text-ink-950">
                         {format(occurrence.scheduledDate, "EEE d MMM yyyy", { locale: fr })}
                       </strong>
                     </p>
                   </div>
                   {latestLog ? (
-                    <p className="text-sm text-[var(--ink-700)]">
+                    <p className="text-sm text-ink-700">
                       Dernier changement:{" "}
-                      <strong className="text-[var(--ink-950)]">
+                      <strong className="text-ink-950">
                         {getHistoryActionLabel(latestLog.actionType)}
                       </strong>{" "}
                       le {format(latestLog.createdAt, "d MMM yyyy à HH:mm", { locale: fr })}
@@ -168,7 +168,7 @@ export default async function TaskOverridesPage({ params, searchParams }: Overri
           })}
         </div>
       ) : (
-        <div className="app-surface rounded-[1.8rem] p-5 text-sm leading-6 text-[var(--ink-700)]">
+        <div className="app-surface rounded-[1.8rem] p-5 text-sm leading-6 text-ink-700">
           Aucune occurrence future modifiée pour cette tâche.
         </div>
       )}

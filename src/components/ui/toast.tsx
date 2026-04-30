@@ -30,9 +30,9 @@ const toastIcons = {
 } as const;
 
 const toastStyles = {
-  success: "border-[rgba(56,115,93,0.25)] bg-[rgba(56,115,93,0.12)] text-[var(--leaf-600)]",
-  error: "border-[rgba(216,100,61,0.25)] bg-[rgba(216,100,61,0.12)] text-[var(--coral-600)]",
-  info: "border-[rgba(47,109,136,0.25)] bg-[rgba(47,109,136,0.12)] text-[var(--sky-600)]",
+  success: "border-[rgba(56,115,93,0.25)] bg-[rgba(56,115,93,0.12)] text-leaf-600",
+  error: "border-[rgba(216,100,61,0.25)] bg-[rgba(216,100,61,0.12)] text-coral-600",
+  info: "border-[rgba(47,109,136,0.25)] bg-[rgba(47,109,136,0.12)] text-sky-600",
 } as const;
 
 let toastCounter = 0;

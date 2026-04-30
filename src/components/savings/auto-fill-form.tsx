@@ -148,7 +148,7 @@ export function AutoFillForm({ householdId, boxId, current, onSaved }: AutoFillF
 
         {type === "weekly" ? (
           <div className="space-y-1.5">
-            <p className="text-sm font-medium text-[var(--ink-700)]">Jours de la semaine</p>
+            <p className="text-sm font-medium text-ink-700">Jours de la semaine</p>
             <div className="grid grid-cols-7 gap-1.5">
               {WEEKDAYS.map((d) => {
                 const active = weekdays.includes(d.value);
@@ -160,8 +160,8 @@ export function AutoFillForm({ householdId, boxId, current, onSaved }: AutoFillF
                     className={cn(
                       "h-10 rounded-lg text-sm font-semibold transition-colors",
                       active
-                        ? "bg-[var(--coral-500)] text-white"
-                        : "bg-black/[0.04] text-[var(--ink-700)]",
+                        ? "bg-coral-500 text-white"
+                        : "bg-black/[0.04] text-ink-700",
                     )}
                   >
                     {d.label}
