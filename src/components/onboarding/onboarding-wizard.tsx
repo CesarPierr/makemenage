@@ -4,18 +4,12 @@ import { useState } from "react";
 import {
   ArrowRight,
   Calculator,
-  CalendarDays,
   CheckCircle2,
   ChevronRight,
-  Flame,
-  House,
   ListChecks,
   PiggyBank,
-  Plane,
   Plus,
-  Shuffle,
   Sparkles,
-  Timer,
   Users,
 } from "lucide-react";
 
@@ -196,7 +190,7 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
             Bienvenue dans<br />{householdName} !
           </h2>
           <p className="mt-4 text-ink-700 leading-7">
-            Bonjour <strong>{currentMemberName}</strong>. MakeMenage est l'outil ultime pour gérer le foyer sans friction.
+            Bonjour <strong>{currentMemberName}</strong>. MakeMenage est l&apos;outil ultime pour gérer le foyer sans friction.
           </p>
           <div className="mt-8 grid gap-2.5 sm:grid-cols-3 text-left">
             <div className="flex flex-col gap-2 rounded-2xl border border-line bg-glass-bg p-4">
@@ -363,7 +357,7 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
           <div className="text-center">
             <h2 className="display-title text-2xl">Nouvelle Caisse</h2>
             <p className="mt-2 text-sm text-ink-700">
-              Créez un pot commun pour démarrer. Vous pourrez en ajouter d'autres plus tard.
+              Créez un pot commun pour démarrer. Vous pourrez en ajouter d&apos;autres plus tard.
             </p>
           </div>
 
@@ -440,8 +434,8 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
             <h2 className="display-title text-2xl sm:text-3xl">Automatisez les calculs</h2>
             <p className="mt-3 text-sm text-ink-700 max-w-md mx-auto leading-relaxed">
               Le module <strong>Calculateur</strong> vous permet de générer des formules personnalisées 
-              (comme le calcul de TVA ou la répartition des frais) et d'injecter directement le résultat 
-              dans une caisse d'épargne.
+              (comme le calcul de TVA ou la répartition des frais) et d&apos;injecter directement le résultat 
+              dans une caisse d&apos;épargne.
             </p>
           </div>
           
@@ -485,7 +479,7 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
               {!isCreating && <Plus className="size-4" />}
             </button>
             <button className="text-xs text-ink-400 hover:text-ink-700 font-medium" onClick={() => setStep("invite")}>
-              Passer pour l'instant
+              Passer pour l&apos;instant
             </button>
           </div>
         </div>
@@ -500,7 +494,7 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
             </div>
             <h2 className="display-title text-2xl sm:text-3xl">Invitez votre équipe</h2>
             <p className="mt-2 text-sm text-ink-700">
-              MakeMenage prend tout son sens à plusieurs. Générez un lien d'accès pour les membres de votre foyer.
+              MakeMenage prend tout son sens à plusieurs. Générez un lien d&apos;accès pour les membres de votre foyer.
             </p>
           </div>
 
@@ -556,8 +550,8 @@ export function OnboardingWizard({ householdId, householdName, currentMemberName
           </div>
           <h2 className="display-title text-3xl sm:text-4xl">Tout est prêt !</h2>
           <p className="text-ink-700 leading-7">
-            Votre foyer est configuré. Vous pouvez modifier tout cela à n'importe quel moment 
-            depuis l'onglet <strong>Réglages</strong>.
+            Votre foyer est configuré. Vous pouvez modifier tout cela à n&apos;importe quel moment 
+            depuis l&apos;onglet <strong>Réglages</strong>.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center pt-2">
             <button

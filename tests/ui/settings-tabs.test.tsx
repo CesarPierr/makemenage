@@ -5,7 +5,7 @@ import { render } from "../test-utils";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 
 vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: any) => <a href={href} {...props}>{children}</a>,
+  default: ({ children, href, ...props }: Record<string, unknown>) => <a href={href as string} {...props}>{children as React.ReactNode}</a>,
 }));
 
 const allPanels = [

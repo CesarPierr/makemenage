@@ -10,6 +10,7 @@ import { useFormAction } from "@/lib/use-form-action";
 const mockBoxes = [
   { id: "box_1", name: "Compte Courant", balance: 1500, kind: "CUSTOM", icon: "Wallet", targetAmount: null, targetDate: null, color: "#ccc", description: null, sortOrder: 0, isArchived: false, notes: null, autoFillRule: null, householdId: "hh_1", allowNegative: false },
   { id: "box_2", name: "Livret A", balance: 5000, kind: "CUSTOM", icon: "PiggyBank", targetAmount: null, targetDate: null, color: "#aaa", description: null, sortOrder: 1, isArchived: false, notes: null, autoFillRule: null, householdId: "hh_1", allowNegative: false },
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ] as any[];
 
 type SubmitFn = (data?: FormData | Record<string, string>) => Promise<boolean>;

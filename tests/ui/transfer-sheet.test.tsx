@@ -10,6 +10,7 @@ import { useFormAction } from "@/lib/use-form-action";
 const mockBoxes = [
   { id: "box_1", name: "Compte Courant", balance: 1500, type: "CHECKING", kind: "CUSTOM", icon: "Wallet", targetAmount: null, targetDate: null, color: "#ccc", description: null, orderIndex: 0, createdAt: new Date(), updatedAt: new Date(), householdId: "hh_1", isHidden: false, isJoint: false },
   { id: "box_2", name: "Livret A", balance: 5000, type: "SAVINGS", kind: "CUSTOM", icon: "PiggyBank", targetAmount: null, targetDate: null, color: "#aaa", description: null, orderIndex: 1, createdAt: new Date(), updatedAt: new Date(), householdId: "hh_1", isHidden: false, isJoint: false },
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ] as any[];
 
 beforeEach(() => {
@@ -28,9 +29,6 @@ test("renders transfer sheet and handles submission correctly", async () => {
     handleSubmit: async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       // Emulate the actual component logic that calls submit manually
-      const fd = new FormData(e.target as HTMLFormElement);
-      // Wait, TransferSheet builds its own FormData and calls submit(fd).
-      // If we use the real handle submit, we must bypass the mock.
       // But TransferSheet uses its own onSubmit that calls submit(fd).
     },
   });
