@@ -130,29 +130,37 @@ export async function syncHouseholdOccurrences(
       }
 
       if (!existing) {
-        const created = await db.taskOccurrence.create({
-          data: {
-            householdId,
-            taskTemplateId: task.id,
-            scheduledDate: occurrence.scheduledDate,
-            dueDate: occurrence.dueDate,
-            assignedMemberId: occurrence.assignedMemberId,
-            status: occurrence.status,
-            sourceGenerationKey: occurrence.sourceGenerationKey,
-            originalScheduledDate: occurrence.scheduledDate,
-          },
-        });
-
-        await db.occurrenceActionLog.create({
-          data: {
-            occurrenceId: created.id,
-            actionType: "created",
-            newValues: {
-              scheduledDate: occurrence.scheduledDate.toISOString(),
+        try {
+          const created = await db.taskOccurrence.create({
+            data: {
+              householdId,
+              taskTemplateId: task.id,
+              scheduledDate: occurrence.scheduledDate,
+              dueDate: occurrence.dueDate,
               assignedMemberId: occurrence.assignedMemberId,
+              status: occurrence.status,
+              sourceGenerationKey: occurrence.sourceGenerationKey,
+              originalScheduledDate: occurrence.scheduledDate,
             },
-          },
-        });
+          });
+
+          await db.occurrenceActionLog.create({
+            data: {
+              occurrenceId: created.id,
+              actionType: "created",
+              newValues: {
+                scheduledDate: occurrence.scheduledDate.toISOString(),
+                assignedMemberId: occurrence.assignedMemberId,
+              },
+            },
+          });
+        } catch (error) {
+          // A row with this sourceGenerationKey already exists OUTSIDE the sync
+          // window (a sliding slot that drifted far). Skip it — never let one key
+          // collision abort the whole sync, which would freeze every occurrence's
+          // status refresh (planned→due→overdue) so overdue tasks look on-time.
+          if ((error as { code?: string }).code !== "P2002") throw error;
+        }
 
         continue;
       }
@@ -198,17 +206,23 @@ export async function syncHouseholdOccurrences(
         keyChanged ||
         (existing.isManuallyModified && options?.forceOverwriteManual)
       ) {
-        await db.taskOccurrence.update({
-          where: { id: existing.id },
-          data: {
-            scheduledDate: occurrence.scheduledDate,
-            dueDate: occurrence.dueDate,
-            assignedMemberId: occurrence.assignedMemberId,
-            status: occurrence.status,
-            sourceGenerationKey: occurrence.sourceGenerationKey,
-            ...(options?.forceOverwriteManual ? { isManuallyModified: false } : {}),
-          },
-        });
+        try {
+          await db.taskOccurrence.update({
+            where: { id: existing.id },
+            data: {
+              scheduledDate: occurrence.scheduledDate,
+              dueDate: occurrence.dueDate,
+              assignedMemberId: occurrence.assignedMemberId,
+              status: occurrence.status,
+              sourceGenerationKey: occurrence.sourceGenerationKey,
+              ...(options?.forceOverwriteManual ? { isManuallyModified: false } : {}),
+            },
+          });
+        } catch (error) {
+          // Re-keying this row can collide with an out-of-window row holding the
+          // same sourceGenerationKey; skip rather than abort the sync.
+          if ((error as { code?: string }).code !== "P2002") throw error;
+        }
       }
     }
 

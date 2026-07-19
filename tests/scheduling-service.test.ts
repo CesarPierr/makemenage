@@ -275,5 +275,102 @@ describe("syncHouseholdOccurrences (SLIDING slot idempotence)", () => {
       }),
     );
   });
+
+  it("survives a sourceGenerationKey collision on create and still refreshes later occurrences", async () => {
+    // The real prod incident: a create hit a unique-key collision (a sliding slot
+    // whose key belongs to a row outside the 45-day window). It aborted the whole
+    // sync, so no occurrence's status ever transitioned planned→overdue.
+    const anchor = startOfDay(new Date());
+    const recurrenceRule = {
+      type: "every_x_days" as const,
+      mode: "FIXED" as const,
+      interval: 7,
+      weekdays: [],
+      dayOfMonth: null,
+      anchorDate: addDays(anchor, -14),
+      dueOffsetDays: 1,
+    };
+    const assignmentRule = {
+      mode: "fixed" as const,
+      eligibleMemberIds: ["M"],
+      fixedMemberId: "M",
+      rotationOrder: ["M"],
+      fairnessWindowDays: null,
+      preserveRotationOnSkip: false,
+      preserveRotationOnReschedule: false,
+      rebalanceOnMemberAbsence: false,
+      lockAssigneeAfterGeneration: false,
+    };
+    const members = [{ id: "M", displayName: "M", isActive: true, weightingFactor: 1, availabilities: [] }];
+
+    const { start, end } = getGenerationWindow();
+    const generated = generateOccurrences({
+      template: {
+        id: "tpl-1",
+        householdId: "house-1",
+        title: "T",
+        estimatedMinutes: 10,
+        startsOn: addDays(anchor, -1),
+        endsOn: null,
+        lastCompletedAt: null,
+        recurrence: mapRecurrenceRule(recurrenceRule),
+        assignment: mapAssignmentRule(assignmentRule),
+      },
+      members: mapMembers(members),
+      absences: mapAbsences(members),
+      existingOccurrences: [],
+      rangeStart: start,
+      rangeEnd: end,
+    });
+    expect(generated.length).toBeGreaterThan(1);
+
+    // Seed an existing row ONLY for the LAST slot (with a different assignee so it
+    // needs an update). Earlier slots have no existing row → create → collision.
+    const last = generated[generated.length - 1];
+    const occurrences = [
+      {
+        id: "occ-last",
+        sourceGenerationKey: last.sourceGenerationKey,
+        scheduledDate: last.scheduledDate,
+        dueDate: last.dueDate,
+        assignedMemberId: "SOMEONE-ELSE",
+        status: "planned" as const,
+        actualMinutes: null,
+        isManuallyModified: false,
+      },
+    ];
+
+    dbMocks.householdFindUnique.mockResolvedValue({
+      id: "house-1",
+      members,
+      tasks: [
+        {
+          id: "tpl-1",
+          householdId: "house-1",
+          title: "T",
+          estimatedMinutes: 10,
+          startsOn: addDays(anchor, -1),
+          endsOn: null,
+          lastCompletedAt: null,
+          isActive: true,
+          recurrenceRule,
+          assignmentRule,
+          occurrences,
+        },
+      ],
+    });
+    // Every create collides on the unique sourceGenerationKey (row exists out of window).
+    dbMocks.taskOccurrenceCreate.mockRejectedValue(
+      Object.assign(new Error("Unique constraint failed on the fields: (`sourceGenerationKey`)"), { code: "P2002" }),
+    );
+    dbMocks.taskOccurrenceUpdate.mockResolvedValue({ id: "occ-last" });
+    dbMocks.taskOccurrenceUpdateMany.mockResolvedValue({ count: 0 });
+
+    // Must NOT throw, and must still reach + update the later occurrence.
+    await expect(syncHouseholdOccurrences("house-1")).resolves.toBeUndefined();
+    expect(dbMocks.taskOccurrenceUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "occ-last" } }),
+    );
+  });
 });
 
