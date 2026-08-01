@@ -77,7 +77,47 @@ export async function declareHoliday(params: {
   return { holiday, shiftedCount: affected.length, dayShift };
 }
 
+/**
+ * Delete a holiday AND reverse its effect: every occurrence this holiday shifted
+ * is moved back by the same number of days and un-marked as a manual override, so
+ * the recurrence sync manages it normally again. Without this reversal, cancelling
+ * a holiday left its tasks stranded in the future forever (they stayed
+ * `isManuallyModified`, which the sync never touches).
+ */
 export async function deleteHoliday(params: { holidayId: string; householdId: string }) {
+  const holiday = await db.householdHoliday.findFirst({
+    where: { id: params.holidayId, householdId: params.householdId },
+  });
+  if (!holiday) return;
+
+  const dayShift = differenceInCalendarDays(endOfDay(holiday.endDate), startOfDay(holiday.startDate)) + 1;
+  const now = startOfDay(new Date());
+
+  const logs = await db.occurrenceActionLog.findMany({
+    where: {
+      actionType: "rescheduled",
+      newValues: { path: ["holidayId"], equals: params.holidayId },
+      occurrence: { isManuallyModified: true, status: { in: ["planned", "due", "overdue"] } },
+    },
+    include: { occurrence: true },
+  });
+
+  for (const log of logs) {
+    const occ = log.occurrence;
+    if (!occ) continue;
+    const restored = addDays(occ.scheduledDate, -dayShift);
+    await db.taskOccurrence.update({
+      where: { id: occ.id },
+      data: {
+        scheduledDate: restored,
+        dueDate: addDays(occ.dueDate, -dayShift),
+        status: startOfDay(restored) < now ? "overdue" : "planned",
+        isManuallyModified: false,
+        ...(occ.rescheduleCount > 0 ? { rescheduleCount: { decrement: 1 } } : {}),
+      },
+    });
+  }
+
   await db.householdHoliday.deleteMany({
     where: { id: params.holidayId, householdId: params.householdId },
   });
