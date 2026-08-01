@@ -126,10 +126,17 @@ export function generateOccurrences(params: {
       return;
     }
 
-    const scheduledDate =
-      isHouseholdFullyAbsent(template.assignment, members, originalDate, absences) || isInHoliday(originalDate)
-        ? resolveAvailableDate(originalDate)
-        : originalDate;
+    // The household is away for a holiday → schedule nothing in the window and do
+    // NOT make it up. The recurrence simply resumes on its normal cadence after
+    // the holiday (no backlog pile-up). Any stale occurrence sitting on a skipped
+    // slot is orphan-cancelled by the sync, since its key is no longer generated.
+    if (isInHoliday(originalDate)) {
+      return;
+    }
+
+    const scheduledDate = isHouseholdFullyAbsent(template.assignment, members, originalDate, absences)
+      ? resolveAvailableDate(originalDate)
+      : originalDate;
 
     const assignedMemberId = pickAssignee({
       sequenceIndex,
