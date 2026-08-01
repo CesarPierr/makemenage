@@ -18,10 +18,19 @@ export function generateOccurrences(params: {
   existingOccurrences: ExistingOccurrenceInput[];
   rangeStart: Date;
   rangeEnd: Date;
+  /** Household holiday windows [startDate, endDate]. Occurrences that land inside
+   * one are pushed to the first day after the holiday — the household has nothing
+   * to do while away. */
+  holidays?: { startDate: Date; endDate: Date }[];
 }) {
-  const { template, members, absences, existingOccurrences, rangeStart, rangeEnd } = params;
+  const { template, members, absences, existingOccurrences, rangeStart, rangeEnd, holidays = [] } = params;
   const isSliding = template.recurrence.mode === "SLIDING";
   const today = startOfDay(new Date());
+
+  const isInHoliday = (date: Date) => {
+    const d = startOfDay(date).getTime();
+    return holidays.some((h) => d >= startOfDay(h.startDate).getTime() && d <= startOfDay(h.endDate).getTime());
+  };
 
   // For sliding tasks, find the most recent "realized" or "locked" occurrence
   // that serves as the base for the next generation.
@@ -83,7 +92,7 @@ export function generateOccurrences(params: {
     const horizonDays = 60;
     let cursor = startOfDay(initialDate);
     for (let i = 0; i <= horizonDays; i++) {
-      if (!isHouseholdFullyAbsent(template.assignment, members, cursor, absences)) {
+      if (!isHouseholdFullyAbsent(template.assignment, members, cursor, absences) && !isInHoliday(cursor)) {
         return cursor;
       }
       cursor = addDays(cursor, 1);
@@ -117,14 +126,10 @@ export function generateOccurrences(params: {
       return;
     }
 
-    const scheduledDate = isHouseholdFullyAbsent(
-      template.assignment,
-      members,
-      originalDate,
-      absences,
-    )
-      ? resolveAvailableDate(originalDate)
-      : originalDate;
+    const scheduledDate =
+      isHouseholdFullyAbsent(template.assignment, members, originalDate, absences) || isInHoliday(originalDate)
+        ? resolveAvailableDate(originalDate)
+        : originalDate;
 
     const assignedMemberId = pickAssignee({
       sequenceIndex,

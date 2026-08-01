@@ -381,4 +381,30 @@ describe("occurrence generation", () => {
       vi.useRealTimers();
     }
   });
+
+  it("pushes occurrences out of holiday windows (keeps the calendar clear while away)", () => {
+    const generated = generateOccurrences({
+      template: {
+        id: "t",
+        householdId: "h",
+        title: "T",
+        estimatedMinutes: 5,
+        startsOn: new Date("2026-01-01"),
+        recurrence: { type: "every_x_days", mode: "FIXED", interval: 2, anchorDate: new Date("2026-01-01"), dueOffsetDays: 0 },
+        assignment: { mode: "fixed", eligibleMemberIds: ["A"], fixedMemberId: "A", rotationOrder: ["A"] },
+      },
+      members: [{ id: "A", displayName: "A", isActive: true }],
+      absences: [],
+      existingOccurrences: [],
+      rangeStart: new Date("2026-01-01"),
+      rangeEnd: new Date("2026-01-20"),
+      holidays: [{ startDate: new Date("2026-01-05"), endDate: new Date("2026-01-10") }],
+    });
+
+    const dates = generated.map((o) => format(o.scheduledDate, "yyyy-MM-dd"));
+    // Nothing lands inside the holiday, and the recurrence resumes before + after.
+    expect(dates.every((d) => d < "2026-01-05" || d > "2026-01-10")).toBe(true);
+    expect(dates.some((d) => d < "2026-01-05")).toBe(true);
+    expect(dates.some((d) => d > "2026-01-10")).toBe(true);
+  });
 });

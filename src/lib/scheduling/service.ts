@@ -64,6 +64,10 @@ export async function syncHouseholdOccurrences(
   const { start, end } = getGenerationWindow();
   const members = mapMembers(household.members);
   const absences = mapAbsences(household.members);
+  const holidays = await db.householdHoliday.findMany({
+    where: { householdId },
+    select: { startDate: true, endDate: true },
+  });
 
   for (const task of household.tasks) {
     const template: TaskTemplateInput = {
@@ -88,6 +92,7 @@ export async function syncHouseholdOccurrences(
       existingOccurrences,
       rangeStart: start,
       rangeEnd: end,
+      holidays,
     });
 
     const generatedKeys = new Set(generated.map((occurrence) => occurrence.sourceGenerationKey));

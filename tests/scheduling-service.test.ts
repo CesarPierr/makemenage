@@ -10,6 +10,7 @@ const dbMocks = vi.hoisted(() => ({
   taskOccurrenceUpdateMany: vi.fn(),
   occurrenceActionLogCreate: vi.fn(),
   occurrenceActionLogFindFirst: vi.fn(),
+  householdHolidayFindMany: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -32,6 +33,9 @@ vi.mock("@/lib/db", () => ({
     occurrenceActionLog: {
       create: dbMocks.occurrenceActionLogCreate,
       findFirst: dbMocks.occurrenceActionLogFindFirst,
+    },
+    householdHoliday: {
+      findMany: dbMocks.householdHolidayFindMany,
     },
   },
 }));

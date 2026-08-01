@@ -5,6 +5,7 @@ import { dataErrorOrRedirect, withHousehold } from "@/lib/api";
 import { parseDateInput } from "@/lib/date-input";
 import { declareHoliday } from "@/lib/holidays";
 import { isDataRequest, redirectTo } from "@/lib/request";
+import { syncHouseholdOccurrences } from "@/lib/scheduling/service";
 
 const schema = z.object({
   startDate: z.preprocess((value) => parseDateInput(String(value ?? "")), z.date()),
@@ -43,12 +44,14 @@ export const POST = withHousehold<{ id: string }>(
       label: parsed.data.label,
       actorMemberId: membership.id,
     });
+    // Apply the holiday: the generator pushes recurrence dates out of the window.
+    await syncHouseholdOccurrences(householdId).catch(() => {});
 
     if (isDataRequest(request)) {
       return NextResponse.json({ ok: true, ...result });
     }
 
-    return redirectTo(request, `${fallback}&shifted=${result.shiftedCount}`);
+    return redirectTo(request, `${fallback}&holiday=1`);
   },
   { requireManage: true },
 );

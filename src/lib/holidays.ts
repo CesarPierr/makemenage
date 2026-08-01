@@ -4,10 +4,11 @@ import { addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fn
 import { db } from "@/lib/db";
 
 /**
- * Declare a holiday for the household: every active occurrence whose scheduledDate falls
- * inside [startDate, endDate] is shifted forward by `(endDate - startDate + 1)` days. The
- * shifted occurrences are marked `isManuallyModified` so the recurrence sync won't put
- * them back, and an action log entry of type `rescheduled` is recorded for traceability.
+ * Declare a holiday for the household. Occurrences are NOT shifted here — the
+ * generator is holiday-aware (it pushes recurrence dates out of holiday windows),
+ * so recording the window is enough; the caller runs a sync to apply it. This
+ * avoids the old post-hoc flat-shift, which stranded tasks as manual overrides
+ * and dragged the SLIDING base forward.
  */
 export async function declareHoliday(params: {
   householdId: string;
@@ -32,49 +33,7 @@ export async function declareHoliday(params: {
     },
   });
 
-  const affected = await db.taskOccurrence.findMany({
-    where: {
-      householdId: params.householdId,
-      scheduledDate: { gte: start, lte: end },
-      status: { in: ["planned", "due", "overdue"] },
-    },
-    orderBy: { scheduledDate: "asc" },
-  });
-
-  const dayShift = differenceInCalendarDays(end, start) + 1;
-  const now = new Date();
-
-  for (const occ of affected) {
-    const newScheduled = addDays(occ.scheduledDate, dayShift);
-    const newDue = addDays(occ.dueDate, dayShift);
-
-    await db.taskOccurrence.update({
-      where: { id: occ.id },
-      data: {
-        scheduledDate: newScheduled,
-        dueDate: newDue,
-        status: newScheduled < now ? "overdue" : "planned",
-        isManuallyModified: true,
-        rescheduleCount: { increment: 1 },
-      },
-    });
-
-    await db.occurrenceActionLog.create({
-      data: {
-        occurrenceId: occ.id,
-        actionType: "rescheduled",
-        actorMemberId: params.actorMemberId ?? undefined,
-        previousValues: { scheduledDate: occ.scheduledDate.toISOString() },
-        newValues: {
-          scheduledDate: newScheduled.toISOString(),
-          reason: "holiday",
-          holidayId: holiday.id,
-        },
-      },
-    });
-  }
-
-  return { holiday, shiftedCount: affected.length, dayShift };
+  return { holiday };
 }
 
 /**
