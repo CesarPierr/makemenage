@@ -29,12 +29,16 @@ export function generateOccurrences(params: {
   let baseIndex = 0;
 
   if (isSliding) {
-    // We look at ALL existing occurrences to find the latest one that is "locked"
-    // (completed, skipped, rescheduled, or manually modified)
+    // The base is the latest "locked" occurrence (completed/skipped/rescheduled/
+    // manually modified) — BUT only among PAST/today ones. A future override (e.g.
+    // a holiday-shifted planned occurrence weeks out) must NOT become the base, or
+    // it drags the slide forward and every near-term date gets skipped, emptying
+    // the calendar until the override's date.
     const lockedOccurrences = existingOccurrences
       .filter(
         (o) =>
-          o.isManuallyModified || ["completed", "skipped", "rescheduled"].includes(o.status),
+          (o.isManuallyModified || ["completed", "skipped", "rescheduled"].includes(o.status)) &&
+          startOfDay(o.scheduledDate).getTime() <= today.getTime(),
       )
       .sort((a, b) => b.scheduledDate.getTime() - a.scheduledDate.getTime());
 

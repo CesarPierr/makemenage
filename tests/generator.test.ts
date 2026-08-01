@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { generateOccurrences } from "@/lib/scheduling/generator";
 
@@ -321,5 +321,64 @@ describe("occurrence generation", () => {
     });
 
     expect(generated.map((occurrence) => occurrence.assignedMemberId)).toEqual(["A", "B", "C"]);
+  });
+
+  it("does not let a future override drag the SLIDING base forward (holiday bug)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-01T12:00:00Z"));
+    try {
+      const generated = generateOccurrences({
+        template: {
+          id: "litter",
+          householdId: "h",
+          title: "Litter",
+          estimatedMinutes: 5,
+          startsOn: new Date("2026-07-01"),
+          recurrence: {
+            type: "every_x_days",
+            mode: "SLIDING",
+            interval: 3,
+            anchorDate: new Date("2026-07-23"),
+            dueOffsetDays: 1,
+          },
+          assignment: { mode: "fixed", eligibleMemberIds: ["A"], fixedMemberId: "A", rotationOrder: ["A"] },
+        },
+        members: [{ id: "A", displayName: "A", isActive: true }],
+        absences: [],
+        existingOccurrences: [
+          // Real base: a PAST completed occurrence.
+          {
+            id: "past",
+            sourceGenerationKey: "litter:sliding:0",
+            scheduledDate: new Date("2026-07-23"),
+            dueDate: new Date("2026-07-24"),
+            assignedMemberId: "A",
+            status: "completed",
+            actualMinutes: null,
+            isManuallyModified: false,
+          },
+          // A FUTURE holiday-shifted override that must NOT become the base.
+          {
+            id: "future",
+            sourceGenerationKey: "litter:sliding:20",
+            scheduledDate: new Date("2026-09-06"),
+            dueDate: new Date("2026-09-07"),
+            assignedMemberId: "A",
+            status: "planned",
+            actualMinutes: null,
+            isManuallyModified: true,
+          },
+        ],
+        rangeStart: new Date("2026-07-02"),
+        rangeEnd: new Date("2026-09-30"),
+      });
+
+      const dates = generated.map((o) => format(o.scheduledDate, "yyyy-MM-dd"));
+      // The slide continues from the July 23 base → near-term (Aug 1-14) is populated,
+      // not skipped-to-September as when the future override dragged the base.
+      expect(dates.some((d) => d >= "2026-08-01" && d <= "2026-08-14")).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
