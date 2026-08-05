@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 
+// `standalone` ne garde que les dépendances réellement tracées : l'image de prod
+// passe d'environ 3,15 Go (node_modules complet embarqué) à quelques centaines de
+// Mo, ce qui rend les builds et les déploiements bien plus légers.
 const isDev = process.env.NODE_ENV === "development";
 
 const ContentSecurityPolicy = `
@@ -31,6 +34,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   async headers() {
     return [
       {

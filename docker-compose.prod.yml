@@ -68,7 +68,12 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-    command: sh -c "npx prisma migrate deploy && npm run start"
+    # Build « standalone » : le serveur est server.js et le CLI Prisma est fourni
+    # explicitement dans l'image (voir Dockerfile), donc pas de npx/réseau au boot.
+    # Build « standalone » : Next ne trace que le serveur, pas le CLI Prisma (ni
+    # ses dépendances comme `effect`). Le CLI vit donc dans son propre arbre,
+    # installé à part dans l'image (voir l'étape « migrator » du Dockerfile).
+    command: sh -c "node /migrator/node_modules/prisma/build/index.js migrate deploy --schema /app/prisma/schema.prisma && node server.js"
 
   reverse-proxy:
     image: caddy:2
