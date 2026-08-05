@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 
 import { dataErrorOrRedirect, dataOrRedirect, withHousehold } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
-import { getBudgetOverview } from "@/lib/budget";
+import { applyPlannedBudgets, getBudgetOverview, monthKey, startOfNextMonth } from "@/lib/budget";
 import { db } from "@/lib/db";
 import {
   budgetChargeSchema,
   budgetExpenseSchema,
   budgetIncomeSchema,
+  budgetPocketPlanSchema,
   budgetPocketSchema,
   budgetRefundSchema,
 } from "@/lib/validation";
@@ -27,6 +28,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
     select: { id: true },
   });
   if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  await applyPlannedBudgets(householdId);
   return NextResponse.json({ overview: await getBudgetOverview(householdId) });
 }
 
@@ -136,6 +138,34 @@ export const POST = withHousehold<{ id: string }>(async ({ request, params, memb
     case "pocket.delete": {
       if (!id) return fail("Identifiant manquant.");
       await db.budgetPocket.deleteMany({ where: { id, householdId } });
+      return ok();
+    }
+    // Prepare next month without touching the current allocation. The plan is
+    // stamped with the month it targets and applied by applyPlannedBudgets.
+    case "pocket.plan": {
+      if (!id) return fail("Identifiant manquant.");
+      const parsed = budgetPocketPlanSchema.safeParse({
+        quota: str("quota"),
+        period: str("period") || undefined,
+      });
+      if (!parsed.success) return fail("Allocation invalide.");
+      const res = await db.budgetPocket.updateMany({
+        where: { id, householdId },
+        data: {
+          plannedQuota: parsed.data.quota,
+          plannedPeriod: parsed.data.period ?? null,
+          plannedFor: monthKey(startOfNextMonth(new Date())),
+        },
+      });
+      if (res.count === 0) return fail("Poste introuvable.");
+      return ok();
+    }
+    case "pocket.plan.clear": {
+      if (!id) return fail("Identifiant manquant.");
+      await db.budgetPocket.updateMany({
+        where: { id, householdId },
+        data: { plannedQuota: null, plannedPeriod: null, plannedFor: null },
+      });
       return ok();
     }
 

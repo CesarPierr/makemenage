@@ -931,6 +931,11 @@ model BudgetPocket {
   /// "monthly" | "weekly" — the period the quota resets on.
   period      String   @default("monthly")
   quota       Decimal  @db.Decimal(12, 2)
+  /// Next-month planning: prepared allocation that replaces quota/period once
+  /// the month named by `plannedFor` ("YYYY-MM") starts. Null = nothing planned.
+  plannedQuota  Decimal? @db.Decimal(12, 2)
+  plannedPeriod String?
+  plannedFor    String?
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

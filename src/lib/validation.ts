@@ -333,6 +333,12 @@ export const budgetPocketSchema = z.object({
 });
 export const budgetPocketUpdateSchema = budgetPocketSchema.partial();
 
+/** Next-month allocation prepared for a pocket (quota, optionally a new period). */
+export const budgetPocketPlanSchema = z.object({
+  quota: positiveAmount,
+  period: z.enum(["monthly", "weekly"]).optional(),
+});
+
 export const budgetExpenseSchema = z.object({
   label: z.string().trim().max(120).optional(),
   amount: positiveAmount,

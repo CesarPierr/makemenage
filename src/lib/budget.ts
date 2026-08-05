@@ -14,6 +14,48 @@ export function normalizePeriod(value: string | null | undefined): BudgetPeriod 
 
 const dec = (d: Prisma.Decimal | null | undefined): number => (d ? Number(d) : 0);
 
+/** "YYYY-MM" key used to stamp a prepared allocation with the month it applies to. */
+export function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** The month after `date`, as a Date on its 1st (safe across year boundaries). */
+export function startOfNextMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 1);
+}
+
+/**
+ * Apply every prepared allocation whose target month has started: the planned
+ * quota/period replace the live ones and the planned fields are cleared. Runs
+ * before reading the overview, so "effective au prochain reset" needs no cron.
+ * Idempotent — a plan is consumed once.
+ */
+export async function applyPlannedBudgets(householdId: string, now: Date = new Date()): Promise<number> {
+  const currentKey = monthKey(now);
+  const planned = await db.budgetPocket.findMany({
+    where: { householdId, NOT: { plannedFor: null } },
+    select: { id: true, plannedFor: true, plannedQuota: true, plannedPeriod: true },
+  });
+
+  let applied = 0;
+  for (const p of planned) {
+    // Not due yet (target month still ahead) — leave it prepared.
+    if (!p.plannedFor || p.plannedFor > currentKey) continue;
+    await db.budgetPocket.update({
+      where: { id: p.id },
+      data: {
+        ...(p.plannedQuota == null ? {} : { quota: p.plannedQuota }),
+        ...(p.plannedPeriod ? { period: normalizePeriod(p.plannedPeriod) } : {}),
+        plannedQuota: null,
+        plannedPeriod: null,
+        plannedFor: null,
+      },
+    });
+    applied += 1;
+  }
+  return applied;
+}
+
 export type SerializedIncome = {
   id: string;
   label: string;
@@ -33,6 +75,9 @@ export type SerializedCharge = {
   isAuto: boolean;
   /** True for a manual charge that duplicates an auto-versement (shown, not counted). */
   duplicateOfAuto: boolean;
+  /** True while the charge's day-of-month is still ahead — not yet debited this
+   *  month. A charge with no day is treated as debited on the 1st. */
+  pending: boolean;
 };
 
 export type SerializedPocket = {
@@ -49,6 +94,9 @@ export type SerializedPocket = {
   /** 0..1+ — share of quota consumed (can exceed 1 when over budget). */
   ratio: number;
   over: boolean;
+  /** Prepared allocation for next month (null = nothing planned yet). */
+  plannedQuota: number | null;
+  plannedPeriod: BudgetPeriod | null;
 };
 
 export type SerializedExpense = {
@@ -87,8 +135,13 @@ export type BudgetOverview = {
     charges: number;
     /** All expenses logged in the current month (across every pocket + uncategorised). */
     monthExpenses: number;
-    /** « Reste sur le compte » = income − charges − monthExpenses. */
+    /** « Reste sur le compte » — ce qui est réellement dessus aujourd'hui :
+     *  income − charges DÉJÀ prélevées − monthExpenses. */
     reste: number;
+    /** Charges du mois pas encore prélevées (jour de prélèvement à venir). */
+    chargesPending: number;
+    /** Reste une fois toutes les charges passées = income − charges − monthExpenses. */
+    restePrevu: number;
     /** Income − charges − sum(pocket quotas) — what's left once every budget is funded. */
     plannedReste: number;
     /** Money still owed to the household across all pending/partial refunds. */
@@ -107,6 +160,15 @@ export type BudgetOverview = {
   refunds: SerializedExpense[];
   /** Month spending classified by type, for the Analyse panel. */
   analysis: BudgetAnalysis;
+  /** Context for the « Mois prochain » planning view. */
+  next: {
+    /** ISO `YYYY-MM` of next month — the month a prepared allocation targets. */
+    month: string;
+    /** « septembre 2026 » style label. */
+    label: string;
+    /** In-month 7-day blocks (a weekly quota × this = its monthly equivalent). */
+    weekCount: number;
+  };
 };
 
 const DAYS_PER_MONTH = 30.4368;
@@ -208,6 +270,9 @@ export async function getBudgetOverview(householdId: string, now: Date = new Dat
   // budget reflects recurring savings without a duplicate manual entry.
   const activeRules = autoFillRules.filter((r) => r.startsOn <= now && (r.endsOn == null || r.endsOn >= now));
   const autoBoxIds = new Set(activeRules.map((r) => r.boxId));
+  // A charge without a day-of-month is assumed debited on the 1st (already gone).
+  const todayOfMonth = now.getDate();
+  const isPendingDay = (day: number | null) => (day ?? 1) > todayOfMonth;
   const derivedCharges: SerializedCharge[] = activeRules.map((r) => ({
     id: `auto-${r.boxId}`,
     label: r.box.name,
@@ -218,6 +283,7 @@ export async function getBudgetOverview(householdId: string, now: Date = new Dat
     sortOrder: 1000,
     isAuto: true,
     duplicateOfAuto: false,
+    pending: isPendingDay(r.dayOfMonth),
   }));
   const manualCharges: SerializedCharge[] = charges.map((c) => ({
     id: c.id,
@@ -229,13 +295,17 @@ export async function getBudgetOverview(householdId: string, now: Date = new Dat
     sortOrder: c.sortOrder,
     isAuto: false,
     duplicateOfAuto: c.savingsBoxId != null && autoBoxIds.has(c.savingsBoxId),
+    pending: isPendingDay(c.dayOfMonth),
   }));
   const allCharges = [...manualCharges, ...derivedCharges];
   // A manual charge that duplicates an auto-versement is shown (with a warning)
   // but NOT counted, to avoid charging the same recurring savings twice.
-  const totalCharges =
-    manualCharges.filter((c) => !c.duplicateOfAuto).reduce((sum, c) => sum + c.amount, 0) +
-    derivedCharges.reduce((sum, c) => sum + c.amount, 0);
+  const countedCharges = [...manualCharges.filter((c) => !c.duplicateOfAuto), ...derivedCharges];
+  const totalCharges = countedCharges.reduce((sum, c) => sum + c.amount, 0);
+  // Split by debit date so « reste sur le compte » reflects the real balance today,
+  // with what's still to be taken shown separately.
+  const chargesPending = countedCharges.filter((c) => c.pending).reduce((sum, c) => sum + c.amount, 0);
+  const chargesDebited = totalCharges - chargesPending;
   const totalMonthExpenses = monthExpenses.reduce((sum, row) => sum + net(row), 0);
 
   const monthByPocket = new Map<string, number>();
@@ -292,6 +362,8 @@ export async function getBudgetOverview(householdId: string, now: Date = new Dat
       remaining: quota - spent,
       ratio: quota > 0 ? spent / quota : spent > 0 ? 1 : 0,
       over: spent > quota,
+      plannedQuota: p.plannedQuota == null ? null : dec(p.plannedQuota),
+      plannedPeriod: p.plannedPeriod ? normalizePeriod(p.plannedPeriod) : null,
     };
   });
 
@@ -310,14 +382,18 @@ export async function getBudgetOverview(householdId: string, now: Date = new Dat
 
   const weekLabel = `${format(weekStart, "d", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
 
+  const nextMonthStart = startOfNextMonth(now);
+
   return {
-    month: `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`,
+    month: monthKey(monthStart),
     week: { index: weekIndex + 1, label: weekLabel },
     totals: {
       income: totalIncome,
       charges: totalCharges,
       monthExpenses: totalMonthExpenses,
-      reste: totalIncome - totalCharges - totalMonthExpenses,
+      reste: totalIncome - chargesDebited - totalMonthExpenses,
+      chargesPending,
+      restePrevu: totalIncome - totalCharges - totalMonthExpenses,
       plannedReste: totalIncome - totalCharges - plannedPocketTotal,
       awaitingRefund,
       freeMoney,
@@ -328,5 +404,10 @@ export async function getBudgetOverview(householdId: string, now: Date = new Dat
     expenses: monthExpenses.slice(0, 365).map(serializeExpense),
     refunds: pendingRefunds.slice(0, 50).map(serializeExpense),
     analysis: { total: totalMonthExpenses, byType, byWeek },
+    next: {
+      month: monthKey(nextMonthStart),
+      label: format(nextMonthStart, "MMMM yyyy", { locale: fr }),
+      weekCount: Math.ceil(endOfMonth(nextMonthStart).getDate() / 7),
+    },
   };
 }

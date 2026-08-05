@@ -5,13 +5,13 @@ vi.mock("@/lib/db", () => ({
   db: {
     budgetIncome: { findMany: vi.fn() },
     budgetCharge: { findMany: vi.fn() },
-    budgetPocket: { findMany: vi.fn() },
+    budgetPocket: { findMany: vi.fn(), update: vi.fn() },
     budgetExpense: { findMany: vi.fn() },
     savingsAutoFillRule: { findMany: vi.fn() },
   },
 }));
 
-import { getBudgetOverview, normalizePeriod } from "@/lib/budget";
+import { applyPlannedBudgets, getBudgetOverview, monthKey, normalizePeriod } from "@/lib/budget";
 import { db } from "@/lib/db";
 
 const d = (s: string) => new Date(s);
@@ -70,6 +70,42 @@ describe("getBudgetOverview", () => {
     // 50 × 5 in-month weeks = 250 → reserved 650; + uncategorised 20 →
     // 2000 − 800 − 650 − 20 = 530.
     expect(o.totals.freeMoney).toBe(530);
+  });
+
+  it("counts only charges already debited in « reste », the rest as à venir", async () => {
+    // Loyer le 5 (déjà prélevé au 18) + Électricité le 25 (encore à venir).
+    vi.mocked(db.budgetCharge.findMany).mockResolvedValue([
+      { id: "c1", label: "Loyer", amount: 800, dayOfMonth: 5, savingsBoxId: null, sortOrder: 0, createdAt: d("2026-06-01"), savingsBox: null },
+      { id: "c2", label: "Électricité", amount: 100, dayOfMonth: 25, savingsBoxId: null, sortOrder: 1, createdAt: d("2026-06-01"), savingsBox: null },
+      // Pas de date → considérée prélevée le 1er.
+      { id: "c3", label: "Netflix", amount: 15, dayOfMonth: null, savingsBoxId: null, sortOrder: 2, createdAt: d("2026-06-01"), savingsBox: null },
+    ] as never);
+
+    const o = await getBudgetOverview("h1", NOW);
+    expect(o.totals.charges).toBe(915); // 800 + 100 + 15
+    expect(o.totals.chargesPending).toBe(100); // seule l'électricité du 25
+    // Solde réel aujourd'hui : les 100 € du 25 ne sont pas encore partis.
+    expect(o.totals.reste).toBe(2000 - 815 - 185);
+    // Une fois tout prélevé.
+    expect(o.totals.restePrevu).toBe(2000 - 915 - 185);
+    expect(o.charges.find((c) => c.id === "c2")?.pending).toBe(true);
+    expect(o.charges.find((c) => c.id === "c1")?.pending).toBe(false);
+    expect(o.charges.find((c) => c.id === "c3")?.pending).toBe(false);
+    // L'argent libre reste conservateur : il retranche TOUTES les charges.
+    expect(o.totals.freeMoney).toBe(2000 - 915 - 650 - 20);
+  });
+
+  it("exposes next month's planning context and prepared allocations", async () => {
+    vi.mocked(db.budgetPocket.findMany).mockResolvedValue([
+      { id: "p1", name: "Alimentation", color: "#38735d", period: "monthly", quota: 400, sortOrder: 0, createdAt: d("2026-06-01"), plannedQuota: 450, plannedPeriod: "monthly", plannedFor: "2026-07" },
+    ] as never);
+
+    const o = await getBudgetOverview("h1", NOW);
+    expect(o.next.month).toBe("2026-07");
+    expect(o.next.label).toMatch(/juillet/);
+    // Le mois en cours n'est pas écrasé par la préparation.
+    expect(o.pockets[0].quota).toBe(400);
+    expect(o.pockets[0].plannedQuota).toBe(450);
   });
 
   it("classifies the month's spending by type for the Analyse panel", async () => {
@@ -162,5 +198,46 @@ describe("getBudgetOverview", () => {
     expect(dup?.duplicateOfAuto).toBe(true);
     // Loyer 800 (counted) + auto 150; the duplicate manual 150 is NOT counted.
     expect(o.totals.charges).toBe(950);
+  });
+});
+
+describe("applyPlannedBudgets", () => {
+  const planned = (plannedFor: string) => [
+    { id: "p1", plannedFor, plannedQuota: 450, plannedPeriod: "weekly" },
+  ] as never;
+
+  it("leaves a plan untouched while its target month is still ahead", async () => {
+    vi.mocked(db.budgetPocket.findMany).mockResolvedValue(planned("2026-07"));
+
+    const applied = await applyPlannedBudgets("h1", NOW); // NOW = juin
+    expect(applied).toBe(0);
+    expect(db.budgetPocket.update).not.toHaveBeenCalled();
+  });
+
+  it("applies the plan once the target month has started, then clears it", async () => {
+    vi.mocked(db.budgetPocket.findMany).mockResolvedValue(planned("2026-07"));
+
+    const applied = await applyPlannedBudgets("h1", new Date("2026-07-01T08:00:00"));
+    expect(applied).toBe(1);
+    expect(db.budgetPocket.update).toHaveBeenCalledWith({
+      where: { id: "p1" },
+      data: { quota: 450, period: "weekly", plannedQuota: null, plannedPeriod: null, plannedFor: null },
+    });
+  });
+
+  it("is idempotent — a consumed plan is no longer returned, so nothing re-applies", async () => {
+    vi.mocked(db.budgetPocket.findMany).mockResolvedValue([] as never);
+
+    expect(await applyPlannedBudgets("h1", new Date("2026-08-01T08:00:00"))).toBe(0);
+    expect(db.budgetPocket.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("monthKey", () => {
+  it("pads the month so keys sort chronologically as strings", () => {
+    expect(monthKey(new Date("2026-06-18T12:00:00"))).toBe("2026-06");
+    expect(monthKey(new Date("2026-12-31T12:00:00"))).toBe("2026-12");
+    expect(monthKey(new Date("2027-01-01T12:00:00"))).toBe("2027-01");
+    expect("2026-09" < "2026-10").toBe(true);
   });
 });

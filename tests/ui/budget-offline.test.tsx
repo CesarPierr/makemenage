@@ -32,6 +32,8 @@ function makeOverview(): BudgetOverview {
       charges: 0,
       monthExpenses: 0,
       reste: 0,
+      chargesPending: 0,
+      restePrevu: 0,
       plannedReste: 0,
       awaitingRefund: 0,
       freeMoney: 0,
@@ -51,11 +53,14 @@ function makeOverview(): BudgetOverview {
         remaining: 300,
         ratio: 0,
         over: false,
+        plannedQuota: null,
+        plannedPeriod: null,
       },
     ],
     expenses: [],
     refunds: [],
     analysis: { total: 0, byType: [], byWeek: [] },
+    next: { month: "2026-07", label: "juillet 2026", weekCount: 5 },
   };
 }
 

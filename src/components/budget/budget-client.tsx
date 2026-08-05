@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  CalendarClock,
   LayoutDashboard,
   Pencil,
   PieChart,
@@ -18,6 +19,7 @@ import {
 
 import { BottomSheet, BottomSheetAction } from "@/components/ui/bottom-sheet";
 import { BudgetAnalysisPanel } from "@/components/budget/budget-analysis";
+import { BudgetNextMonth } from "@/components/budget/budget-next-month";
 import { ChargeEditor, ExpenseEditor, IncomeEditor, PocketEditor, RefundEditor } from "@/components/budget/budget-editors";
 import { useToast } from "@/components/ui/toast";
 import { postForm } from "@/lib/api-client";
@@ -66,6 +68,7 @@ function applyOptimisticExpense(prev: BudgetOverview, fields: Record<string, str
       ...prev.totals,
       monthExpenses: prev.totals.monthExpenses + amt,
       reste: prev.totals.reste - amt,
+      restePrevu: prev.totals.restePrevu - amt,
       freeMoney: prev.totals.freeMoney - amt,
     },
   };
@@ -97,6 +100,8 @@ const ACTION_MSG: Record<string, string> = {
   "charge.create": "Charge ajoutée.",
   "charge.update": "Charge mise à jour.",
   "charge.delete": "Charge supprimée.",
+  "pocket.plan": "Prévu pour le mois prochain.",
+  "pocket.plan.clear": "Préparation annulée.",
 };
 
 const PAGE = 20;
@@ -167,6 +172,8 @@ export function BudgetClient({ householdId, initialOverview, savingsBoxes }: Bud
   const [sheet, setSheet] = useState<Sheet>(null);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<Tab>("apercu");
+  // "current" = le mois en cours ; "next" = préparer le mois prochain (sans l'écraser).
+  const [scope, setScope] = useState<"current" | "next">("current");
   const [visible, setVisible] = useState(PAGE);
   const [filter, setFilter] = useState<string>("all"); // "all" | pocketId | "none"
 
@@ -262,10 +269,54 @@ export function BudgetClient({ householdId, initialOverview, savingsBoxes }: Bud
     <section className="space-y-3 sm:space-y-4">
       <header className="px-1">
         <p className="section-kicker">Budget</p>
-        <h2 className="display-title mt-1 text-2xl capitalize leading-tight sm:text-3xl">{monthLabel}</h2>
-        <p className="mt-1 text-sm text-ink-500">Salaires, charges et dépenses — votre reste en temps réel.</p>
+        <h2 className="display-title mt-1 text-2xl capitalize leading-tight sm:text-3xl">
+          {scope === "next" ? overview.next.label : monthLabel}
+        </h2>
+        <p className="mt-1 text-sm text-ink-500">
+          {scope === "next"
+            ? "Préparez vos enveloppes — actif au 1er du mois prochain."
+            : "Salaires, charges et dépenses — votre reste en temps réel."}
+        </p>
       </header>
 
+      {/* Mois en cours ↔ préparation du mois prochain */}
+      <div className="grid grid-cols-2 gap-1 rounded-2xl border border-line bg-white/60 p-1 dark:bg-surface/60">
+        {([
+          { id: "current" as const, label: "Ce mois", icon: Wallet },
+          { id: "next" as const, label: "Mois prochain", icon: CalendarClock },
+        ]).map((s) => {
+          const active = scope === s.id;
+          const Icon = s.icon;
+          return (
+            <button
+              aria-pressed={active}
+              className={cn(
+                "flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-sm font-semibold transition-all active:scale-[0.98]",
+                active ? "bg-white text-ink-950 shadow-sm dark:bg-surface" : "text-ink-500 hover:text-ink-800",
+              )}
+              key={s.id}
+              onClick={() => setScope(s.id)}
+              type="button"
+            >
+              <Icon className="size-4 shrink-0" />
+              <span className="truncate">{s.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {scope === "next" ? (
+        <BudgetNextMonth
+          busy={busy}
+          online={online}
+          onClearPlan={(pocketId) => void mutate({ _action: "pocket.plan.clear", id: pocketId })}
+          onPlan={(pocketId, quota, period) =>
+            void mutate({ _action: "pocket.plan", id: pocketId, quota: String(quota), period })
+          }
+          overview={overview}
+        />
+      ) : (
+      <>
       {/* Sub-nav */}
       <div className="grid grid-cols-3 gap-1 rounded-2xl border border-line bg-white/60 p-1 dark:bg-surface/60">
         {tabs.map((x) => {
@@ -303,7 +354,18 @@ export function BudgetClient({ householdId, initialOverview, savingsBoxes }: Bud
               <Stat icon={Repeat} label="Charges" tone="text-ink-800" value={t.charges} />
               <Stat icon={TrendingDown} label="Dépenses" tone="text-coral-600" value={t.monthExpenses} />
             </div>
-            <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-line bg-white/60 px-3 py-2 dark:bg-surface/60">
+            {/* Charges pas encore prélevées : le « reste » ci-dessus est le solde réel
+                du jour, celui-ci annonce ce qui va encore partir. */}
+            {t.chargesPending > 0 ? (
+              <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-line bg-white/60 px-3 py-2 dark:bg-surface/60">
+                <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-ink-700">
+                  <CalendarClock className="size-3.5 shrink-0 text-ink-400" />
+                  Charges à venir <span className="truncate font-normal text-ink-400">· après prélèvement {formatCurrency(t.restePrevu)}</span>
+                </span>
+                <span className="shrink-0 text-sm font-bold tabular-nums text-ink-800">−{formatCurrency(t.chargesPending)}</span>
+              </div>
+            ) : null}
+            <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-line bg-white/60 px-3 py-2 dark:bg-surface/60">
               <span className="min-w-0 text-xs font-semibold text-ink-700">
                 Argent libre <span className="font-normal text-ink-400">· budgets réservés</span>
               </span>
@@ -381,8 +443,14 @@ export function BudgetClient({ householdId, initialOverview, savingsBoxes }: Bud
                   render={(c) =>
                     c.isAuto ? (
                       <Row
-                        badge={<span className="rounded-full bg-sky-500/10 px-1.5 py-0.5 text-[0.6rem] font-bold text-sky-600">auto · épargne</span>}
-                        hint="Versement automatique — géré dans l'enveloppe"
+                        badge={
+                          c.pending ? (
+                            <span className="rounded-full bg-black/[0.06] px-1.5 py-0.5 text-[0.6rem] font-bold text-ink-600">à venir</span>
+                          ) : (
+                            <span className="rounded-full bg-sky-500/10 px-1.5 py-0.5 text-[0.6rem] font-bold text-sky-600">auto · épargne</span>
+                          )
+                        }
+                        hint={c.dayOfMonth ? `Le ${c.dayOfMonth} · versement automatique` : "Versement automatique — géré dans l'enveloppe"}
                         key={c.id}
                         onClick={() => router.push(`/app/epargne?household=${householdId}`)}
                         title={c.label}
@@ -390,15 +458,21 @@ export function BudgetClient({ householdId, initialOverview, savingsBoxes }: Bud
                       />
                     ) : (
                       <Row
-                        badge={c.duplicateOfAuto ? <span className="rounded-full bg-coral-500/10 px-1.5 py-0.5 text-[0.6rem] font-bold text-coral-600">doublon</span> : undefined}
+                        badge={
+                          c.duplicateOfAuto ? (
+                            <span className="rounded-full bg-coral-500/10 px-1.5 py-0.5 text-[0.6rem] font-bold text-coral-600">doublon</span>
+                          ) : c.pending ? (
+                            <span className="rounded-full bg-black/[0.06] px-1.5 py-0.5 text-[0.6rem] font-bold text-ink-600">à venir</span>
+                          ) : undefined
+                        }
                         hint={
                           c.duplicateOfAuto
                             ? "Doublon d'un auto-versement · non compté"
-                            : c.savingsBoxName
-                              ? `Épargne · ${c.savingsBoxName}`
-                              : c.dayOfMonth
-                                ? `Le ${c.dayOfMonth} du mois`
-                                : undefined
+                            : c.dayOfMonth
+                              ? `Le ${c.dayOfMonth} du mois${c.pending ? "" : " · prélevé"}${c.savingsBoxName ? ` · ${c.savingsBoxName}` : ""}`
+                              : c.savingsBoxName
+                                ? `Épargne · ${c.savingsBoxName}`
+                                : "Prélevé en début de mois"
                         }
                         key={c.id}
                         onClick={online ? () => setSheet({ kind: "charge", entity: c }) : blockOffline}
@@ -513,6 +587,8 @@ export function BudgetClient({ householdId, initialOverview, savingsBoxes }: Bud
 
       {/* ── ANALYSE ── */}
       {tab === "analyse" ? <BudgetAnalysisPanel analysis={overview.analysis} /> : null}
+      </>
+      )}
 
       {/* ── Sheets ── */}
       {sheet?.kind === "expense" ? (

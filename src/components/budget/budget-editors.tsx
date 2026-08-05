@@ -75,7 +75,20 @@ export function ExpenseEditor({
   return (
     <BottomSheet isOpen={open} onClose={onClose} title="Nouvelle dépense">
       <div className="space-y-3">
-        <AmountField autoFocus value={amount} onChange={setAmount} />
+        {/* Nom d'abord, montant ensuite : saisir le libellé dans le champ montant
+            (et inversement) était l'erreur la plus fréquente. */}
+        <label className="field-label">
+          <span>Nom de la dépense</span>
+          <input
+            autoFocus
+            className="field"
+            maxLength={120}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Ex. Courses Lidl"
+            value={label}
+          />
+        </label>
+        <AmountField value={amount} onChange={setAmount} />
         <div className="field-label">
           <span>Poste</span>
           <div className="flex flex-wrap gap-2">
@@ -99,10 +112,6 @@ export function ExpenseEditor({
             ))}
           </div>
         </div>
-        <label className="field-label">
-          <span>Libellé (facultatif)</span>
-          <input className="field" maxLength={120} onChange={(e) => setLabel(e.target.value)} placeholder="Ex. Courses Lidl" value={label} />
-        </label>
         <label className="field-label">
           <span>Date</span>
           <input className="field" onChange={(e) => setDate(e.target.value)} type="date" value={date} />

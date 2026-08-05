@@ -1,6 +1,6 @@
 import { BudgetClient } from "@/components/budget/budget-client";
 import { requireUser } from "@/lib/auth";
-import { getBudgetOverview } from "@/lib/budget";
+import { applyPlannedBudgets, getBudgetOverview } from "@/lib/budget";
 import { db } from "@/lib/db";
 import { requireHouseholdContext } from "@/lib/households";
 
@@ -13,6 +13,10 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
   const params = await searchParams;
   const context = await requireHouseholdContext(user.id, params.household);
   const householdId = context.household.id;
+
+  // "Effectif au prochain reset" : toute allocation préparée dont le mois cible a
+  // commencé devient la vraie allocation, avant de calculer l'aperçu.
+  await applyPlannedBudgets(householdId);
 
   const [overview, savingsBoxes] = await Promise.all([
     getBudgetOverview(householdId),
