@@ -33,6 +33,7 @@ function makeOverview(): BudgetOverview {
       monthExpenses: 0,
       reste: 0,
       chargesPending: 0,
+      expensesUpcoming: 0,
       restePrevu: 0,
       plannedReste: 0,
       awaitingRefund: 0,

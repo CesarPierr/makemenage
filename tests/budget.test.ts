@@ -95,6 +95,27 @@ describe("getBudgetOverview", () => {
     expect(o.totals.freeMoney).toBe(2000 - 915 - 650 - 20);
   });
 
+  it("keeps a future-dated expense out of the live balance, in « à venir »", async () => {
+    vi.mocked(db.budgetExpense.findMany).mockResolvedValue([
+      // Déjà dépensé (le 10, on est le 18).
+      { id: "e1", label: "Courses", amount: 120, pocketId: "p1", spentAt: d("2026-06-10T10:00:00"), pocket: { name: "Alimentation", color: "#38735d" }, createdByMember: null },
+      // Prévue le 25 : ne doit pas peser sur le solde du compte aujourd'hui.
+      { id: "e2", label: "Billets train", amount: 90, pocketId: null, spentAt: d("2026-06-25T10:00:00"), pocket: null, createdByMember: null },
+    ] as never);
+
+    const o = await getBudgetOverview("h1", NOW);
+    expect(o.totals.monthExpenses).toBe(210); // total du mois, prévu inclus
+    expect(o.totals.expensesUpcoming).toBe(90);
+    // Solde réel : seules les 120 € déjà dépensées sont retranchées.
+    expect(o.totals.reste).toBe(2000 - 800 - 120);
+    // Projection : tout est retranché.
+    expect(o.totals.restePrevu).toBe(2000 - 800 - 210);
+    expect(o.expenses.find((e) => e.id === "e2")?.upcoming).toBe(true);
+    expect(o.expenses.find((e) => e.id === "e1")?.upcoming).toBe(false);
+    // Argent libre : conservateur, la dépense prévue reste comptée.
+    expect(o.totals.freeMoney).toBe(2000 - 800 - 650 - 90);
+  });
+
   it("exposes next month's planning context and prepared allocations", async () => {
     vi.mocked(db.budgetPocket.findMany).mockResolvedValue([
       { id: "p1", name: "Alimentation", color: "#38735d", period: "monthly", quota: 400, sortOrder: 0, createdAt: d("2026-06-01"), plannedQuota: 450, plannedPeriod: "monthly", plannedFor: "2026-07" },

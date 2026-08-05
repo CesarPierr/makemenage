@@ -54,7 +54,13 @@ function applyOptimisticExpense(prev: BudgetOverview, fields: Record<string, str
     refundExpected,
     refundedAmount: null,
     outstanding: refundExpected ?? 0,
+    upcoming: false,
   };
+  // Une dépense datée dans le futur ne touche pas le solde du compte, seulement
+  // la projection et l'argent libre (conservateur).
+  const spentAtDate = fields.spentAt ? new Date(fields.spentAt) : new Date();
+  const upcoming = spentAtDate.getTime() > new Date().setHours(23, 59, 59, 999);
+  expense.upcoming = upcoming;
   const pockets = prev.pockets.map((p) => {
     if (p.id !== pocketId) return p;
     const spent = p.spent + amt;
@@ -67,7 +73,8 @@ function applyOptimisticExpense(prev: BudgetOverview, fields: Record<string, str
     totals: {
       ...prev.totals,
       monthExpenses: prev.totals.monthExpenses + amt,
-      reste: prev.totals.reste - amt,
+      reste: upcoming ? prev.totals.reste : prev.totals.reste - amt,
+      expensesUpcoming: upcoming ? prev.totals.expensesUpcoming + amt : prev.totals.expensesUpcoming,
       restePrevu: prev.totals.restePrevu - amt,
       freeMoney: prev.totals.freeMoney - amt,
     },
@@ -79,7 +86,7 @@ type BudgetClientProps = { householdId: string; initialOverview: BudgetOverview;
 type Tab = "apercu" | "depenses" | "analyse";
 
 type Sheet =
-  | { kind: "expense"; pocketId?: string }
+  | { kind: "expense"; pocketId?: string; entity?: SerializedExpense }
   | { kind: "pocketActions"; pocket: SerializedPocket }
   | { kind: "pocket"; entity?: SerializedPocket }
   | { kind: "income"; entity?: SerializedIncome }
@@ -89,6 +96,7 @@ type Sheet =
 
 const ACTION_MSG: Record<string, string> = {
   "expense.create": "Dépense ajoutée.",
+  "expense.update": "Dépense modifiée.",
   "expense.delete": "Dépense supprimée.",
   "expense.refund": "Remboursement enregistré.",
   "pocket.create": "Poste créé.",
@@ -354,15 +362,15 @@ export function BudgetClient({ householdId, initialOverview, savingsBoxes }: Bud
               <Stat icon={Repeat} label="Charges" tone="text-ink-800" value={t.charges} />
               <Stat icon={TrendingDown} label="Dépenses" tone="text-coral-600" value={t.monthExpenses} />
             </div>
-            {/* Charges pas encore prélevées : le « reste » ci-dessus est le solde réel
-                du jour, celui-ci annonce ce qui va encore partir. */}
-            {t.chargesPending > 0 ? (
+            {/* Ce qui n'est pas encore parti du compte : charges non prélevées +
+                dépenses datées dans le futur. Le « reste » ci-dessus est le solde réel. */}
+            {t.chargesPending + t.expensesUpcoming > 0 ? (
               <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-line bg-white/60 px-3 py-2 dark:bg-surface/60">
                 <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-ink-700">
                   <CalendarClock className="size-3.5 shrink-0 text-ink-400" />
-                  Charges à venir <span className="truncate font-normal text-ink-400">· après prélèvement {formatCurrency(t.restePrevu)}</span>
+                  À venir <span className="truncate font-normal text-ink-400">· il restera {formatCurrency(t.restePrevu)}</span>
                 </span>
-                <span className="shrink-0 text-sm font-bold tabular-nums text-ink-800">−{formatCurrency(t.chargesPending)}</span>
+                <span className="shrink-0 text-sm font-bold tabular-nums text-ink-800">−{formatCurrency(t.chargesPending + t.expensesUpcoming)}</span>
               </div>
             ) : null}
             <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-line bg-white/60 px-3 py-2 dark:bg-surface/60">
@@ -552,21 +560,31 @@ export function BudgetClient({ householdId, initialOverview, savingsBoxes }: Bud
 
                 <ul className="space-y-2">
                   {filtered.slice(0, visible).map((e) => (
-                    <li className="flex items-center gap-3 rounded-xl border border-line bg-white/60 p-3 dark:bg-surface/60" key={e.id}>
+                    <li className={cn("flex items-center gap-3 rounded-xl border border-line bg-white/60 p-3 dark:bg-surface/60", e.upcoming && "border-dashed")} key={e.id}>
                       <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: e.pocketColor ?? "var(--ink-300)" }} />
-                      <span className="min-w-0 flex-1">
+                      {/* Toute la ligne ouvre l'éditeur : modifier une dépense saisie. */}
+                      <button
+                        className="min-w-0 flex-1 text-left"
+                        onClick={online ? () => setSheet({ kind: "expense", entity: e }) : blockOffline}
+                        type="button"
+                      >
                         <span className="block truncate text-sm font-semibold text-ink-950">{e.label || e.pocketName || "Dépense"}</span>
                         <span className="block truncate text-[0.7rem] text-ink-500">
+                          {new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" }).format(new Date(e.spentAt))}
+                          {" · "}
                           {e.pocketName ?? "Sans poste"}
                           {e.createdByName ? ` · ${e.createdByName}` : ""}
                         </span>
-                      </span>
+                      </button>
+                      {e.upcoming ? (
+                        <span className="shrink-0 rounded-full bg-black/[0.06] px-1.5 py-0.5 text-[0.6rem] font-bold text-ink-600">à venir</span>
+                      ) : null}
                       {e.refundExpected != null ? (
                         <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[0.6rem] font-bold", e.outstanding > 0 ? "bg-coral-500/10 text-coral-600" : "bg-leaf-600/10 text-leaf-600")}>
                           {e.outstanding > 0 ? "à rembourser" : "remboursé"}
                         </span>
                       ) : null}
-                      <span className="shrink-0 text-sm font-bold tabular-nums text-coral-600">−{formatCurrency(e.amount)}</span>
+                      <span className={cn("shrink-0 text-sm font-bold tabular-nums", e.upcoming ? "text-ink-500" : "text-coral-600")}>−{formatCurrency(e.amount)}</span>
                       <button aria-label="Supprimer la dépense" className="flex size-9 shrink-0 items-center justify-center rounded-full text-ink-400 transition-colors hover:bg-black/[0.05] hover:text-red-600 disabled:opacity-50" disabled={busy} onClick={() => mutate({ _action: "expense.delete", id: e.id })} type="button">
                         <Trash2 className="size-4" />
                       </button>
@@ -592,7 +610,7 @@ export function BudgetClient({ householdId, initialOverview, savingsBoxes }: Bud
 
       {/* ── Sheets ── */}
       {sheet?.kind === "expense" ? (
-        <ExpenseEditor busy={busy} defaultPocketId={sheet.pocketId} onClose={() => setSheet(null)} onSubmit={mutate} open pockets={overview.pockets} todayIso={todayIso} />
+        <ExpenseEditor busy={busy} defaultPocketId={sheet.pocketId} expense={sheet.entity} onClose={() => setSheet(null)} onSubmit={mutate} open pockets={overview.pockets} todayIso={todayIso} />
       ) : null}
       {sheet?.kind === "pocket" ? (
         <PocketEditor busy={busy} entity={sheet.entity} key={sheet.entity?.id ?? "new"} onClose={() => setSheet(null)} onDelete={mutate} onSubmit={mutate} open />

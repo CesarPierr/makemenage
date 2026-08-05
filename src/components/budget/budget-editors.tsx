@@ -55,6 +55,7 @@ export function ExpenseEditor({
   pockets,
   defaultPocketId,
   todayIso,
+  expense,
   onSubmit,
 }: {
   open: boolean;
@@ -63,17 +64,20 @@ export function ExpenseEditor({
   pockets: SerializedPocket[];
   defaultPocketId?: string;
   todayIso: string;
+  /** Passed when editing an existing expense; omitted to create a new one. */
+  expense?: SerializedExpense;
   onSubmit: Submit;
 }) {
-  const [amount, setAmount] = useState("");
-  const [pocketId, setPocketId] = useState(defaultPocketId ?? "");
-  const [label, setLabel] = useState("");
-  const [date, setDate] = useState(todayIso);
-  const [refundable, setRefundable] = useState(false);
-  const [refundExpected, setRefundExpected] = useState("");
+  const editing = expense != null;
+  const [amount, setAmount] = useState(expense ? String(expense.amount) : "");
+  const [pocketId, setPocketId] = useState(expense?.pocketId ?? defaultPocketId ?? "");
+  const [label, setLabel] = useState(expense?.label ?? "");
+  const [date, setDate] = useState(expense ? expense.spentAt.slice(0, 10) : todayIso);
+  const [refundable, setRefundable] = useState(expense?.refundExpected != null);
+  const [refundExpected, setRefundExpected] = useState(expense?.refundExpected != null ? String(expense.refundExpected) : "");
 
   return (
-    <BottomSheet isOpen={open} onClose={onClose} title="Nouvelle dépense">
+    <BottomSheet isOpen={open} onClose={onClose} title={editing ? "Modifier la dépense" : "Nouvelle dépense"}>
       <div className="space-y-3">
         {/* Nom d'abord, montant ensuite : saisir le libellé dans le champ montant
             (et inversement) était l'erreur la plus fréquente. */}
@@ -115,6 +119,9 @@ export function ExpenseEditor({
         <label className="field-label">
           <span>Date</span>
           <input className="field" onChange={(e) => setDate(e.target.value)} type="date" value={date} />
+          {date > todayIso ? (
+            <span className="field-help">Date future — comptée dans « à venir », sans toucher au solde du compte.</span>
+          ) : null}
         </label>
         <div className="rounded-xl border border-line p-3">
           <label className="flex cursor-pointer items-center justify-between gap-3">
@@ -143,7 +150,8 @@ export function ExpenseEditor({
           disabled={busy || !amount.trim()}
           onClick={() =>
             onSubmit({
-              _action: "expense.create",
+              _action: editing ? "expense.update" : "expense.create",
+              ...(editing ? { id: expense.id } : {}),
               amount,
               pocketId,
               label,
@@ -153,7 +161,7 @@ export function ExpenseEditor({
           }
           type="button"
         >
-          Ajouter la dépense
+          {editing ? "Enregistrer" : "Ajouter la dépense"}
         </button>
       </div>
     </BottomSheet>

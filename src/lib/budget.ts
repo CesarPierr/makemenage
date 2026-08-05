@@ -114,6 +114,9 @@ export type SerializedExpense = {
   refundedAmount: number | null;
   /** Still owed = max(refundExpected − refundedAmount, 0). */
   outstanding: number;
+  /** True when the expense is dated in the future: it's planned, so it doesn't
+   *  weigh on the live account balance yet (only on the projection). */
+  upcoming: boolean;
 };
 
 export type BudgetAnalysis = {
@@ -140,6 +143,8 @@ export type BudgetOverview = {
     reste: number;
     /** Charges du mois pas encore prélevées (jour de prélèvement à venir). */
     chargesPending: number;
+    /** Dépenses datées dans le futur : prévues, pas encore débitées. */
+    expensesUpcoming: number;
     /** Reste une fois toutes les charges passées = income − charges − monthExpenses. */
     restePrevu: number;
     /** Income − charges − sum(pocket quotas) — what's left once every budget is funded. */
@@ -248,6 +253,9 @@ export async function getBudgetOverview(householdId: string, now: Date = new Dat
 
   // Net of refunds already received — the real cost of an expense.
   const net = (e: { amount: Prisma.Decimal; refundedAmount: Prisma.Decimal | null }) => dec(e.amount) - dec(e.refundedAmount);
+  // A future-dated expense is planned, not yet debited from the account.
+  const todayEnd = endOfDay(now);
+  const isUpcoming = (e: { spentAt: Date }) => e.spentAt > todayEnd;
   const outstandingOf = (e: { refundExpected: Prisma.Decimal | null; refundedAmount: Prisma.Decimal | null }) =>
     Math.max(dec(e.refundExpected) - dec(e.refundedAmount), 0);
   const serializeExpense = (e: (typeof monthExpenses)[number]): SerializedExpense => ({
@@ -258,6 +266,7 @@ export async function getBudgetOverview(householdId: string, now: Date = new Dat
     pocketName: e.pocket?.name ?? null,
     pocketColor: e.pocket?.color ?? null,
     spentAt: e.spentAt.toISOString(),
+    upcoming: isUpcoming(e),
     createdByName: e.createdByMember?.displayName ?? null,
     refundExpected: e.refundExpected == null ? null : dec(e.refundExpected),
     refundedAmount: e.refundedAmount == null ? null : dec(e.refundedAmount),
@@ -307,6 +316,10 @@ export async function getBudgetOverview(householdId: string, now: Date = new Dat
   const chargesPending = countedCharges.filter((c) => c.pending).reduce((sum, c) => sum + c.amount, 0);
   const chargesDebited = totalCharges - chargesPending;
   const totalMonthExpenses = monthExpenses.reduce((sum, row) => sum + net(row), 0);
+  // Planned (future-dated) spending: shown as « à venir », excluded from the live
+  // balance but still counted in the projection and in the conservative free money.
+  const expensesUpcoming = monthExpenses.filter(isUpcoming).reduce((sum, row) => sum + net(row), 0);
+  const expensesSpent = totalMonthExpenses - expensesUpcoming;
 
   const monthByPocket = new Map<string, number>();
   for (const e of monthExpenses) {
@@ -391,8 +404,9 @@ export async function getBudgetOverview(householdId: string, now: Date = new Dat
       income: totalIncome,
       charges: totalCharges,
       monthExpenses: totalMonthExpenses,
-      reste: totalIncome - chargesDebited - totalMonthExpenses,
+      reste: totalIncome - chargesDebited - expensesSpent,
       chargesPending,
+      expensesUpcoming,
       restePrevu: totalIncome - totalCharges - totalMonthExpenses,
       plannedReste: totalIncome - totalCharges - plannedPocketTotal,
       awaitingRefund,

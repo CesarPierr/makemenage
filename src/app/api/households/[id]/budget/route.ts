@@ -204,6 +204,36 @@ export const POST = withHousehold<{ id: string }>(async ({ request, params, memb
       }
       return ok();
     }
+    case "expense.update": {
+      if (!id) return fail("Identifiant manquant.");
+      const parsed = budgetExpenseSchema.safeParse({
+        label: str("label") || undefined,
+        amount: str("amount"),
+        pocketId: str("pocketId") || undefined,
+        spentAt: str("spentAt") || undefined,
+        refundExpected: str("refundExpected") || undefined,
+      });
+      if (!parsed.success) return fail("Dépense invalide.");
+      if (parsed.data.pocketId) {
+        const pocket = await db.budgetPocket.findFirst({ where: { id: parsed.data.pocketId, householdId }, select: { id: true } });
+        if (!pocket) return fail("Poste introuvable.");
+      }
+      const spentAt = parsed.data.spentAt ? new Date(parsed.data.spentAt) : undefined;
+      if (spentAt && Number.isNaN(spentAt.getTime())) return fail("Date invalide.");
+      const res = await db.budgetExpense.updateMany({
+        where: { id, householdId },
+        data: {
+          label: parsed.data.label ?? null,
+          amount: parsed.data.amount,
+          pocketId: parsed.data.pocketId ?? null,
+          // Clearing the toggle removes the expected refund (and its "à rembourser" line).
+          refundExpected: parsed.data.refundExpected ?? null,
+          ...(spentAt ? { spentAt } : {}),
+        },
+      });
+      if (res.count === 0) return fail("Dépense introuvable.");
+      return ok();
+    }
     case "expense.refund": {
       if (!id) return fail("Identifiant manquant.");
       const parsed = budgetRefundSchema.safeParse({ refundedAmount: str("refundedAmount") });
