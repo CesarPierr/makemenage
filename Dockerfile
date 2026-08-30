@@ -4,9 +4,7 @@ COPY package.json package-lock.json ./
 RUN apt-get update -y && apt-get install -y openssl curl && rm -rf /var/lib/apt/lists/*
 RUN npm ci
 
-FROM node:24-bookworm-slim AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+FROM deps AS builder
 COPY . .
 RUN npx prisma generate
 RUN npm run build

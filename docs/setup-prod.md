@@ -7,6 +7,14 @@
 - `APP_HOST`
 - `AUTH_SECRET`
 
+Pour activer le SSO OpenID Connect, définir également `OIDC_ISSUER`,
+`OIDC_CLIENT_ID` et `OIDC_CLIENT_SECRET`, puis enregistrer l'URI de redirection
+stricte suivante chez le fournisseur :
+
+```text
+https://votre-domaine/api/auth/oidc/callback
+```
+
 ## Déploiement
 
 1. Copier `.env.production.example` vers `.env.production`.

@@ -63,8 +63,6 @@ const nextConfig: NextConfig = {
   experimental: {
     // Optimize package imports
     optimizePackageImports: ["lucide-react", "date-fns"],
-    // Smooth crossfade between pages on client-side navigation
-    viewTransition: true,
   },
 };
 

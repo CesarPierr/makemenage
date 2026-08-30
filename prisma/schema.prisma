@@ -108,6 +108,8 @@ model User {
   id                     String                  @id @default(cuid())
   email                  String                  @unique
   passwordHash           String
+  oidcIssuer             String?
+  oidcSubject            String?
   displayName            String
   isSiteAdmin            Boolean                 @default(false)
   emailVerifiedAt        DateTime?
@@ -129,6 +131,8 @@ model User {
   deletionRequests       DeletionRequest[]
   supporterContributions SupporterContribution[]
   billingCustomers       BillingCustomer[]
+
+  @@unique([oidcIssuer, oidcSubject])
 }
 
 model Session {

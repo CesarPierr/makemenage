@@ -10,6 +10,10 @@
 | `NEXT_PUBLIC_CONTACT_EMAIL` | Email public pour support, RGPD et sécurité |
 | `NEXT_PUBLIC_SUPPORT_URL` | Lien de don/soutien optionnel |
 | `AUTH_SECRET` | Secret de signature des sessions cookie |
+| `OIDC_ISSUER` | Issuer OIDC optionnel (URL exacte publiée par le fournisseur) |
+| `OIDC_CLIENT_ID` | Identifiant du client OIDC confidentiel |
+| `OIDC_CLIENT_SECRET` | Secret du client OIDC confidentiel |
+| `OIDC_DISPLAY_NAME` | Nom du fournisseur affiché sur la page de connexion (défaut : `SSO`) |
 | `DEFAULT_TIMEZONE` | Timezone par défaut des nouveaux foyers (ex. `Europe/Paris`) |
 | `OCCURRENCE_PAST_DAYS` | Fenêtre passée conservée pour la génération |
 | `OCCURRENCE_FUTURE_DAYS` | Horizon futur généré |
@@ -23,6 +27,13 @@
 | `RATE_LIMIT_DISABLED` | `1` pour désactiver le rate-limiter en dev |
 | `ICAL_SECRET` | Secret de signature des liens iCal partageables |
 | `ADMIN_EMAILS` | Liste CSV des emails autorisés à accéder à `/app/admin` |
+
+Les trois variables `OIDC_ISSUER`, `OIDC_CLIENT_ID` et `OIDC_CLIENT_SECRET`
+doivent être définies ensemble. Quotidy utilise le flux Authorization Code avec
+PKCE, `state` et `nonce`; l'URI de redirection est
+`<APP_BASE_URL>/api/auth/oidc/callback`. Un compte local existant portant le même
+email est lié lors de la première connexion uniquement si le fournisseur marque
+cet email comme vérifié, puis l'identité stable `iss` + `sub` est utilisée.
 
 ## SMTP (optionnel)
 

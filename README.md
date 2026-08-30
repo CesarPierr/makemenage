@@ -51,7 +51,7 @@ L'app s'organise en cinq espaces autonomes, accessibles depuis l'accueil (grille
 |---|---|
 | Frontend | Next.js 16 (App Router), React 19, Tailwind 4 (config inline dans `globals.css`) |
 | Backend | Routes Next.js, Prisma 6, PostgreSQL 17 |
-| Auth | Sessions cookie HTTPOnly (table `Session`) |
+| Auth | Sessions cookie HTTPOnly + SSO OpenID Connect optionnel |
 | Tests | Vitest 4 (unitaire + couverture) |
 | Déploiement | Docker Compose durci, reverse proxy Caddy (TLS auto), systemd timers / cron local |
 
@@ -170,6 +170,7 @@ Pensée pour exposer un port à Internet sans donner accès au réseau local :
 - **CSRF** double-submit (cookie `__csrf`), **rate limiting** par route, **CSP stricte** dans [next.config.ts](next.config.ts).
 - **Reverse proxy Caddy** pour TLS automatique ; `X-Forwarded-For` lu sur l'IP la plus à droite (anti-spoof).
 - **Sessions** cookie HTTPOnly, secrets obligatoires (`AUTH_SECRET`, `CSRF_SECRET`, `CRON_SECRET`).
+- **SSO OIDC optionnel** — Authorization Code avec PKCE, validation de `state`, `nonce`, issuer et signature de l'ID token.
 - **Télémétrie sans donnée personnelle** (agrégats), purge automatique au-delà de la fenêtre de rétention.
 
 Checklist de mise en ligne et runbook incident : [docs/beta-readiness.md](docs/beta-readiness.md).

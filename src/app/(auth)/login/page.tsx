@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { requireGuest } from "@/lib/auth";
+import { getOidcSettings } from "@/lib/oidc";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -16,6 +17,7 @@ type LoginPageProps = {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   await requireGuest();
   const params = await searchParams;
+  const oidc = getOidcSettings();
   const email = params.email ?? "";
   const next = params.next ?? "";
 
@@ -40,6 +42,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 tone: "error" as const,
                 text: "Email ou mot de passe incorrect. Vérifiez vos identifiants puis réessayez.",
               }
+            : params.error === "oidc_failed"
+              ? {
+                  tone: "error" as const,
+                  text: "La connexion SSO a échoué ou a expiré. Relancez la connexion.",
+                }
             : null;
 
   return (
@@ -73,7 +80,26 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             {feedbackMessage.text}
           </div>
         ) : null}
-        <form action="/api/auth/login" method="post" className="mt-8 space-y-4">
+        {oidc ? (
+          <>
+            <Link
+              className="btn-primary mt-8 block w-full px-5 py-3 text-center font-semibold"
+              href={
+                next
+                  ? `/api/auth/oidc/start?next=${encodeURIComponent(next)}`
+                  : "/api/auth/oidc/start"
+              }
+            >
+              Continuer avec {oidc.displayName}
+            </Link>
+            <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-ink-500">
+              <span className="h-px flex-1 bg-line" />
+              <span>ou avec un mot de passe</span>
+              <span className="h-px flex-1 bg-line" />
+            </div>
+          </>
+        ) : null}
+        <form action="/api/auth/login" method="post" className={oidc ? "space-y-4" : "mt-8 space-y-4"}>
           <input type="hidden" name="next" value={next} />
           <input
             autoCapitalize="none"
