@@ -61,6 +61,34 @@ export async function syncHouseholdOccurrences(
     return;
   }
 
+  // The regular occurrence query is intentionally bounded, but a SLIDING task
+  // still needs its latest locked occurrence as the continuity anchor after that
+  // row falls out of the history window. Without it, the generator falls back to
+  // the original (or drifted) rule anchor, reuses old sliding keys and can make a
+  // recurring task disappear from the planning view.
+  const taskIds = household.tasks.map((task) => task.id);
+  const latestLockedOccurrences = taskIds.length
+    ? await db.taskOccurrence.findMany({
+        where: {
+          taskTemplateId: { in: taskIds },
+          scheduledDate: { lte: endOfDay(new Date()) },
+          OR: [
+            { isManuallyModified: true },
+            { status: { in: ["completed", "skipped", "rescheduled"] } },
+          ],
+        },
+        orderBy: [
+          { taskTemplateId: "asc" },
+          { scheduledDate: "desc" },
+          { createdAt: "desc" },
+        ],
+        distinct: ["taskTemplateId"],
+      })
+    : [];
+  const latestLockedByTaskId = new Map(
+    latestLockedOccurrences.map((occurrence) => [occurrence.taskTemplateId, occurrence] as const),
+  );
+
   const { start, end } = getGenerationWindow();
   const members = mapMembers(household.members);
   const absences = mapAbsences(household.members);
@@ -84,7 +112,11 @@ export async function syncHouseholdOccurrences(
       }),
     };
 
-    const existingOccurrences = mapExistingOccurrences(task.occurrences);
+    const latestLocked = latestLockedByTaskId.get(task.id);
+    const taskOccurrences = latestLocked && !task.occurrences.some((occurrence) => occurrence.id === latestLocked.id)
+      ? [...task.occurrences, latestLocked]
+      : task.occurrences;
+    const existingOccurrences = mapExistingOccurrences(taskOccurrences);
     const generated = generateOccurrences({
       template,
       members,
@@ -289,14 +321,35 @@ export async function realignOverdueRecurrences(householdId: string) {
       orderBy: { scheduledDate: "asc" },
       select: { scheduledDate: true },
     });
-    if (!nextOccurrence) continue;
-
     const rule = task.recurrenceRule;
-    const delayDeltaDays = differenceInDays(today, startOfDay(latestOverdue.scheduledDate));
-    
-    if (delayDeltaDays <= 0) continue;
+    const newAnchor = startOfDay(
+      computeNextAnchorAfter(
+        {
+          type: rule.type,
+          mode: rule.mode,
+          interval: rule.interval,
+          weekdays: parseNumberArray(rule.weekdays),
+          dayOfMonth: rule.dayOfMonth,
+          anchorDate: rule.anchorDate,
+          dueOffsetDays: rule.dueOffsetDays,
+          config: rule.config,
+        },
+        today,
+      ),
+    );
 
-    const newAnchor = addDays(startOfDay(rule.anchorDate), delayDeltaDays);
+    // The next occurrence is the durable idempotence marker. Once it has been
+    // generated at or after the date projected from today, repeated page loads
+    // must not move the anchor again. When no next row exists (the failure mode
+    // that leaves a task invisible), repair the anchor so the following sync can
+    // materialise it.
+    if (nextOccurrence && startOfDay(nextOccurrence.scheduledDate).getTime() >= newAnchor.getTime()) {
+      continue;
+    }
+
+    if (startOfDay(rule.anchorDate).getTime() === newAnchor.getTime()) {
+      continue;
+    }
 
     await db.recurrenceRule.update({
       where: { id: rule.id },

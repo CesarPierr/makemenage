@@ -95,7 +95,6 @@ export function generateRecurrenceDates(
 
   if (rule.type === "weekly") {
     const weekdays = (rule.weekdays?.length ? rule.weekdays : [getDay(anchor)]).sort();
-    const interval = Math.max(1, rule.interval || 1);
     let cursor = start;
 
     if (isSliding && options?.baseDate) {

@@ -5,9 +5,12 @@ const dbMocks = vi.hoisted(() => ({
   assignmentRuleUpdate: vi.fn(),
   householdFindUnique: vi.fn(),
   taskOccurrenceFindUnique: vi.fn(),
+  taskOccurrenceFindFirst: vi.fn(),
+  taskOccurrenceFindMany: vi.fn(),
   taskOccurrenceCreate: vi.fn(),
   taskOccurrenceUpdate: vi.fn(),
   taskOccurrenceUpdateMany: vi.fn(),
+  recurrenceRuleUpdate: vi.fn(),
   occurrenceActionLogCreate: vi.fn(),
   occurrenceActionLogFindFirst: vi.fn(),
   householdHolidayFindMany: vi.fn().mockResolvedValue([]),
@@ -26,9 +29,14 @@ vi.mock("@/lib/db", () => ({
     },
     taskOccurrence: {
       findUnique: dbMocks.taskOccurrenceFindUnique,
+      findFirst: dbMocks.taskOccurrenceFindFirst,
+      findMany: dbMocks.taskOccurrenceFindMany,
       create: dbMocks.taskOccurrenceCreate,
       update: dbMocks.taskOccurrenceUpdate,
       updateMany: dbMocks.taskOccurrenceUpdateMany,
+    },
+    recurrenceRule: {
+      update: dbMocks.recurrenceRuleUpdate,
     },
     occurrenceActionLog: {
       create: dbMocks.occurrenceActionLogCreate,
@@ -47,6 +55,7 @@ import { mapAbsences, mapAssignmentRule, mapMembers, mapRecurrenceRule } from "@
 import {
   addMemberToExistingAssignments,
   completeOccurrence,
+  realignOverdueRecurrences,
   reopenOccurrence,
   syncHouseholdOccurrences,
 } from "@/lib/scheduling/service";
@@ -55,6 +64,8 @@ import { getGenerationWindow } from "@/lib/time";
 describe("scheduling service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    dbMocks.taskOccurrenceFindFirst.mockResolvedValue(null);
+    dbMocks.taskOccurrenceFindMany.mockResolvedValue([]);
     dbMocks.householdFindUnique.mockResolvedValue({
       id: "house-1",
       members: [],
@@ -109,6 +120,84 @@ describe("scheduling service", () => {
         eligibleMemberIds: ["A", "B", "C"],
         rotationOrder: ["A", "B", "C"],
       },
+    });
+  });
+});
+
+describe("realignOverdueRecurrences", () => {
+  it("moves an overdue recurrence anchor once per day, not once per page load", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-04T12:00:00Z"));
+
+    const makeTask = (anchorDate: Date) => ({
+      id: "tpl-overdue",
+      recurrenceRule: {
+        id: "rule-overdue",
+        type: "every_x_days" as const,
+        mode: "FIXED" as const,
+        interval: 7,
+        weekdays: [],
+        dayOfMonth: null,
+        anchorDate,
+        dueOffsetDays: 0,
+        config: null,
+      },
+    });
+
+    dbMocks.taskTemplateFindMany
+      .mockResolvedValueOnce([makeTask(new Date("2026-08-01"))])
+      .mockResolvedValueOnce([makeTask(new Date("2026-09-11"))]);
+    dbMocks.taskOccurrenceFindFirst
+      .mockResolvedValueOnce({ scheduledDate: new Date("2026-09-02") })
+      .mockResolvedValueOnce({ scheduledDate: new Date("2026-09-03") })
+      .mockResolvedValueOnce({ scheduledDate: new Date("2026-09-02") })
+      .mockResolvedValueOnce({ scheduledDate: new Date("2026-09-11") });
+
+    try {
+      await realignOverdueRecurrences("house-1");
+      await realignOverdueRecurrences("house-1");
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(dbMocks.recurrenceRuleUpdate).toHaveBeenCalledTimes(1);
+    expect(dbMocks.recurrenceRuleUpdate).toHaveBeenCalledWith({
+      where: { id: "rule-overdue" },
+      data: { anchorDate: startOfDay(new Date(2026, 8, 11)) },
+    });
+  });
+
+  it("repairs a drifted future anchor when no successor row remains", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-04T12:00:00Z"));
+
+    dbMocks.taskTemplateFindMany.mockResolvedValueOnce([{
+      id: "tpl-overdue",
+      recurrenceRule: {
+        id: "rule-overdue",
+        type: "every_x_days" as const,
+        mode: "SLIDING" as const,
+        interval: 7,
+        weekdays: [],
+        dayOfMonth: null,
+        anchorDate: new Date("2026-12-01"),
+        dueOffsetDays: 0,
+        config: null,
+      },
+    }]);
+    dbMocks.taskOccurrenceFindFirst
+      .mockResolvedValueOnce({ scheduledDate: new Date("2026-09-02") })
+      .mockResolvedValueOnce(null);
+
+    try {
+      await realignOverdueRecurrences("house-1");
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(dbMocks.recurrenceRuleUpdate).toHaveBeenCalledWith({
+      where: { id: "rule-overdue" },
+      data: { anchorDate: startOfDay(new Date(2026, 8, 11)) },
     });
   });
 });
@@ -376,5 +465,80 @@ describe("syncHouseholdOccurrences (SLIDING slot idempotence)", () => {
       expect.objectContaining({ where: { id: "occ-last" } }),
     );
   });
-});
 
+  it("uses the latest locked occurrence even after it leaves the history window", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-04T12:00:00Z"));
+
+    const members = [{ id: "M", displayName: "M", isActive: true, weightingFactor: 1, availabilities: [] }];
+    const recurrenceRule = {
+      id: "rule-history",
+      type: "every_x_days" as const,
+      mode: "SLIDING" as const,
+      interval: 7,
+      weekdays: [],
+      dayOfMonth: null,
+      anchorDate: new Date("2026-01-01"),
+      dueOffsetDays: 0,
+      config: null,
+    };
+    const assignmentRule = {
+      id: "assignment-history",
+      mode: "fixed" as const,
+      eligibleMemberIds: ["M"],
+      fixedMemberId: "M",
+      rotationOrder: ["M"],
+      fairnessWindowDays: null,
+      preserveRotationOnSkip: true,
+      preserveRotationOnReschedule: true,
+      rebalanceOnMemberAbsence: false,
+      lockAssigneeAfterGeneration: true,
+    };
+    const historicalLocked = {
+      id: "occ-history",
+      taskTemplateId: "tpl-history",
+      sourceGenerationKey: "tpl-history:sliding:4",
+      scheduledDate: new Date("2026-08-05"),
+      dueDate: new Date("2026-08-05"),
+      assignedMemberId: "M",
+      status: "completed" as const,
+      actualMinutes: null,
+      isManuallyModified: true,
+      createdAt: new Date("2026-08-05"),
+    };
+
+    dbMocks.householdFindUnique.mockResolvedValue({
+      id: "house-1",
+      members,
+      tasks: [{
+        id: "tpl-history",
+        householdId: "house-1",
+        title: "Historique",
+        estimatedMinutes: 10,
+        startsOn: new Date("2026-01-01"),
+        endsOn: null,
+        lastCompletedAt: new Date("2026-08-05"),
+        isActive: true,
+        recurrenceRule,
+        assignmentRule,
+        occurrences: [],
+      }],
+    });
+    dbMocks.taskOccurrenceFindMany.mockResolvedValue([historicalLocked]);
+    dbMocks.taskOccurrenceCreate.mockImplementation(async ({ data }) => ({ id: data.sourceGenerationKey }));
+
+    try {
+      await syncHouseholdOccurrences("house-1");
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(dbMocks.taskOccurrenceCreate).toHaveBeenCalled();
+    expect(dbMocks.taskOccurrenceCreate.mock.calls[0]?.[0].data).toEqual(
+      expect.objectContaining({
+        sourceGenerationKey: "tpl-history:sliding:5",
+        scheduledDate: startOfDay(new Date(2026, 7, 12)),
+      }),
+    );
+  });
+});
