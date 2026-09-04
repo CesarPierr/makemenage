@@ -541,4 +541,97 @@ describe("syncHouseholdOccurrences (SLIDING slot idempotence)", () => {
       }),
     );
   });
+
+  it("reuses a stale cancelled sliding row instead of dropping the generated slot", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-04T12:00:00Z"));
+
+    const baseOccurrence = {
+      id: "occ-base",
+      taskTemplateId: "tpl-rebind",
+      sourceGenerationKey: "tpl-rebind:sliding:2",
+      scheduledDate: new Date("2026-08-05"),
+      dueDate: new Date("2026-08-05"),
+      assignedMemberId: "M",
+      status: "completed" as const,
+      actualMinutes: null,
+      isManuallyModified: true,
+      createdAt: new Date("2026-08-05"),
+    };
+    const staleCancelled = {
+      ...baseOccurrence,
+      id: "occ-stale",
+      sourceGenerationKey: "tpl-rebind:sliding:3",
+      scheduledDate: new Date("2026-07-20"),
+      status: "cancelled" as const,
+      isManuallyModified: false,
+    };
+    const members = [{ id: "M", displayName: "M", isActive: true, weightingFactor: 1, availabilities: [] }];
+    const recurrenceRule = {
+      id: "rule-rebind",
+      type: "every_x_days" as const,
+      mode: "SLIDING" as const,
+      interval: 7,
+      weekdays: [],
+      dayOfMonth: null,
+      anchorDate: new Date("2026-01-01"),
+      dueOffsetDays: 0,
+      config: null,
+    };
+    const assignmentRule = {
+      id: "assignment-rebind",
+      mode: "fixed" as const,
+      eligibleMemberIds: ["M"],
+      fixedMemberId: "M",
+      rotationOrder: ["M"],
+      fairnessWindowDays: null,
+      preserveRotationOnSkip: true,
+      preserveRotationOnReschedule: true,
+      rebalanceOnMemberAbsence: false,
+      lockAssigneeAfterGeneration: true,
+    };
+
+    dbMocks.householdFindUnique.mockResolvedValue({
+      id: "house-1",
+      members,
+      tasks: [{
+        id: "tpl-rebind",
+        householdId: "house-1",
+        title: "Rebind",
+        estimatedMinutes: 10,
+        startsOn: new Date("2026-01-01"),
+        endsOn: null,
+        lastCompletedAt: new Date("2026-08-05"),
+        isActive: true,
+        recurrenceRule,
+        assignmentRule,
+        occurrences: [baseOccurrence],
+      }],
+    });
+    dbMocks.taskOccurrenceFindMany
+      .mockResolvedValueOnce([baseOccurrence])
+      .mockResolvedValueOnce([staleCancelled]);
+    dbMocks.taskOccurrenceUpdate.mockResolvedValue({ id: "occ-stale" });
+
+    try {
+      await syncHouseholdOccurrences("house-1");
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(
+      dbMocks.taskOccurrenceCreate.mock.calls.some(
+        ([input]) => input.data.sourceGenerationKey === "tpl-rebind:sliding:3",
+      ),
+    ).toBe(false);
+    expect(dbMocks.taskOccurrenceUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "occ-stale" },
+        data: expect.objectContaining({
+          sourceGenerationKey: "tpl-rebind:sliding:3",
+          scheduledDate: startOfDay(new Date(2026, 7, 12)),
+        }),
+      }),
+    );
+  });
 });

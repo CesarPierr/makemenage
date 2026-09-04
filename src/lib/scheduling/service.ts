@@ -127,6 +127,21 @@ export async function syncHouseholdOccurrences(
       holidays,
     });
 
+    // A generated sliding key can belong to a stale cancelled row that was
+    // scheduled outside the bounded relation query. Load those exact keys so
+    // the row can be re-bound instead of triggering a P2002 and silently
+    // dropping the new occurrence.
+    const generatedKeyOccurrences = generated.length
+      ? await db.taskOccurrence.findMany({
+          where: {
+            sourceGenerationKey: { in: generated.map((occurrence) => occurrence.sourceGenerationKey) },
+          },
+        })
+      : [];
+    const occurrencesByGenerationKey = new Map(
+      [...task.occurrences, ...generatedKeyOccurrences].map((occurrence) => [occurrence.sourceGenerationKey, occurrence] as const),
+    );
+
     const generatedKeys = new Set(generated.map((occurrence) => occurrence.sourceGenerationKey));
     const isSlidingTask = task.recurrenceRule?.mode === "SLIDING";
     // Rows already bound to a generated slot this run, so two generated entries
@@ -135,9 +150,8 @@ export async function syncHouseholdOccurrences(
     const sameDay = (a: Date, b: Date) => startOfDay(a).getTime() === startOfDay(b).getTime();
 
     for (const occurrence of generated) {
-      let existing = task.occurrences.find(
-        (item) => item.sourceGenerationKey === occurrence.sourceGenerationKey && !consumedIds.has(item.id),
-      );
+      const keyedOccurrence = occurrencesByGenerationKey.get(occurrence.sourceGenerationKey);
+      let existing = keyedOccurrence && !consumedIds.has(keyedOccurrence.id) ? keyedOccurrence : undefined;
 
       // SLIDING idempotence: the `:sliding:<index>` key is recomputed from a moving
       // base (the latest locked occurrence), so an exact-key miss can still be the
